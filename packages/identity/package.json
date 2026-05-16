@@ -1,0 +1,31 @@
+{
+  "name": "@citizenry/identity",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./admin": "./src/router/admin.ts",
+    "./auth": "./src/auth.ts",
+    "./schema": "./src/db/schema.ts",
+    "./service": "./src/service/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "echo 'apply migrations/*.sql against your Postgres (Hyperdrive origin)'"
+  },
+  "dependencies": {
+    "@citizenry/spec": "workspace:*",
+    "drizzle-orm": "^0.36.4",
+    "hono": "^4.6.10",
+    "postgres": "^3.4.5",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241022.0",
+    "@types/node": "^22.7.5",
+    "drizzle-kit": "^0.28.1",
+    "typescript": "^5.6.3"
+  }
+}

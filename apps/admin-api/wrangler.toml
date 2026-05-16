@@ -1,0 +1,25 @@
+name = "citizenry-admin-api"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+# identity 도메인 — Postgres via Hyperdrive
+[[hyperdrive]]
+binding = "HYPERDRIVE"
+id = "local-dev-placeholder"
+localConnectionString = "postgresql://endue_workspace:endue_workspace@localhost:15438/citizenry_identity"
+
+# vault 도메인 — D1
+[[d1_databases]]
+binding = "DB_VAULT"
+database_name = "citizenry-vault"
+database_id = "local-dev-placeholder"
+migrations_dir = "../../packages/vault/migrations"
+
+[vars]
+ISSUER_HOST = "citizenry.id"
+
+# secrets — `wrangler secret put`
+#   SERVICE_KEY
+#   ENROLLMENT_PEPPER
+#   ADMIN_ALLOWLIST (optional)

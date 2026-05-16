@@ -1,0 +1,30 @@
+{
+  "name": "@citizenry/spec",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./openapi/identity": "./generated/openapi/identity-api.yaml",
+    "./openapi/vault": "./generated/openapi/vault-api.yaml"
+  },
+  "scripts": {
+    "build": "pnpm run build:identity && pnpm run build:vault",
+    "build:identity": "tsp compile identity/main.tsp --config identity/tspconfig.yaml",
+    "build:vault": "tsp compile vault/main.tsp --config vault/tspconfig.yaml",
+    "lint:identity": "tsp compile identity/main.tsp --config identity/tspconfig.yaml --no-emit",
+    "lint:vault": "tsp compile vault/main.tsp --config vault/tspconfig.yaml --no-emit",
+    "lint": "pnpm run lint:identity && pnpm run lint:vault",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf generated"
+  },
+  "devDependencies": {
+    "@typespec/compiler": "^0.65.0",
+    "@typespec/http": "^0.65.0",
+    "@typespec/openapi": "^0.65.0",
+    "@typespec/openapi3": "^0.65.0",
+    "@typespec/rest": "^0.65.0",
+    "@typespec/versioning": "^0.65.0",
+    "typescript": "^5.6.3"
+  }
+}

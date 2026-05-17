@@ -1,8 +1,8 @@
 name: Setup workspace
 description: |
-  pnpm, Node 24, frozen install (with cache). Callers must run
-  actions/checkout@v4 first — local composite actions cannot be
-  loaded until the workspace exists.
+  pnpm, Node (pinned via .nvmrc), frozen install (with cache).
+  Callers must run actions/checkout@v4 first — local composite
+  actions cannot be loaded until the workspace exists.
 
 runs:
   using: composite
@@ -11,7 +11,7 @@ runs:
 
     - uses: actions/setup-node@v4
       with:
-        node-version: 24
+        node-version-file: .nvmrc
         cache: pnpm
 
     - name: Install dependencies

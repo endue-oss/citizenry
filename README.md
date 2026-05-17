@@ -29,7 +29,7 @@ pnpm typecheck
 
 ## Deploy your own
 
-[![1. Use this template](https://img.shields.io/badge/1.-Use%20this%20template-2563eb?style=for-the-badge&logo=github&logoColor=white)](https://github.com/new?template_name=citizenry&template_owner=endue-oss)
+[![1. Fork this repo](https://img.shields.io/badge/1.-Fork%20this%20repo-2563eb?style=for-the-badge&logo=github&logoColor=white)](https://github.com/endue-oss/citizenry/fork)
 &nbsp;
 [![2. Add Cloudflare secrets](https://img.shields.io/badge/2.-Add%20Cloudflare%20secrets-f38020?style=for-the-badge&logo=cloudflare&logoColor=white)](https://github.com/YOUR_USERNAME/citizenry/settings/secrets/actions/new)
 &nbsp;
@@ -37,8 +37,9 @@ pnpm typecheck
 
 Three steps from a fresh GitHub account to a running deployment:
 
-1. **Use this template** — creates a new repository under your account.
-   GitHub redirects you to it.
+1. **Fork this repo** — creates your own copy under your account.
+   GitHub redirects you to it. (You'll also get a "Sync fork" button to
+   pull upstream updates later.)
 2. **Add Cloudflare secrets** — in your new repo, *Settings → Secrets
    and variables → Actions → New repository secret*. Add three:
    - `CLOUDFLARE_API_TOKEN` — scoped Cloudflare API token ([scoping

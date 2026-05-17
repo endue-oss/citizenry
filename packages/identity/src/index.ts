@@ -9,4 +9,13 @@ export type {
   AgentKeyRow,
   EnrollmentTokenRow,
   AuditLogRow,
+  FederationPeerRow,
 } from './db/schema'
+export { ID_PREFIX } from './ids'
+export type {
+  FederationPeerState,
+  FederationPurpose,
+  FederationPeerView,
+  FederationHandshakePayload,
+  PeerDiscoveryDocument,
+} from './service/federation/types'

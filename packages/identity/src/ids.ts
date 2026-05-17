@@ -10,6 +10,8 @@ export const ID_PREFIX = {
   enrollment: 'enr_',
   enrollmentToken: 'eret_',
   auditLog: 'alg_',
+  federationPeer: 'fdp_',
+  instance: 'ci_',
 } as const
 
 export type IdPrefix = keyof typeof ID_PREFIX

@@ -9,6 +9,7 @@ import "./register.tsp";
 import "./me.tsp";
 import "./public.tsp";
 import "./admin.tsp";
+import "./federation.tsp";
 
 using TypeSpec.Http;
 using TypeSpec.Rest;

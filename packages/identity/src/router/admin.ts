@@ -1,7 +1,11 @@
 import { Hono } from 'hono'
 import type { Db } from '../db'
+import {
+  mountAdminFederationRoutes,
+  type FederationVars,
+} from './federation'
 
-type Vars = { db: Db }
+type Vars = { db: Db } & Partial<FederationVars>
 
 /**
  * Admin identity router.
@@ -40,3 +44,14 @@ export const adminIdentityRouter = new Hono<{ Variables: Vars }>()
     c.json({ todo: 'admin agent read', id: c.req.param('id') }),
   )
   .delete('/api/v1/admin/agents/:id', (c) => c.body(null, 204))
+
+// ── Federation admin surface (RFC-0001) ───────────────────
+//   POST   /api/v1/admin/federation/peers
+//   GET    /api/v1/admin/federation/peers
+//   GET    /api/v1/admin/federation/peers/:id
+//   POST   /api/v1/admin/federation/peers/:id/transition
+//   DELETE /api/v1/admin/federation/peers/:id
+//   POST   /api/v1/admin/federation/peers/:id/jwks-refresh
+mountAdminFederationRoutes(
+  adminIdentityRouter as unknown as Hono<{ Variables: FederationVars }>,
+)

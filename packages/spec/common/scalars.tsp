@@ -32,6 +32,28 @@ scalar humanId extends string;
 scalar tenantId extends string;
 
 /**
+ * Federation peer ID — `fdp_` + 26자 ULID.
+ *
+ * 한 Citizenry 인스턴스가 자신의 DB 에 보관하는 *다른* 인스턴스의 row 식별자.
+ *
+ * @status confirmed
+ */
+@pattern("^fdp_[0-9A-HJKMNP-TV-Z]{26}$")
+scalar federationPeerId extends string;
+
+/**
+ * Instance ID — `ci_` + 26자 ULID.
+ *
+ * 한 Citizenry 배포가 부팅 시 1회 생성해 보존하는 self-id.
+ * JWKS rotation 과 무관하게 안정적이며, 페더레이션 핸드셰이크에서 peer 의
+ * "이름" 으로 쓰인다. (DID 의 host 부분이 바뀌어도 instance_id 는 그대로.)
+ *
+ * @status confirmed
+ */
+@pattern("^ci_[0-9A-HJKMNP-TV-Z]{26}$")
+scalar instanceId extends string;
+
+/**
  * Key ID — `kid_` + 26자 ULID. JWKS / JWS header `kid` 에 노출.
  * @status confirmed
  */

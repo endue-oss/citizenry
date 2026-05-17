@@ -1,7 +1,11 @@
 import { Hono } from 'hono'
 import type { Db } from '../db'
+import {
+  mountPublicFederationRoutes,
+  type FederationVars,
+} from './federation'
 
-type Vars = { db: Db }
+type Vars = { db: Db } & Partial<FederationVars>
 
 /**
  * User-facing identity router.
@@ -54,3 +58,9 @@ export const identityRouter = new Hono<{ Variables: Vars }>()
       assertionMethod: [],
     }),
   )
+
+// ── Federation public surface (RFC-0001) ──────────────────
+//   GET  /.well-known/citizenry-peer
+//   POST /federation/handshake
+// 라우트는 c.var.federation 서비스 인스턴스를 기대 — apps/api 미들웨어에서 주입.
+mountPublicFederationRoutes(identityRouter as unknown as Hono<{ Variables: FederationVars }>)

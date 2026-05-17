@@ -40,6 +40,8 @@ export const principal = identity.table(
 // ── tenant ───────────────────────────────────────────────────
 // 시민이 속하는 영역 entity (WHERE 차원).
 // 4-state lifecycle: pending → active ⇄ suspended → archived.
+// kind: 'local' (기본) | 'federated' (다른 Citizenry 인스턴스 미러).
+//   federated 는 federation_peer 와 1:1 매핑 (RFC-0001).
 export const tenant = identity.table(
   'tenant',
   {
@@ -47,10 +49,65 @@ export const tenant = identity.table(
     slug: varchar('slug', { length: 255 }).notNull().unique('tenant_slug_uniq'),
     displayName: varchar('display_name', { length: 255 }),
     status: varchar('status', { length: 255 }).default('pending').notNull(),
+    kind: varchar('kind', { length: 255 }).default('local').notNull(),
+    federationPeerId: varchar('federation_peer_id', { length: 255 }),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   },
-  (t) => [index('tenant_status_idx').on(t.status)],
+  (t) => [
+    index('tenant_status_idx').on(t.status),
+    index('tenant_kind_idx').on(t.kind),
+    check('tenant_kind_check', sql`${t.kind} IN ('local', 'federated')`),
+  ],
+)
+
+// ── federation_peer ──────────────────────────────────────────
+// 다른 Citizenry 인스턴스의 로컬 표현 (RFC-0001).
+//
+// state machine:
+//   invited   → pending | revoked
+//   pending   → trusted | revoked
+//   trusted   → suspended | revoked
+//   suspended → trusted | revoked
+//
+// tenant_id 는 trusted 진입 시 materialize 되는 federated tenant 와의 1:1 링크.
+export const federationPeer = identity.table(
+  'federation_peer',
+  {
+    federationPeerId: varchar('federation_peer_id', { length: 255 }).primaryKey(),
+    issuer: varchar('issuer', { length: 255 })
+      .notNull()
+      .unique('federation_peer_issuer_uniq'),
+    instanceId: varchar('instance_id', { length: 255 }),
+    displayName: varchar('display_name', { length: 255 }),
+    state: varchar('state', { length: 255 }).default('invited').notNull(),
+    protocolVersion: integer('protocol_version').default(1).notNull(),
+    peerMetadata: jsonb('peer_metadata')
+      .$type<Record<string, unknown>>()
+      .default(sql`'{}'::jsonb`)
+      .notNull(),
+    jwks: jsonb('jwks')
+      .$type<Record<string, unknown>>()
+      .default(sql`'{}'::jsonb`)
+      .notNull(),
+    jwksCachedAt: timestamp('jwks_cached_at', { withTimezone: true }),
+    pendingNonce: varchar('pending_nonce', { length: 255 }),
+    pendingNonceExp: timestamp('pending_nonce_exp', { withTimezone: true }),
+    tenantId: varchar('tenant_id', { length: 255 }).unique('federation_peer_tenant_id_uniq'),
+    trustedAt: timestamp('trusted_at', { withTimezone: true }),
+    suspendedAt: timestamp('suspended_at', { withTimezone: true }),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    index('federation_peer_state_idx').on(t.state),
+    index('federation_peer_jwks_cached_at_idx').on(t.jwksCachedAt),
+    check(
+      'federation_peer_state_check',
+      sql`${t.state} IN ('invited', 'pending', 'trusted', 'suspended', 'revoked')`,
+    ),
+  ],
 )
 
 // ── tenant_principal_membership ──────────────────────────────
@@ -214,6 +271,7 @@ export const schema = {
   enrollmentToken,
   jtiReplay,
   auditLog,
+  federationPeer,
 }
 export type Schema = typeof schema
 
@@ -225,3 +283,4 @@ export type AgentRow = typeof agent.$inferSelect
 export type AgentKeyRow = typeof agentKey.$inferSelect
 export type EnrollmentTokenRow = typeof enrollmentToken.$inferSelect
 export type AuditLogRow = typeof auditLog.$inferSelect
+export type FederationPeerRow = typeof federationPeer.$inferSelect

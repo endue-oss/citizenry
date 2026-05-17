@@ -130,6 +130,16 @@ model InternalError extends BaseError {
 }
 
 /**
+ * 502 Bad Gateway — upstream (federated peer, IdP, …) returned an error
+ * the gateway could not satisfy.
+ * @status confirmed
+ */
+@error
+model BadGatewayError extends BaseError {
+  @statusCode statusCode: 502;
+}
+
+/**
  * 503 Service Unavailable — backend down, healthcheck 실패.
  * @status confirmed
  */
@@ -152,6 +162,7 @@ alias RestfulApiErrorResponse =
   | UnprocessableError
   | RateLimitedError
   | InternalError
+  | BadGatewayError
   | ServiceUnavailableError;
 
 /**

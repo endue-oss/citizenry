@@ -19,24 +19,23 @@ Run it yourself on Cloudflare. Fully open source — no strings attached.
 
 ## What it is
 
-Citizenry is an open, self-hostable **identity issuer** for AI agents
-and the people who run them. You operate your own
-`did:web:yourhost`, sign JWTs with your own keys, and decide who counts
-as a citizen. No SaaS in the middle. No vendor lock-in. Just open
-protocols (DID, JWT, JWKS) running on a Cloudflare Worker.
+Citizenry is an open, run-it-yourself **citizenship office** for AI
+agents. You issue your own citizenships, sign them with your own keys,
+and decide who counts as a citizen. No middleman. No company holding
+your data. Just open standards running on Cloudflare.
 
 ## What you get
 
-After about five minutes of deploy:
+About five minutes after you start:
 
-- A **DID issuer** at `https://yourhost/.well-known/did.json`
-- A **public JWKS** endpoint that anyone can verify against
-- An **admin API + web** to enroll agents, mint citizenships, and rotate keys
-- An **MCP gateway** so AI agents can authenticate using their citizenship
-- A **migrator Worker** that applies schema updates idempotently on every deploy
-- **Federation** built in — your issuer can trust other citizenry instances on terms you choose
+- A **public profile page** at `/.well-known/did.json` — your citizenry's address on the web
+- A **public key page** other systems use to verify the citizenships you sign
+- An **admin dashboard** for adding agents, issuing citizenships, and renewing signing keys
+- A **gateway for AI agents** (MCP) so they can prove their citizenship to other tools
+- An **auto-updater** that keeps the database in shape on every deploy
+- **Federation** — your citizenry can recognize and trust other citizenries on terms you choose
 
-All on **Cloudflare Workers + D1**. The free tier is enough to start.
+All on **Cloudflare**. The free tier is enough to start.
 
 ---
 
@@ -73,9 +72,9 @@ Or push any commit to `main`.
 > step 1, replace it in the URL bar with your GitHub username, or just
 > navigate within your new repo.
 
-Five services come up: three Workers, two Pages projects, all bound
-to two D1 databases provisioned for you mid-deploy. Full walkthrough
-in [`docs/deploy.md`](./docs/deploy.md).
+Five things come up on your Cloudflare account: three small services,
+two web sites, two databases — all set up for you during the deploy.
+Full walkthrough in [`docs/deploy.md`](./docs/deploy.md).
 
 ---
 
@@ -83,39 +82,42 @@ in [`docs/deploy.md`](./docs/deploy.md).
 
 Identity should not be rented.
 
-The agent web is being built right now — LLM-driven actors are
-showing up at APIs and at each other by the millions, and the default
-answer is "let a third party authenticate them for you." That makes
-identity a chokepoint, and chokepoints get monetized, censored, or
-both.
+AI agents are showing up everywhere right now — millions of them,
+talking to apps and to each other. The default answer is "let some
+big company sign them in for you." That turns identity into a toll
+gate. Toll gates get charged for, or shut down, or both.
 
-Citizenry exists so that **anyone can run an identity authority**:
-your team, your community, your weekend project. Federation lets these
-authorities trust each other on terms they pick. There is no Endue
-server in the middle — the spec is the only thing we ship together.
+Citizenry exists so that **anyone can run their own citizenship
+office**: your team, your community, your weekend project. Different
+citizenries can recognize each other on terms you choose. No central
+authority, no Endue server in the middle — just the open spec we
+share.
 
 ## Real open source, not the fake kind
 
 We love open source. It is the reason most of the software you use
-exists, and we want this project to outlive any company, including
-ours. So here are our commitments — in code rather than rhetoric:
+exists. We want this project to outlive any company — including ours.
+Here is what that means in practice:
 
-- **Apache License 2.0 for the code.** OSI-approved, permissive. You
-  can use, modify, distribute, host as a service, and commercialize it
-  freely. ([`LICENSE`](./LICENSE))
-- **CC-BY-SA 4.0 for the specification.** The protocol is share-alike;
-  derivatives stay open. ([`packages/spec/LICENSE`](./packages/spec/LICENSE))
-- **No CLA.** Contributors keep their copyright. We use only the
-  [Developer Certificate of Origin](https://developercertificate.org/),
-  the same lightweight sign-off the Linux kernel uses.
+- **Apache License 2.0 for the code.** A real, OSI-approved open
+  source license — not a workalike. You can use it, change it, share
+  it, host it as a service, and make money from it.
+  ([`LICENSE`](./LICENSE))
+- **CC-BY-SA 4.0 for the specification.** If you build on the
+  protocol, your version stays open too.
+  ([`packages/spec/LICENSE`](./packages/spec/LICENSE))
+- **No paperwork that signs your rights away.** Contributors keep
+  their copyright. We use only the
+  [Developer Certificate of Origin](https://developercertificate.org/) —
+  the one-line sign-off the Linux kernel uses.
   ([`CONTRIBUTING.md`](./CONTRIBUTING.md))
-- **No future relicense.** Apache 2.0 is what shipped, and that is
-  what will keep shipping — no BUSL, no SSPL, no "fair-code"
-  reframing, no surprise commercial-only modules. The license cannot
-  be silently changed, and every prior release stays Apache 2.0
-  forever.
-- **Public RFC process for everything material.** Anyone can read;
-  anyone can propose. ([`docs/rfcs/`](./docs/rfcs/))
+- **No bait-and-switch later.** Apache 2.0 is what we shipped, and
+  that is what we will keep shipping. No quiet switch to a
+  "mostly-open" license (BUSL, SSPL, "fair-code"). No commercial-only
+  modules sneaked in. Every release we have already made stays
+  Apache 2.0 forever.
+- **Public RFC process for big changes.** Anyone can read; anyone can
+  propose. ([`docs/rfcs/`](./docs/rfcs/))
 - **Trademark only on the name itself**, narrowly. Forks may use the
   name to describe what they are; they may not claim to *be* official
   Endue Citizenry. ([`TRADEMARKS.md`](./TRADEMARKS.md))
@@ -151,20 +153,19 @@ pnpm dev          # spec build → all apps in parallel
 pnpm typecheck
 ```
 
-Local `wrangler dev` uses miniflare; no Cloudflare provisioning is
-needed for development.
+`wrangler dev` runs locally — no Cloudflare account needed.
 
 ## Documentation
 
 | | |
 |---|---|
-| Full adopter deploy walkthrough | [`docs/deploy.md`](./docs/deploy.md) |
-| Contributing & DCO sign-off | [`CONTRIBUTING.md`](./CONTRIBUTING.md) |
-| Governance and decision-making | [`GOVERNANCE.md`](./GOVERNANCE.md) |
-| RFC process for spec changes | [`docs/rfcs/`](./docs/rfcs/) |
-| Architectural decisions | [`docs/adr/`](./docs/adr/) |
+| Full deploy guide | [`docs/deploy.md`](./docs/deploy.md) |
+| How to contribute | [`CONTRIBUTING.md`](./CONTRIBUTING.md) |
+| Project governance | [`GOVERNANCE.md`](./GOVERNANCE.md) |
+| Proposals (RFCs) | [`docs/rfcs/`](./docs/rfcs/) |
+| Past decisions (ADRs) | [`docs/adr/`](./docs/adr/) |
 | Code of Conduct | [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md) |
-| Security disclosure | [`SECURITY.md`](./SECURITY.md) |
+| Report a security issue | [`SECURITY.md`](./SECURITY.md) |
 | Trademark policy | [`TRADEMARKS.md`](./TRADEMARKS.md) |
 
 ## Conformance & Partnership

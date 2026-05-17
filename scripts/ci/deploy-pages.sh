@@ -27,7 +27,10 @@ deploy_pages_app() {
   fi
 
   # wrangler lives in each app's local node_modules; scope pnpm to that
-  # workspace so `pnpm exec` resolves it regardless of CWD.
+  # workspace so `pnpm exec` resolves it regardless of CWD. The filter
+  # also makes wrangler run from the app dir, so absolutize outdir.
+  local abs_outdir
+  abs_outdir=$(cd "$outdir" && pwd)
   local exec=(pnpm --filter "$filter" exec wrangler)
 
   echo "Ensuring Pages project $project exists…"
@@ -39,7 +42,7 @@ deploy_pages_app() {
   fi
 
   echo "Deploying $project from $outdir…"
-  "${exec[@]}" pages deploy "$outdir" \
+  "${exec[@]}" pages deploy "$abs_outdir" \
     --project-name="$project" \
     --branch=main \
     --commit-hash="${GITHUB_SHA:-}" \

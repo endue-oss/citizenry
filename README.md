@@ -94,9 +94,9 @@ process.
 ## Conformance & Partnership
 
 - **Conformance program** (use of the "Endue Citizenry Certified" mark):
-  `conformance@citizenry.dev`
-- **Hosting / cloud partner program**: `partners@citizenry.dev`
-- **Trademark questions**: `trademarks@citizenry.dev`
+  `team@endue.ai`
+- **Hosting / cloud partner program**: `team@endue.ai`
+- **Trademark questions**: `team@endue.ai`
 
 ---
 

@@ -70,7 +70,7 @@ You may use the Marks to truthfully describe the Project, including:
 ## 3. Restricted Uses (Permission Required)
 
 The following uses require **prior written permission** from Endue.
-Contact: `trademarks@citizenry.dev`.
+Contact: `team@endue.ai`.
 
 ### 3.1 Product, company, or service names
 
@@ -166,7 +166,7 @@ the integrity of the Marks.
 
 Endue offers a formal partnership program for hosting providers that
 wish to obtain expanded mark usage rights, official partner badges, and
-conformance certification. Contact `partners@citizenry.dev`.
+conformance certification. Contact `team@endue.ai`.
 
 ---
 
@@ -194,7 +194,7 @@ trademark rights in cases of misuse, dilution, confusion, or
 infringement.
 
 If you become aware of a use of the Marks that you believe is
-inappropriate, please contact `trademarks@citizenry.dev`.
+inappropriate, please contact `team@endue.ai`.
 
 If you have used the Marks in a way that conflicts with this policy,
 please remedy the use (e.g., rename your product, remove confusing
@@ -209,9 +209,9 @@ For permission requests, partnership inquiries, conformance program
 questions, or clarification on whether a specific use is permitted,
 please contact:
 
-- **General trademark inquiries**: `trademarks@citizenry.dev`
-- **Partnership program**: `partners@citizenry.dev`
-- **Conformance program**: `conformance@citizenry.dev`
+- **General trademark inquiries**: `team@endue.ai`
+- **Partnership program**: `team@endue.ai`
+- **Conformance program**: `team@endue.ai`
 
 When requesting permission, please describe (a) the proposed use,
 (b) the duration and scope, (c) whether the use is commercial, and

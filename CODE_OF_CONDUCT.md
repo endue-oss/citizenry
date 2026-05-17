@@ -21,7 +21,7 @@ individual is officially representing the project in public spaces.
 If you experience or witness behavior that violates this Code of
 Conduct, please report it to:
 
-- **Email:** `conduct@citizenry.dev`
+- **Email:** `team@endue.ai`
 
 Reports are handled confidentially by the Code of Conduct response
 team. The team will acknowledge receipt within 3 business days and

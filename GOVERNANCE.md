@@ -257,8 +257,8 @@ and the consistency of certification.
 
 ## 9. Contact
 
-- **Governance questions**: `governance@citizenry.dev`
+- **Governance questions**: `team@endue.ai`
 - **Security disclosures**: see `SECURITY.md`
-- **Trademark questions**: `trademarks@citizenry.dev`
-- **Conformance program**: `conformance@citizenry.dev`
-- **Partnership inquiries**: `partners@citizenry.dev`
+- **Trademark questions**: `team@endue.ai`
+- **Conformance program**: `team@endue.ai`
+- **Partnership inquiries**: `team@endue.ai`

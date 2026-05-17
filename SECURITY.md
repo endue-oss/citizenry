@@ -29,7 +29,7 @@ Report vulnerabilities privately via one of the following:
 - **Preferred — GitHub Private Vulnerability Reporting:**
   Use the "Report a vulnerability" button in the repository's Security
   tab. This routes directly to the security response team.
-- **Email:** `security@citizenry.dev`
+- **Email:** `team@endue.ai`
   - Optionally encrypt with the project's PGP key published at
     `https://citizenry.dev/.well-known/security.txt`.
 
@@ -126,13 +126,13 @@ We will not pursue legal action against researchers who:
   disclosing it publicly.
 
 If you are unsure whether your planned research is within the spirit
-of this policy, contact `security@citizenry.dev` first.
+of this policy, contact `team@endue.ai` first.
 
 ---
 
 ## Contact
 
-- **Vulnerability reports:** `security@citizenry.dev`
+- **Vulnerability reports:** `team@endue.ai`
 - **PGP key:** `https://citizenry.dev/.well-known/security.txt`
 - **General security questions (non-vulnerability):**
-  `security@citizenry.dev`
+  `team@endue.ai`

@@ -207,7 +207,7 @@ discussions.
 ## 8. Questions
 
 - General contributor questions: open a GitHub Discussion.
-- Governance questions: `governance@citizenry.dev`
+- Governance questions: `team@endue.ai`
 - Code of conduct concerns: see `CODE_OF_CONDUCT.md`
 - Security issues: see `SECURITY.md`
 

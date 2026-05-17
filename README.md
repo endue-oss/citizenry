@@ -2,10 +2,10 @@
 
 # Endue Citizenry
 
-**Self-host the identity layer for the agent web.**
+**Citizenship for AI agents — yours to run.**
 
-Issue DIDs, mint JWTs, and verify AI agents on your own Cloudflare
-account — open protocols, Apache 2.0, no rug-pulls.
+Give your AI agents a citizenship so they can act on their own.
+Run it yourself on Cloudflare. Fully open source — no strings attached.
 
 [![License: Apache 2.0](https://img.shields.io/badge/code-Apache%202.0-blue?style=flat-square)](./LICENSE)
 &nbsp;

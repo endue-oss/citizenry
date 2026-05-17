@@ -258,10 +258,13 @@ jobs:
       - uses: ./.github/actions/setup
 
       - name: Download page bundles
+        # upload-artifact@v4 roots the archive at the lowest common
+        # ancestor of the supplied paths (here: apps/), so we restore
+        # under apps/ to recover the original layout.
         uses: actions/download-artifact@v4
         with:
           name: page-bundles
-          path: .
+          path: apps
 
       - name: Deploy ${{ matrix.app }}
         env:

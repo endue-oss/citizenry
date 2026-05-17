@@ -27,17 +27,34 @@ pnpm dev          # spec build → all apps in parallel
 pnpm typecheck
 ```
 
-## Deploy
+## Deploy your own
 
-The included GitHub Actions workflow (`.github/workflows/deploy.yml`)
-provisions Cloudflare resources, runs migrations (D1 + Postgres), and
-deploys all five apps. After forking, set three repository secrets —
-`CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `IDENTITY_DATABASE_URL`
-— and push to `main` (or run the workflow manually).
+[![1. Use this template](https://img.shields.io/badge/1.-Use%20this%20template-2563eb?style=for-the-badge&logo=github&logoColor=white)](https://github.com/new?template_name=citizenry&template_owner=endue-oss)
+&nbsp;
+[![2. Add Cloudflare secrets](https://img.shields.io/badge/2.-Add%20Cloudflare%20secrets-f38020?style=for-the-badge&logo=cloudflare&logoColor=white)](https://github.com/YOUR_USERNAME/citizenry/settings/secrets/actions/new)
+&nbsp;
+[![3. Run deploy](https://img.shields.io/badge/3.-Run%20deploy-22c55e?style=for-the-badge&logo=githubactions&logoColor=white)](https://github.com/YOUR_USERNAME/citizenry/actions/workflows/deploy.yml)
 
-See [`docs/deploy.md`](./docs/deploy.md) for the full walkthrough,
-including token scoping, optional secrets, custom domains, and the
-migration model.
+Three steps from a fresh GitHub account to a running deployment:
+
+1. **Use this template** — creates a new repository under your account.
+   GitHub redirects you to it.
+2. **Add Cloudflare secrets** — in your new repo, *Settings → Secrets
+   and variables → Actions → New repository secret*. Add three:
+   - `CLOUDFLARE_API_TOKEN` — scoped Cloudflare API token ([scoping
+     guide](./docs/deploy.md#step-2-create-a-scoped-cloudflare-api-token))
+   - `CLOUDFLARE_ACCOUNT_ID`
+   - `IDENTITY_DATABASE_URL` — any reachable Postgres
+     (Neon / Supabase free tiers work)
+3. **Run deploy** — in your new repo, *Actions → Deploy to Cloudflare
+   → Run workflow*. Or push any commit to `main`.
+
+> Buttons 2 and 3 use a `YOUR_USERNAME` placeholder. After step 1,
+> replace it in the URL bar with your GitHub username, or just navigate
+> within your new repo.
+
+Full walkthrough — optional secrets, custom domains, migration model:
+[`docs/deploy.md`](./docs/deploy.md).
 
 For local one-off deploys, each Worker app can also be shipped
 independently via `wrangler deploy` from its own directory.

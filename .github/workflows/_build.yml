@@ -35,7 +35,8 @@ jobs:
         # SvelteKit's adapter-cloudflare emits `_worker.js` under
         # `.svelte-kit/cloudflare/` that references sibling `output/`
         # and `cloudflare-tmp/`, so the whole `.svelte-kit/` directory
-        # has to ride along — `cloudflare/` alone is not self-contained.
+        # has to ride along. `.svelte-kit/` is a dotfile, so we have
+        # to opt into include-hidden-files explicitly.
         uses: actions/upload-artifact@v4
         with:
           name: page-bundles
@@ -43,5 +44,6 @@ jobs:
             apps/web/.svelte-kit
             apps/admin-web/.svelte-kit
             apps/docs/dist
+          include-hidden-files: true
           if-no-files-found: error
           retention-days: 1

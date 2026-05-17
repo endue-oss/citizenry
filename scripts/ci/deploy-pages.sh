@@ -34,8 +34,13 @@ deploy_pages_app() {
   local exec=(pnpm --filter "$filter" exec wrangler)
 
   echo "Ensuring Pages project $project exists…"
-  if ! "${exec[@]}" pages project list --json \
-       | jq -e --arg n "$project" 'any(.[]; .name == $n)' >/dev/null; then
+  # Use the CF REST API directly: wrangler's `pages project list --json`
+  # interleaves its banner with the JSON payload and trips jq.
+  local api="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects"
+  local exists
+  exists=$(curl -fsSL -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api" \
+    | jq -r --arg n "$project" '.result[]? | select(.name == $n) | .name')
+  if [[ -z "$exists" ]]; then
     "${exec[@]}" pages project create "$project" --production-branch=main
   else
     echo "·  project $project already exists"

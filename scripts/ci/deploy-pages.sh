@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
-# Deploy citizenry SvelteKit apps to Cloudflare Pages.
+# Deploy citizenry Cloudflare Pages projects.
 #
-# Creates the Pages project on first run, then uploads .svelte-kit/cloudflare.
+# Usage: deploy-pages.sh <app>...
+#   apps: web, admin-web, docs
+#
+# Creates the Pages project on first run, then uploads the build output.
 # Required env: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, GITHUB_SHA
 
 set -euo pipefail
@@ -9,9 +12,14 @@ set -euo pipefail
 : "${CLOUDFLARE_API_TOKEN:?required}"
 : "${CLOUDFLARE_ACCOUNT_ID:?required}"
 
+if [[ $# -eq 0 ]]; then
+  echo "::error::usage: $0 <app>... (apps: web, admin-web, docs)" >&2
+  exit 1
+fi
+
 deploy_pages_app() {
   local app_dir=$1 project=$2
-  local outdir="$app_dir/.svelte-kit/cloudflare"
+  local outdir=${3:-"$app_dir/.svelte-kit/cloudflare"}
 
   if [[ ! -d "$outdir" ]]; then
     echo "::error::$outdir not built — run pnpm --filter <app> build first"
@@ -34,5 +42,14 @@ deploy_pages_app() {
     --commit-message="deploy via GitHub Actions"
 }
 
-deploy_pages_app apps/web        citizenry-web
-deploy_pages_app apps/admin-web  citizenry-admin-web
+for app in "$@"; do
+  case $app in
+    web)       deploy_pages_app apps/web       citizenry-web ;;
+    admin-web) deploy_pages_app apps/admin-web citizenry-admin-web ;;
+    docs)      deploy_pages_app apps/docs      citizenry-docs apps/docs/dist ;;
+    *)
+      echo "::error::unknown app: $app (apps: web, admin-web, docs)" >&2
+      exit 1
+      ;;
+  esac
+done

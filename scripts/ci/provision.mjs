@@ -1,17 +1,27 @@
 #!/usr/bin/env node
-// Idempotently provision Cloudflare D1 databases (identity + vault).
+// Idempotently provision Cloudflare D1 databases (identity + vault + email).
 //
 // Required env:
 //   CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID
 // Required env (when run by GitHub Actions): GITHUB_OUTPUT
+// Optional env:
+//   SERVICE_PREFIX  Override the default "citizenry" prefix used in resource
+//                   names. Forks that share a Cloudflare account set this
+//                   to keep their resources distinct.
+//
+// Naming convention: `${SERVICE_PREFIX}-<domain>-db`. Defaults to
+// `citizenry-identity-db`, `citizenry-vault-db`, `citizenry-email-db`.
 //
 // Looks up each D1 by name; creates if missing. Writes UUIDs to $GITHUB_OUTPUT
 // for downstream steps (render-wrangler.mjs) to consume.
 
 import { appendFileSync } from 'node:fs'
 
-const D1_VAULT_NAME = 'citizenry-vault'
-const D1_IDENTITY_NAME = 'citizenry-identity'
+const PREFIX = process.env.SERVICE_PREFIX || 'citizenry'
+
+const D1_IDENTITY_NAME = `${PREFIX}-identity-db`
+const D1_VAULT_NAME = `${PREFIX}-vault-db`
+const D1_EMAIL_NAME = `${PREFIX}-email-db`
 
 const {
   CLOUDFLARE_API_TOKEN: token,
@@ -67,11 +77,19 @@ async function ensureD1(name) {
   return created.uuid
 }
 
-const d1VaultId = await ensureD1(D1_VAULT_NAME)
+console.log(`Provisioning with prefix: ${PREFIX}`)
+
 const d1IdentityId = await ensureD1(D1_IDENTITY_NAME)
+const d1VaultId = await ensureD1(D1_VAULT_NAME)
+const d1EmailId = await ensureD1(D1_EMAIL_NAME)
 
 if (outFile) {
-  appendFileSync(outFile, `d1_vault_id=${d1VaultId}\n`)
   appendFileSync(outFile, `d1_identity_id=${d1IdentityId}\n`)
+  appendFileSync(outFile, `d1_vault_id=${d1VaultId}\n`)
+  appendFileSync(outFile, `d1_email_id=${d1EmailId}\n`)
+  appendFileSync(outFile, `d1_identity_name=${D1_IDENTITY_NAME}\n`)
+  appendFileSync(outFile, `d1_vault_name=${D1_VAULT_NAME}\n`)
+  appendFileSync(outFile, `d1_email_name=${D1_EMAIL_NAME}\n`)
+  appendFileSync(outFile, `service_prefix=${PREFIX}\n`)
 }
 console.log(`\nProvisioning complete.`)

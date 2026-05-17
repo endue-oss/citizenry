@@ -10,16 +10,23 @@ port = 13003
 # identity domain — D1 (SQLite)
 [[d1_databases]]
 binding = "DB_IDENTITY"
-database_name = "citizenry-identity"
+database_name = "citizenry-identity-db"
 database_id = "local-dev-placeholder"
 migrations_dir = "../../packages/identity/migrations"
 
 # vault domain — D1
 [[d1_databases]]
 binding = "DB_VAULT"
-database_name = "citizenry-vault"
+database_name = "citizenry-vault-db"
 database_id = "local-dev-placeholder"
 migrations_dir = "../../packages/vault/migrations"
+
+# email domain — D1
+[[d1_databases]]
+binding = "DB_EMAIL"
+database_name = "citizenry-email-db"
+database_id = "local-dev-placeholder"
+migrations_dir = "../../packages/email/migrations"
 
 # secrets — `wrangler secret put`
 #   MIGRATOR_TOKEN   Bearer token required on every request to /apply, /status

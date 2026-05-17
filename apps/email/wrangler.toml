@@ -1,0 +1,32 @@
+name = "citizenry-email"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+[dev]
+port = 13004
+
+# identity — D1. The Worker reads agent_key rows to verify Bearer JWTs.
+[[d1_databases]]
+binding = "DB_IDENTITY"
+database_name = "citizenry-identity-db"
+database_id = "local-dev-placeholder"
+migrations_dir = "../../packages/identity/migrations"
+
+# email — D1. Email-domain storage.
+[[d1_databases]]
+binding = "DB_EMAIL"
+database_name = "citizenry-email-db"
+database_id = "local-dev-placeholder"
+migrations_dir = "../../packages/email/migrations"
+
+[vars]
+# JWT audience(s) accepted by this Worker. Comma-separated.
+JWT_AUDIENCE = "mail.citizenry.id,citizenry-email"
+# Outbound default-From host. When a sender omits `from`, the address
+# becomes `<account_id>@<EMAIL_DOMAIN>`.
+EMAIL_DOMAIN = "citizenry.id"
+
+# secrets — `wrangler secret put`
+#   RESEND_API_KEY   Provider key for the Resend sender. Optional — unset means
+#                    outbound is logged-only and rows land with deliveryStatus='queued'.

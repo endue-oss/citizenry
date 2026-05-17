@@ -1,0 +1,25 @@
+{
+  "name": "@citizenry/email",
+  "version": "0.0.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/db/schema.ts",
+    "./service": "./src/service/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@citizenry/identity": "workspace:*",
+    "drizzle-orm": "^0.36.4",
+    "hono": "^4.6.10",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260516.0",
+    "typescript": "^5.6.3"
+  }
+}

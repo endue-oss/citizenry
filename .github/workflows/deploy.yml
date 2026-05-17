@@ -15,17 +15,25 @@ name: Deploy to Cloudflare
 #                              deploy uses (or generates) the value in D1 `_config`.
 #   SERVICE_KEY              — Override the auto-generated PSK shared between api
 #                              and admin-api. Otherwise same as above.
+#   RESEND_API_KEY           — Resend provider key for citizenry-mail outbound.
+#                              Unset = log-only sender (no actual delivery).
 #
 # Without ENROLLMENT_PEPPER / SERVICE_KEY set, each deploy reads (or
-# bootstraps) the values from D1 `citizenry-identity._config` and pushes
-# them to the matching Worker secrets — no GitHub-side configuration
-# needed for either. Inspect from CF anytime:
-#   wrangler d1 execute citizenry-identity --remote \
+# bootstraps) the values from D1 `${SERVICE_PREFIX}-identity-db._config`
+# (default `citizenry-identity-db`) and pushes them to the matching Worker
+# secrets — no GitHub-side configuration needed for either. Inspect from
+# CF anytime:
+#   wrangler d1 execute citizenry-identity-db --remote \
 #     --command="SELECT key, value FROM _config;"
 #
 # Optional GitHub variables (vars, not secrets) — control [vars] blocks in wrangler.toml:
+#   SERVICE_PREFIX   e.g. "acme" — overrides the "citizenry" prefix used in
+#                    Worker / D1 resource names. Forks sharing a Cloudflare
+#                    account use this to keep resources distinct.
 #   ISSUER_HOST      e.g. "id.example.com" (default: keep wrangler.toml value)
 #   JWT_AUDIENCE     e.g. "api.id.example.com,citizenry-id" (default: keep wrangler.toml value)
+#   EMAIL_DOMAIN     e.g. "mail.example.com" — recipient host for inbound email
+#                    and default From host for outbound (default: keep wrangler.toml value)
 #   API_BASE_URL     URL of api that admin-api calls (default: auto-detected workers.dev subdomain)
 #
 # See docs/deploy.md for a full walkthrough.
@@ -56,6 +64,8 @@ jobs:
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      # Default "citizenry". Set vars.SERVICE_PREFIX to fork the resource names.
+      SERVICE_PREFIX: ${{ vars.SERVICE_PREFIX || 'citizenry' }}
       WRANGLER_SEND_METRICS: 'false'
 
     steps:
@@ -108,14 +118,17 @@ jobs:
             exit 1
           fi
           echo "subdomain=$sub" >> "$GITHUB_OUTPUT"
-          echo "api_url=https://citizenry-api.${sub}.workers.dev" >> "$GITHUB_OUTPUT"
+          echo "api_url=https://${SERVICE_PREFIX}-api.${sub}.workers.dev" >> "$GITHUB_OUTPUT"
+          echo "migrator_url=https://${SERVICE_PREFIX}-migrator.${sub}.workers.dev" >> "$GITHUB_OUTPUT"
 
       - name: Render wrangler.toml with real IDs
         env:
           D1_VAULT_ID: ${{ steps.provision.outputs.d1_vault_id }}
           D1_IDENTITY_ID: ${{ steps.provision.outputs.d1_identity_id }}
+          D1_EMAIL_ID: ${{ steps.provision.outputs.d1_email_id }}
           ISSUER_HOST: ${{ vars.ISSUER_HOST }}
           JWT_AUDIENCE: ${{ vars.JWT_AUDIENCE }}
+          EMAIL_DOMAIN: ${{ vars.EMAIL_DOMAIN }}
           # URL that admin-api proxies to. Repo variable wins; otherwise the
           # workers.dev subdomain resolved above.
           API_BASE_URL: ${{ vars.API_BASE_URL || steps.subdomain.outputs.api_url }}
@@ -145,7 +158,7 @@ jobs:
 
       - name: Apply migrations via migrator
         env:
-          URL: https://citizenry-migrator.${{ steps.subdomain.outputs.subdomain }}.workers.dev
+          URL: ${{ steps.subdomain.outputs.migrator_url }}
           TOKEN: ${{ steps.migrator_token.outputs.token }}
         run: |
           set -eo pipefail
@@ -176,19 +189,25 @@ jobs:
             exit 1
           fi
 
-      - name: Build SvelteKit apps
+      - name: Build SvelteKit apps and static docs site
         run: |
           pnpm --filter @citizenry/web run build
           pnpm --filter @citizenry/admin-web run build
+          pnpm --filter @citizenry/docs run build
 
-      - name: Deploy Workers (api, admin-api, mcp)
+      - name: Deploy Workers (api, admin-api, mcp, email)
         run: |
           set -e
-          for app in api admin-api mcp; do
+          for app in api admin-api mcp email; do
             echo "::group::deploy $app"
             (cd "apps/$app" && pnpm exec wrangler deploy)
             echo "::endgroup::"
           done
+
+      - name: Deploy Pages (docs)
+        env:
+          GITHUB_SHA: ${{ github.sha }}
+        run: ./scripts/ci/deploy-pages.sh docs
 
       - name: Bootstrap Worker secrets (from D1 _config, or generate)
         env:
@@ -196,27 +215,33 @@ jobs:
           # values in D1 `citizenry-identity._config`.
           ENROLLMENT_PEPPER: ${{ secrets.ENROLLMENT_PEPPER }}
           SERVICE_KEY: ${{ secrets.SERVICE_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
         run: ./scripts/ci/bootstrap-secrets.sh
 
       - name: Deploy Pages (web, admin-web)
         env:
           GITHUB_SHA: ${{ github.sha }}
-        run: ./scripts/ci/deploy-pages.sh
+        run: ./scripts/ci/deploy-pages.sh web admin-web
 
       - name: Deployment summary
         if: success()
         env:
           SUBDOMAIN: ${{ steps.subdomain.outputs.subdomain }}
         run: |
+          P="$SERVICE_PREFIX"
           {
             echo "## ✓ Deployment complete"
             echo ""
+            echo "Service prefix: \`${P}\`"
+            echo ""
             echo "| Service | Type | Default endpoint |"
             echo "|---|---|---|"
-            echo "| citizenry-migrator  | Worker | \`citizenry-migrator.${SUBDOMAIN}.workers.dev\` |"
-            echo "| citizenry-api       | Worker | \`citizenry-api.${SUBDOMAIN}.workers.dev\` |"
-            echo "| citizenry-admin-api | Worker | \`citizenry-admin-api.${SUBDOMAIN}.workers.dev\` |"
-            echo "| citizenry-mcp       | Worker | \`citizenry-mcp.${SUBDOMAIN}.workers.dev\` |"
-            echo "| citizenry-web       | Pages  | \`citizenry-web.pages.dev\` |"
-            echo "| citizenry-admin-web | Pages  | \`citizenry-admin-web.pages.dev\` |"
+            echo "| ${P}-migrator  | Worker | \`${P}-migrator.${SUBDOMAIN}.workers.dev\` |"
+            echo "| ${P}-api       | Worker | \`${P}-api.${SUBDOMAIN}.workers.dev\` |"
+            echo "| ${P}-admin-api | Worker | \`${P}-admin-api.${SUBDOMAIN}.workers.dev\` |"
+            echo "| ${P}-mcp       | Worker | \`${P}-mcp.${SUBDOMAIN}.workers.dev\` |"
+            echo "| ${P}-email     | Worker | \`${P}-email.${SUBDOMAIN}.workers.dev\` |"
+            echo "| ${P}-web       | Pages  | \`${P}-web.pages.dev\` |"
+            echo "| ${P}-admin-web | Pages  | \`${P}-admin-web.pages.dev\` |"
+            echo "| ${P}-docs      | Pages  | \`${P}-docs.pages.dev\` |"
           } >> "$GITHUB_STEP_SUMMARY"

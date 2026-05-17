@@ -5,10 +5,20 @@
 // Required env:
 //   D1_VAULT_ID     UUID returned by provision.mjs
 //   D1_IDENTITY_ID  UUID returned by provision.mjs
+//   D1_EMAIL_ID     UUID returned by provision.mjs
+//
+// Optional env:
+//   SERVICE_PREFIX  Override the default "citizenry" prefix used in worker
+//                   and D1 names. Substitutes leading `citizenry-` in any
+//                   `name = "citizenry-..."` and `database_name = "citizenry-..."`
+//                   line, keeping the suffix intact. JWT_AUDIENCE / ISSUER_HOST
+//                   and other vars are not touched — those are protocol-level
+//                   values, not infrastructure names.
 //
 // Optional env (override [vars] blocks):
 //   ISSUER_HOST     defaults to the value already in wrangler.toml
 //   JWT_AUDIENCE    defaults to the value already in wrangler.toml
+//   EMAIL_DOMAIN     defaults to the value already in wrangler.toml
 //
 // Optional env (admin-api):
 //   API_BASE_URL    overrides admin-api's [vars] API_BASE_URL — usually the api
@@ -18,16 +28,27 @@
 //   apps/api/wrangler.toml         — DB_VAULT, DB_IDENTITY
 //   apps/admin-api/wrangler.toml   — vars only (no direct DB access)
 //   apps/mcp/wrangler.toml         — no DB bindings
-//   apps/migrator/wrangler.toml    — DB_VAULT, DB_IDENTITY (migration runner worker)
+//   apps/email/wrangler.toml        — DB_IDENTITY, DB_EMAIL
+//   apps/migrator/wrangler.toml    — DB_IDENTITY, DB_VAULT, DB_EMAIL (migration runner)
 //
 // The replacement is anchored on `binding = "..."`, so only the intended binding is touched.
 
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 
-const { D1_VAULT_ID, D1_IDENTITY_ID, ISSUER_HOST, JWT_AUDIENCE, API_BASE_URL } = process.env
+const {
+  D1_VAULT_ID,
+  D1_IDENTITY_ID,
+  D1_EMAIL_ID,
+  ISSUER_HOST,
+  JWT_AUDIENCE,
+  EMAIL_DOMAIN,
+  API_BASE_URL,
+} = process.env
 
-if (!D1_VAULT_ID || !D1_IDENTITY_ID) {
-  console.error('::error::render-wrangler.mjs: D1_VAULT_ID and D1_IDENTITY_ID required')
+const SERVICE_PREFIX = process.env.SERVICE_PREFIX || 'citizenry'
+
+if (!D1_VAULT_ID || !D1_IDENTITY_ID || !D1_EMAIL_ID) {
+  console.error('::error::render-wrangler.mjs: D1_VAULT_ID, D1_IDENTITY_ID, and D1_EMAIL_ID required')
   process.exit(1)
 }
 
@@ -35,6 +56,7 @@ const TARGETS = [
   'apps/api/wrangler.toml',
   'apps/admin-api/wrangler.toml',
   'apps/mcp/wrangler.toml',
+  'apps/email/wrangler.toml',
   'apps/migrator/wrangler.toml',
 ]
 
@@ -51,6 +73,19 @@ function patchVar(content, key, value) {
   return content.replace(new RegExp(`(${key}\\s*=\\s*)"[^"]*"`, 'g'), `$1"${value}"`)
 }
 
+/**
+ * Substitute the resource-name prefix in `name = "citizenry-..."` and
+ * `database_name = "citizenry-..."` lines. No-op when SERVICE_PREFIX is
+ * left at the default ("citizenry") — the committed file already has the
+ * right value.
+ */
+function patchPrefix(content, prefix) {
+  if (prefix === 'citizenry') return content
+  return content
+    .replace(/(^|\n)(\s*name\s*=\s*)"citizenry-/g, `$1$2"${prefix}-`)
+    .replace(/(^|\n)(\s*database_name\s*=\s*)"citizenry-/g, `$1$2"${prefix}-`)
+}
+
 let changed = 0
 for (const path of TARGETS) {
   if (!existsSync(path)) continue
@@ -58,8 +93,11 @@ for (const path of TARGETS) {
   let after = before
   after = patchD1(after, 'DB_VAULT', D1_VAULT_ID)
   after = patchD1(after, 'DB_IDENTITY', D1_IDENTITY_ID)
+  after = patchD1(after, 'DB_EMAIL', D1_EMAIL_ID)
+  after = patchPrefix(after, SERVICE_PREFIX)
   after = patchVar(after, 'ISSUER_HOST', ISSUER_HOST)
   after = patchVar(after, 'JWT_AUDIENCE', JWT_AUDIENCE)
+  after = patchVar(after, 'EMAIL_DOMAIN', EMAIL_DOMAIN)
   after = patchVar(after, 'API_BASE_URL', API_BASE_URL)
   if (after !== before) {
     writeFileSync(path, after)
@@ -69,4 +107,4 @@ for (const path of TARGETS) {
     console.log(`no changes for ${path}`)
   }
 }
-console.log(`\n${changed} file(s) patched`)
+console.log(`\nprefix=${SERVICE_PREFIX}, ${changed} file(s) patched`)

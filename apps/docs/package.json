@@ -1,0 +1,20 @@
+{
+  "name": "@citizenry/docs",
+  "version": "0.0.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "dev": "node build.mjs && wrangler pages dev dist --port 8790 --ip 127.0.0.1",
+    "deploy": "wrangler pages deploy dist",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@citizenry/spec": "workspace:*"
+  },
+  "devDependencies": {
+    "@scalar/api-reference": "^1.57.2",
+    "wrangler": "^4.0.0"
+  }
+}

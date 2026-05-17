@@ -2,7 +2,8 @@
 # Bootstrap instance secrets with zero user input.
 #
 # Policy:
-#   - D1 table `_config` (in citizenry-identity) is the source of truth —
+#   - D1 table `_config` (in ${PREFIX}-identity-db, default citizenry-identity-db)
+#     is the source of truth —
 #     once a value lands there, it persists for the life of the database.
 #   - Every deploy reads `_config`, copies values into Worker secrets so
 #     runtime code can use them. If a key is missing, a fresh random value
@@ -15,23 +16,31 @@
 #   service_key        → apps/api         SERVICE_KEY
 #                       apps/admin-api   SERVICE_KEY    (same value)
 #
+# Operator-supplied (no auto-gen — outbound email stays log-only until set):
+#   RESEND_API_KEY     → apps/email        RESEND_API_KEY
+#
 # Inspect values:
-#   wrangler d1 execute citizenry-identity --remote \
+#   wrangler d1 execute citizenry-identity-db --remote \
 #     --command="SELECT key, value FROM _config;"
-#   (or open Cloudflare Dashboard → D1 → citizenry-identity → Console.)
+#   (or open Cloudflare Dashboard → D1 → ${PREFIX}-identity-db → Console.)
 #
 # Rotate a value:
-#   wrangler d1 execute citizenry-identity --remote \
+#   wrangler d1 execute citizenry-identity-db --remote \
 #     --command="DELETE FROM _config WHERE key='...';"
 #   The next deploy generates and pushes a new random value.
 #
 # Required env: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID
-# Optional env (overrides): ENROLLMENT_PEPPER, SERVICE_KEY
+# Optional env: SERVICE_PREFIX (default "citizenry") — controls the D1 name
+#               that holds the `_config` table. Must match what
+#               provision.mjs / render-wrangler.mjs used.
+# Optional env (overrides):   ENROLLMENT_PEPPER, SERVICE_KEY
+# Optional env (pass-through): RESEND_API_KEY (pushed verbatim when present)
 # Prereq: D1 migrations applied — `_config` table must exist before this runs.
 
 set -euo pipefail
 
-D1_NAME="citizenry-identity"
+PREFIX="${SERVICE_PREFIX:-citizenry}"
+D1_NAME="${PREFIX}-identity-db"
 # `wrangler d1 execute` reads wrangler.toml from the caller's cwd.
 WORK_DIR="apps/api"
 
@@ -102,6 +111,19 @@ echo "::add-mask::$service_key"
 push_secret apps/api       SERVICE_KEY "$service_key"
 push_secret apps/admin-api SERVICE_KEY "$service_key"
 echo "::endgroup::"
+
+# ── RESEND_API_KEY (apps/email, operator-supplied only) ─────────────
+# Resend is an external provider credential, so there's no auto-gen
+# fallback. When unset, apps/email uses its LogOnlySender — outbound
+# emails are written to D1 with deliveryStatus='queued' and only logged.
+if [[ -n "${RESEND_API_KEY:-}" ]]; then
+  echo "::group::RESEND_API_KEY"
+  echo "::add-mask::$RESEND_API_KEY"
+  push_secret apps/email RESEND_API_KEY "$RESEND_API_KEY"
+  echo "::endgroup::"
+else
+  echo "RESEND_API_KEY not set — apps/email will use the log-only sender."
+fi
 
 echo
 echo "✓ Bootstrap complete. Values persist in D1 \`$D1_NAME._config\`."

@@ -154,12 +154,51 @@ The same table is rendered in the Summary of every workflow run.
 
 ## Adding migrations later
 
-Add SQL files under `packages/vault/migrations/` or
-`packages/identity/migrations/`. Each file must be idempotent
-(`CREATE ... IF NOT EXISTS`).
+Add SQL files under `packages/identity/migrations/`,
+`packages/vault/migrations/`, or `packages/mail/migrations/`. Each file
+must be idempotent (`CREATE ... IF NOT EXISTS`).
 
 The next deploy applies them via `wrangler d1 migrations apply`, which
 uses its tracking table to skip files that are already present.
+
+## Enabling email (optional)
+
+`apps/mail` is deployed unconditionally, but inbound mail delivery and
+outbound sending each need a one-time setup. Skip this section and the
+worker is still reachable — `GET /_health` works, outbound goes through
+the log-only sender, inbound never fires because no MX records point at
+Cloudflare.
+
+### Inbound (Cloudflare Email Routing)
+
+1. **Dashboard → Email → Email Routing** for the zone matching your
+   `MAIL_DOMAIN` GitHub variable (e.g. `mail.example.com`).
+2. Enable Email Routing. Cloudflare auto-suggests three MX records —
+   add them to your zone.
+3. Create one routing rule:
+   - **Match** `*@<MAIL_DOMAIN>` (catch-all)
+   - **Action** *Send to a Worker* → pick `citizenry-mail`
+4. Verify with a test message. `citizenry-mail`'s `email()` handler
+   resolves the local-part against `identity.agent.slug`; unknown
+   recipients are dropped silently (see
+   [`apps/mail/src/inbound/handler.ts`](../apps/mail/src/inbound/handler.ts)).
+
+No `wrangler.toml` block is needed — the routing rule lives only in
+Cloudflare's configuration and survives redeploys.
+
+### Outbound (Resend)
+
+1. Sign up at [resend.com](https://resend.com), verify your sending
+   domain, and create an API key.
+2. Add a GitHub repository **secret** named `RESEND_API_KEY` with that
+   value.
+3. Re-run the workflow. `scripts/ci/bootstrap-secrets.sh` pushes the
+   secret to `citizenry-mail`; subsequent `POST /emails` calls deliver
+   via Resend instead of falling back to the log-only sender.
+
+To rotate the key, update the GitHub secret and redeploy. To remove it,
+delete the secret in GitHub and run `wrangler secret delete
+RESEND_API_KEY` against `citizenry-mail`.
 
 ## Custom domains
 

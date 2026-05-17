@@ -160,17 +160,22 @@ jobs:
           TOKEN: ${{ steps.migrator_token.outputs.token }}
         run: |
           set -eo pipefail
-          # Warm up /_health before /apply — the worker was just deployed.
+          # Warm up /status before /apply — hitting an auth-gated route also
+          # confirms the just-uploaded MIGRATOR_TOKEN has propagated to the
+          # edge (the unauth /_health endpoint says nothing about secrets).
           for i in 1 2 3 4 5 6 7 8 9 10; do
-            if curl -fsSL "$URL/_health" >/tmp/health.json; then
-              cat /tmp/health.json
+            http=$(curl -sS -o /tmp/status.json -w '%{http_code}' \
+              "$URL/status" -H "Authorization: Bearer $TOKEN" --max-time 30 || true)
+            if [[ "$http" == "200" ]]; then
+              cat /tmp/status.json
               break
             fi
             if [[ "$i" == "10" ]]; then
-              echo "::error::migrator did not respond on $URL/_health"
+              echo "::error::migrator /status not ready (last HTTP $http) on $URL"
+              cat /tmp/status.json 2>/dev/null || true
               exit 1
             fi
-            echo "attempt $i: migrator not ready, retrying in ${i}s…"
+            echo "attempt $i: migrator HTTP $http, retrying in ${i}s…"
             sleep "$i"
           done
 

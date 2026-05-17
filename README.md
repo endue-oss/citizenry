@@ -77,8 +77,9 @@ Or push any commit to `main`.
 > step 1, replace it in the URL bar with your GitHub username, or just
 > navigate within your new repo.
 
-Five things come up on your Cloudflare account: three small services,
-two web sites, two databases — all set up for you during the deploy.
+A handful of things come up on your Cloudflare account: a few small
+services, an admin console, and two databases — all set up for you
+during the deploy.
 Full walkthrough in [`docs/deploy.md`](./docs/deploy.md).
 
 ---
@@ -141,8 +142,7 @@ apps/
   admin-api/    admin API Worker
   mcp/          MCP gateway
   migrator/     migration Worker
-  web/          user-facing SvelteKit → Cloudflare Pages
-  admin-web/    admin SvelteKit → Cloudflare Pages
+  admin-web/    admin SvelteKit → Cloudflare Pages (ops console)
 
 packages/
   spec/         TypeSpec → OpenAPI 3 + zod + types

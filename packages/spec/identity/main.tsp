@@ -28,7 +28,7 @@ using TypeSpec.OpenAPI;
  * | zone | base | responsibility |
  * |------|------|----------------|
  * | sub  | `https://api.citizenry.id/identity` | all module APIs (`/v1/...`) |
- * | apex | `https://citizenry.id`             | issuer well-known (`/.well-known/jwks.json`, `/.well-known/did.json`) — prod only |
+ * | apex | `https://citizenry.id`             | issuer well-known (`/.well-known/jwks.json` — instance federation keys, *not* per-agent; `/.well-known/did.json`) — prod only |
  *
  * # Authentication
  *

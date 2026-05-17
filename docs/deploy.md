@@ -15,8 +15,7 @@ no Postgres, no Hyperdrive.
 | `citizenry-api`       | Workers | `DB_IDENTITY` (D1), `DB_VAULT` (D1)              |
 | `citizenry-admin-api` | Workers | none — proxies to api `/_admin/*` via SERVICE_KEY |
 | `citizenry-mcp`       | Workers | —                                                |
-| `citizenry-web`       | Pages   | static SvelteKit user web                        |
-| `citizenry-admin-web` | Pages   | static SvelteKit admin web                       |
+| `citizenry-admin-web` | Pages   | static SvelteKit admin console (ops-only)        |
 
 Storage:
 
@@ -128,8 +127,8 @@ On the first run, the workflow:
 3. Applies migrations to both D1 databases via
    `wrangler d1 migrations apply`.
 4. Builds and deploys the three Workers (`api`, `admin-api`, `mcp`).
-5. Builds the two SvelteKit apps and deploys them as Cloudflare Pages
-   projects.
+5. Builds the SvelteKit Pages apps (`admin-web`, `docs`) and deploys
+   them as Cloudflare Pages projects.
 6. Pushes Worker secrets, auto-generating any value that's missing.
 
 Subsequent runs are idempotent:
@@ -147,7 +146,6 @@ After a successful run (`<sub>` = your `*.workers.dev` subdomain):
 - `https://citizenry-api.<sub>.workers.dev`
 - `https://citizenry-admin-api.<sub>.workers.dev`
 - `https://citizenry-mcp.<sub>.workers.dev`
-- `https://citizenry-web.pages.dev`
 - `https://citizenry-admin-web.pages.dev`
 
 The same table is rendered in the Summary of every workflow run.

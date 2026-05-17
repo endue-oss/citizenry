@@ -18,21 +18,18 @@ export interface JwkSet {
 }
 
 /**
- * JWKS builder.
+ * Per-agent JWKS builder.
  *
- * Not implemented — the issuer JWKS aggregates active+rotated keys from every registered
- * agent (will need caching / physical split for performance). The agent JWKS contains
- * only the active+rotated keys of a single agent.
+ * Per ADR-2026-0003 there is no aggregate-over-all-agents JWKS. Verifiers
+ * resolve the JWT `iss` claim to `/agent/{iss}/jwks.json` and look up the
+ * single key matching `header.kid`. The instance-level federation JWKS at
+ * `/.well-known/jwks.json` is a separate, bounded key set and is not
+ * served from this service.
  */
 export const createJwksService = (deps: { db: Db }) => {
   const keys = createAgentKeyRepo(deps.db)
 
   return {
-    /** Whole-issuer JWKS — `/.well-known/jwks.json`. */
-    issuer: async (): Promise<JwkSet> => {
-      throw new Error('not implemented')
-    },
-
     /** Single-agent JWKS — `/agent/{id}/jwks.json`. */
     agent: async (agentId: string): Promise<JwkSet> => {
       const rows = await keys.listValidByAgent(agentId)

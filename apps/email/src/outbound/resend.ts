@@ -1,9 +1,7 @@
-// Outbound providers.
+// Resend and log-only outbound providers.
 //
-// Resend integration is the recommended path — set RESEND_API_KEY and
-// outbound POSTs to https://api.resend.com/emails. When the key is absent,
-// `LogOnlySender` records the call without delivering, so the OSS scaffold
-// works end-to-end without external credentials.
+// Used when the higher-priority Cloudflare binding is unavailable.
+// Selection priority lives in ./index.ts (pickSender).
 
 import type { EmailSender, OutboundMessage } from '@citizenry/email'
 
@@ -68,11 +66,4 @@ export class LogOnlySender implements EmailSender {
 
 function formatAddress(a: { name?: string; email: string }): string {
   return a.name ? `${a.name} <${a.email}>` : a.email
-}
-
-export function pickSender(env: { RESEND_API_KEY?: string }): EmailSender {
-  if (env.RESEND_API_KEY && env.RESEND_API_KEY.length > 0) {
-    return new ResendSender(env.RESEND_API_KEY)
-  }
-  return new LogOnlySender()
 }

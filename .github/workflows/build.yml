@@ -2,7 +2,7 @@ name: Build
 
 # Reusable build job. Produces:
 #   - TypeSpec-generated types under packages/spec/build/*
-#   - SvelteKit Pages bundles for web, admin-web, docs
+#   - SvelteKit Pages bundles for admin-web, docs
 #
 # Page bundles are uploaded as a single `page-bundles` artifact so
 # deploy-pages can fan out without rebuilding.
@@ -27,7 +27,6 @@ jobs:
 
       - name: Build Pages bundles
         run: |
-          pnpm --filter @citizenry/web       run build
           pnpm --filter @citizenry/admin-web run build
           pnpm --filter @citizenry/docs      run build
 
@@ -41,7 +40,6 @@ jobs:
         with:
           name: page-bundles
           path: |
-            apps/web/.svelte-kit
             apps/admin-web/.svelte-kit
             apps/docs/dist
           include-hidden-files: true

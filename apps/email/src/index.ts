@@ -19,7 +19,7 @@ import type { Bindings } from './env'
 import { emailDb, type EmailVars } from './db'
 import { bearerAuth, type AuthVars } from './middleware/auth'
 import { handleInboundEmail } from './inbound/handler'
-import { pickSender } from './outbound/resend'
+import { pickSender } from './outbound'
 import { mintId } from './ids'
 
 const app = new Hono<{ Bindings: Bindings }>()

@@ -29,8 +29,7 @@ apps/
   admin-api/    admin API Worker (citizenry-admin-api)   — HTTP proxy to api /_admin/* (SERVICE_KEY)
   mcp/          MCP gateway Worker (citizenry-mcp)
   migrator/     migration Worker (citizenry-migrator)    — bearer-guarded /apply against both D1 databases
-  web/          user-facing SvelteKit → Cloudflare Pages
-  admin-web/    admin SvelteKit → Cloudflare Pages
+  admin-web/    admin SvelteKit → Cloudflare Pages (ops-only console; agents use api/mcp directly)
 
 packages/
   spec/         TypeSpec → OpenAPI 3 + zod + types (internal source of truth)
@@ -47,7 +46,7 @@ scripts/ci/
   provision.mjs          list-or-create D1 databases via Cloudflare REST API
   render-wrangler.mjs    patch placeholder database_id into wrangler.toml at CI time
   bootstrap-secrets.sh   read or generate values in D1 `_config`, push to Worker secrets
-  deploy-pages.sh        wrangler pages deploy for the two SvelteKit apps
+  deploy-pages.sh        wrangler pages deploy for the SvelteKit Pages apps
 
 templates/
   adr.md, rfc.md, error-code.md — scaffolds used by the `/docs create` skill

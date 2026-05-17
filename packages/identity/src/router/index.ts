@@ -15,7 +15,7 @@ type Vars = { db: Db } & Partial<FederationVars>
  *   GET    /api/v1/agent/me            (Bearer self-signed JWT)
  *   POST   /api/v1/agent/me/rotate-key (body JWS, old key signed)
  *   DELETE /api/v1/agent/me            (body JWS, current key signed)
- *   GET    /.well-known/jwks.json      (public, no auth)
+ *   GET    /.well-known/jwks.json      (public, no auth — federation/instance only, see ADR-2026-0003)
  *   GET    /.well-known/did.json       (public, no auth)
  *   GET    /agent/:id/jwks.json        (public, no auth)
  *   GET    /agent/:id/did.json         (public, no auth)
@@ -30,6 +30,10 @@ export const identityRouter = new Hono<{ Variables: Vars }>()
   .delete('/api/v1/agent/me', (c) => c.body(null, 204))
 
   // ── Public well-known (issuer) ───────────────────────
+  // /.well-known/jwks.json carries the instance-level federation-signing key set
+  // (RFC-0001 federation peers verify handshake JWS against this). It NEVER contains
+  // per-agent keys — agent verification uses /agent/{iss}/jwks.json (ADR-2026-0003).
+  // Returns an empty set until the federation key issuance work lands.
   .get('/.well-known/jwks.json', (c) => c.json({ keys: [] }))
   .get('/.well-known/did.json', (c) =>
     c.json({

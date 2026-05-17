@@ -16,7 +16,14 @@ namespace Citizenry.Identity;
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 /**
- * Issuer JWK Set — every active and rotated key of this citizenry-id instance.
+ * Instance-level JWK Set — the deployment's own federation-signing keys.
+ *
+ * Per ADR-2026-0003 this endpoint **does not** contain per-agent keys. It carries the
+ * small, bounded set of keys this citizenry-id instance uses to sign federation
+ * peer-to-peer handshakes (RFC-0001). Verifiers of agent JWTs must resolve the JWT
+ * `iss` claim to `/agent/{iss}/jwks.json` instead.
+ *
+ * Returns an empty set until the federation key issuance work lands.
  *
  * @status confirmed
  */
@@ -25,7 +32,7 @@ namespace Citizenry.Identity;
 @useAuth(NoAuth)
 interface IssuerJwks {
   /** Possible errors: 500, 503. */
-  @summary("Issuer JWK Set (all active and rotated keys)")
+  @summary("Instance federation JWK Set (NOT an agent aggregate — see ADR-2026-0003)")
   @operationId("public-issuer-jwks")
   @get read(): JwkSet | InternalError | ServiceUnavailableError;
 }
@@ -47,7 +54,13 @@ interface IssuerDid {
 /**
  * Per-agent JWK Set — active and rotated keys of a single agent.
  *
- * Useful when an RP wants to verify only a specific agent (narrower than the issuer JWKS).
+ * Canonical resolution path for verifying an agent-issued JWT (ADR-2026-0003). A
+ * verifier extracts `iss` from the JWT payload (which equals the agent id, since
+ * citizenry enforces `iss === sub === agent_id`), fetches this endpoint at
+ * `/agent/{iss}/jwks.json`, and picks the JWK whose `kid` matches the token header.
+ *
+ * The response contains only that agent's active and rotated keys — typically one or
+ * two — so verification cost is independent of the total number of registered agents.
  *
  * @status confirmed
  */
@@ -56,7 +69,7 @@ interface IssuerDid {
 @useAuth(NoAuth)
 interface AgentJwks {
   /** Possible errors: 404 (agent_not_found), 500. */
-  @summary("Per-agent JWK Set")
+  @summary("Per-agent JWK Set — canonical resolution path for agent JWTs")
   @operationId("public-agent-jwks")
   @get read(@path id: agentId): JwkSet | NotFoundError | InternalError;
 }

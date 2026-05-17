@@ -27,6 +27,15 @@ JWT_AUDIENCE = "mail.citizenry.id,citizenry-email"
 # becomes `<account_id>@<EMAIL_DOMAIN>`.
 EMAIL_DOMAIN = "citizenry.id"
 
+# Outbound — Cloudflare Email Service (public beta, 2026-04-16).
+# Highest-priority sender; when bound, supersedes RESEND_API_KEY. Requires
+# EMAIL_DOMAIN to be hosted on Cloudflare DNS so CF auto-configures
+# SPF/DKIM/DMARC. Optionally restrict envelope senders with
+# `allowed_sender_addresses = ["noreply@citizenry.id"]`.
+[[send_email]]
+name = "EMAIL"
+
 # secrets — `wrangler secret put`
-#   RESEND_API_KEY   Provider key for the Resend sender. Optional — unset means
-#                    outbound is logged-only and rows land with deliveryStatus='queued'.
+#   RESEND_API_KEY   Optional fallback when the Cloudflare EMAIL binding is
+#                    unavailable. If neither is configured, outbound is
+#                    logged-only and rows land with deliveryStatus='queued'.

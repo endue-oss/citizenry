@@ -9,7 +9,7 @@ name: Deploy to Cloudflare
 #   migrate            deploy migrator worker, apply pending migrations
 #   deploy-workers     deploy api / admin-api / mcp / email (matrix, parallel)
 #   bootstrap-secrets  read or generate _config values, push to Worker secrets
-#   deploy-pages       deploy web / admin-web / docs (matrix, parallel)
+#   deploy-pages       deploy admin-web / docs (matrix, parallel)
 #   summary            render a per-run status table
 #
 # Required GitHub secrets:
@@ -58,7 +58,7 @@ env:
 jobs:
   # ── Build ─────────────────────────────────────────────────────────────
   build:
-    uses: ./.github/workflows/_build.yml
+    uses: ./.github/workflows/build.yml
 
   # ── Provision Cloudflare infra ────────────────────────────────────────
   provision:
@@ -252,7 +252,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        app: [web, admin-web, docs]
+        app: [admin-web, docs]
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
@@ -311,7 +311,6 @@ jobs:
               echo "| ${P}-admin-api | Worker | \`${P}-admin-api.${SUBDOMAIN}.workers.dev\` |"
               echo "| ${P}-mcp       | Worker | \`${P}-mcp.${SUBDOMAIN}.workers.dev\` |"
               echo "| ${P}-email     | Worker | \`${P}-email.${SUBDOMAIN}.workers.dev\` |"
-              echo "| ${P}-web       | Pages  | \`${P}-web.pages.dev\` |"
               echo "| ${P}-admin-web | Pages  | \`${P}-admin-web.pages.dev\` |"
               echo "| ${P}-docs      | Pages  | \`${P}-docs.pages.dev\` |"
             fi

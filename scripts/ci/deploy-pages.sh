@@ -2,7 +2,7 @@
 # Deploy citizenry Cloudflare Pages projects.
 #
 # Usage: deploy-pages.sh <app>...
-#   apps: web, admin-web, docs
+#   apps: admin-web, docs
 #
 # Creates the Pages project on first run, then uploads the build output.
 # Required env: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, GITHUB_SHA
@@ -13,7 +13,7 @@ set -euo pipefail
 : "${CLOUDFLARE_ACCOUNT_ID:?required}"
 
 if [[ $# -eq 0 ]]; then
-  echo "::error::usage: $0 <app>... (apps: web, admin-web, docs)" >&2
+  echo "::error::usage: $0 <app>... (apps: admin-web, docs)" >&2
   exit 1
 fi
 
@@ -56,11 +56,10 @@ deploy_pages_app() {
 
 for app in "$@"; do
   case $app in
-    web)       deploy_pages_app apps/web       @citizenry/web       citizenry-web ;;
     admin-web) deploy_pages_app apps/admin-web @citizenry/admin-web citizenry-admin-web ;;
     docs)      deploy_pages_app apps/docs      @citizenry/docs      citizenry-docs apps/docs/dist ;;
     *)
-      echo "::error::unknown app: $app (apps: web, admin-web, docs)" >&2
+      echo "::error::unknown app: $app (apps: admin-web, docs)" >&2
       exit 1
       ;;
   esac

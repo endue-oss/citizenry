@@ -22,8 +22,9 @@ Run it yourself on Cloudflare. Fully open source(no strings attached !).
 
 Citizenry is an open, run-it-yourself **citizenship office** for AI
 agents. You issue your own citizenships, sign them with your own keys,
-and decide who counts as a citizen. No middleman. No company holding
-your data. Just open standards running on Cloudflare.
+and decide who counts as a citizen. No middleman.
+
+Just open standards running on Cloudflare.
 
 ## What you get
 

@@ -1,42 +1,35 @@
 name: Deploy to Cloudflare
 
-# Runs on every push to main and on manual dispatch.
-# Provisions Cloudflare resources (two D1 databases) idempotently, deploys
-# the application Workers, applies D1 migrations via wrangler, then deploys
-# the Pages projects.
+# Production deploy. Runs on every push to main and on manual dispatch.
+# The pipeline is split into focused jobs so each stage's purpose is
+# obvious from its name and `needs:` chain:
+#
+#   build              build spec + Pages bundles (reusable workflow)
+#   provision          create D1 databases, resolve workers.dev subdomain
+#   migrate            deploy migrator worker, apply pending migrations
+#   deploy-workers     deploy api / admin-api / mcp / email (matrix, parallel)
+#   bootstrap-secrets  read or generate _config values, push to Worker secrets
+#   deploy-pages       deploy web / admin-web / docs (matrix, parallel)
+#   summary            render a per-run status table
 #
 # Required GitHub secrets:
-#   CLOUDFLARE_API_TOKEN     scoped token: Workers Scripts, Pages, D1 (Edit)
+#   CLOUDFLARE_API_TOKEN     Workers Scripts + Pages + D1 (Edit), Workers Subdomain (Read)
 #   CLOUDFLARE_ACCOUNT_ID    Cloudflare account ID
 #
 # Optional GitHub secrets:
-#   MIGRATOR_TOKEN           — Bearer token for citizenry-migrator (auto-rotated per deploy if unset).
-#   ENROLLMENT_PEPPER        — Override the auto-generated pepper. Otherwise the
-#                              deploy uses (or generates) the value in D1 `_config`.
-#   SERVICE_KEY              — Override the auto-generated PSK shared between api
-#                              and admin-api. Otherwise same as above.
-#   RESEND_API_KEY           — Resend provider key for citizenry-mail outbound.
-#                              Unset = log-only sender (no actual delivery).
+#   MIGRATOR_TOKEN     Pin a stable bearer for the migrator; auto-rotated when unset.
+#   ENROLLMENT_PEPPER  Override the auto-generated pepper stored in D1 `_config`.
+#   SERVICE_KEY        Override the auto-generated api ↔ admin-api PSK.
+#   RESEND_API_KEY     Resend key for outbound email; log-only when unset.
 #
-# Without ENROLLMENT_PEPPER / SERVICE_KEY set, each deploy reads (or
-# bootstraps) the values from D1 `${SERVICE_PREFIX}-identity-db._config`
-# (default `citizenry-identity-db`) and pushes them to the matching Worker
-# secrets — no GitHub-side configuration needed for either. Inspect from
-# CF anytime:
-#   wrangler d1 execute citizenry-identity-db --remote \
-#     --command="SELECT key, value FROM _config;"
+# Optional GitHub variables (vars):
+#   SERVICE_PREFIX   Resource-name prefix for forks (default "citizenry").
+#   ISSUER_HOST      Override the value in wrangler.toml.
+#   JWT_AUDIENCE     Override the value in wrangler.toml.
+#   EMAIL_DOMAIN     Override the value in wrangler.toml.
+#   API_BASE_URL     URL admin-api proxies to (defaults to the workers.dev URL).
 #
-# Optional GitHub variables (vars, not secrets) — control [vars] blocks in wrangler.toml:
-#   SERVICE_PREFIX   e.g. "acme" — overrides the "citizenry" prefix used in
-#                    Worker / D1 resource names. Forks sharing a Cloudflare
-#                    account use this to keep resources distinct.
-#   ISSUER_HOST      e.g. "id.example.com" (default: keep wrangler.toml value)
-#   JWT_AUDIENCE     e.g. "api.id.example.com,citizenry-id" (default: keep wrangler.toml value)
-#   EMAIL_DOMAIN     e.g. "mail.example.com" — recipient host for inbound email
-#                    and default From host for outbound (default: keep wrangler.toml value)
-#   API_BASE_URL     URL of api that admin-api calls (default: auto-detected workers.dev subdomain)
-#
-# See docs/deploy.md for a full walkthrough.
+# See docs/deploy.md for the adopter walkthrough.
 
 on:
   workflow_dispatch:
@@ -53,21 +46,34 @@ concurrency:
   group: deploy-${{ github.ref }}
   cancel-in-progress: false
 
+env:
+  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+  SERVICE_PREFIX: ${{ vars.SERVICE_PREFIX || 'citizenry' }}
+  ISSUER_HOST: ${{ vars.ISSUER_HOST }}
+  JWT_AUDIENCE: ${{ vars.JWT_AUDIENCE }}
+  EMAIL_DOMAIN: ${{ vars.EMAIL_DOMAIN }}
+  WRANGLER_SEND_METRICS: 'false'
+
 jobs:
-  deploy:
-    name: Deploy
+  # ── Build ─────────────────────────────────────────────────────────────
+  build:
+    uses: ./.github/workflows/_build.yml
+
+  # ── Provision Cloudflare infra ────────────────────────────────────────
+  provision:
+    name: Provision D1 and resolve subdomain
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 5
     permissions:
       contents: read
-
-    env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      # Default "citizenry". Set vars.SERVICE_PREFIX to fork the resource names.
-      SERVICE_PREFIX: ${{ vars.SERVICE_PREFIX || 'citizenry' }}
-      WRANGLER_SEND_METRICS: 'false'
-
+    outputs:
+      d1_identity_id: ${{ steps.d1.outputs.d1_identity_id }}
+      d1_vault_id: ${{ steps.d1.outputs.d1_vault_id }}
+      d1_email_id: ${{ steps.d1.outputs.d1_email_id }}
+      subdomain: ${{ steps.subdomain.outputs.subdomain }}
+      api_url: ${{ steps.subdomain.outputs.api_url }}
+      migrator_url: ${{ steps.subdomain.outputs.migrator_url }}
     steps:
       - name: Verify required secrets
         run: |
@@ -80,26 +86,10 @@ jobs:
             exit 1
           fi
 
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build spec (TypeSpec → generated types)
-        run: pnpm --filter @citizenry/spec run build
-
-      - name: Provision Cloudflare D1 databases (identity + vault)
-        id: provision
+      - name: Provision D1 databases (identity + vault + email)
+        id: d1
         run: node scripts/ci/provision.mjs
 
       - name: Resolve workers.dev subdomain
@@ -109,41 +99,45 @@ jobs:
           resp=$(curl -fsSL \
             -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
             "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/subdomain")
-          sub=$(echo "$resp" | jq -r '.result.subdomain')
+          sub=$(jq -r '.result.subdomain' <<<"$resp")
           if [[ -z "$sub" || "$sub" == "null" ]]; then
             echo "::error::Failed to resolve workers.dev subdomain"
             echo "$resp"
             exit 1
           fi
-          echo "subdomain=$sub" >> "$GITHUB_OUTPUT"
-          echo "api_url=https://${SERVICE_PREFIX}-api.${sub}.workers.dev" >> "$GITHUB_OUTPUT"
-          echo "migrator_url=https://${SERVICE_PREFIX}-migrator.${sub}.workers.dev" >> "$GITHUB_OUTPUT"
+          {
+            echo "subdomain=$sub"
+            echo "api_url=https://${SERVICE_PREFIX}-api.${sub}.workers.dev"
+            echo "migrator_url=https://${SERVICE_PREFIX}-migrator.${sub}.workers.dev"
+          } >> "$GITHUB_OUTPUT"
 
-      - name: Render wrangler.toml with real IDs
-        env:
-          D1_VAULT_ID: ${{ steps.provision.outputs.d1_vault_id }}
-          D1_IDENTITY_ID: ${{ steps.provision.outputs.d1_identity_id }}
-          D1_EMAIL_ID: ${{ steps.provision.outputs.d1_email_id }}
-          ISSUER_HOST: ${{ vars.ISSUER_HOST }}
-          JWT_AUDIENCE: ${{ vars.JWT_AUDIENCE }}
-          EMAIL_DOMAIN: ${{ vars.EMAIL_DOMAIN }}
-          # URL that admin-api proxies to. Repo variable wins; otherwise the
-          # workers.dev subdomain resolved above.
-          API_BASE_URL: ${{ vars.API_BASE_URL || steps.subdomain.outputs.api_url }}
-        run: node scripts/ci/render-wrangler.mjs
+  # ── Apply migrations ──────────────────────────────────────────────────
+  migrate:
+    name: Apply D1 migrations
+    needs: provision
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: ./.github/actions/setup
+
+      - uses: ./.github/actions/render
+        with:
+          d1_identity_id: ${{ needs.provision.outputs.d1_identity_id }}
+          d1_vault_id: ${{ needs.provision.outputs.d1_vault_id }}
+          d1_email_id: ${{ needs.provision.outputs.d1_email_id }}
+          api_base_url: ${{ vars.API_BASE_URL || needs.provision.outputs.api_url }}
 
       - name: Deploy migrator worker
         run: (cd apps/migrator && pnpm exec wrangler deploy)
 
       - name: Ensure MIGRATOR_TOKEN
-        id: migrator_token
+        id: token
         env:
           MIGRATOR_TOKEN: ${{ secrets.MIGRATOR_TOKEN }}
         run: |
           set -e
-          # When the GitHub secret is set, push that value. Otherwise generate a
-          # fresh token every deploy (overwrites the prior one). Pin via the GH
-          # secret if you need a stable token across deploys.
           if [[ -n "$MIGRATOR_TOKEN" ]]; then
             token="$MIGRATOR_TOKEN"
           else
@@ -154,15 +148,15 @@ jobs:
           echo "::add-mask::$token"
           echo "token=$token" >> "$GITHUB_OUTPUT"
 
-      - name: Apply migrations via migrator
+      - name: Apply migrations
         env:
-          URL: ${{ steps.subdomain.outputs.migrator_url }}
-          TOKEN: ${{ steps.migrator_token.outputs.token }}
+          URL: ${{ needs.provision.outputs.migrator_url }}
+          TOKEN: ${{ steps.token.outputs.token }}
         run: |
           set -eo pipefail
-          # Warm up /status before /apply — hitting an auth-gated route also
-          # confirms the just-uploaded MIGRATOR_TOKEN has propagated to the
-          # edge (the unauth /_health endpoint says nothing about secrets).
+          # Warm up /status (bearer-protected) before /apply — a 200 there
+          # means both the worker and the freshly uploaded MIGRATOR_TOKEN
+          # have propagated to the edge.
           for i in 1 2 3 4 5 6 7 8 9 10; do
             http=$(curl -sS -o /tmp/status.json -w '%{http_code}' \
               "$URL/status" -H "Authorization: Bearer $TOKEN" --max-time 30 || true)
@@ -180,71 +174,138 @@ jobs:
           done
 
           echo "POST $URL/apply"
-          # Generous timeout — a single big migration can run for minutes.
-          http_code=$(curl -sS -o /tmp/apply.json -w '%{http_code}' \
+          http=$(curl -sS -o /tmp/apply.json -w '%{http_code}' \
             -X POST "$URL/apply" \
             -H "Authorization: Bearer $TOKEN" \
             --max-time 600)
-          echo "HTTP $http_code"
+          echo "HTTP $http"
           jq . /tmp/apply.json || cat /tmp/apply.json
-          if [[ "$http_code" != "200" ]]; then
-            echo "::error::migration apply failed (HTTP $http_code)"
+          if [[ "$http" != "200" ]]; then
+            echo "::error::migration apply failed (HTTP $http)"
             exit 1
           fi
 
-      - name: Build SvelteKit apps and static docs site
-        run: |
-          pnpm --filter @citizenry/web run build
-          pnpm --filter @citizenry/admin-web run build
-          pnpm --filter @citizenry/docs run build
+  # ── Deploy Workers (parallel) ─────────────────────────────────────────
+  deploy-workers:
+    name: Deploy worker
+    needs: [provision, migrate]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [api, admin-api, mcp, email]
+    steps:
+      - uses: ./.github/actions/setup
 
-      - name: Deploy Workers (api, admin-api, mcp, email)
-        run: |
-          set -e
-          for app in api admin-api mcp email; do
-            echo "::group::deploy $app"
-            (cd "apps/$app" && pnpm exec wrangler deploy)
-            echo "::endgroup::"
-          done
+      - uses: ./.github/actions/render
+        with:
+          d1_identity_id: ${{ needs.provision.outputs.d1_identity_id }}
+          d1_vault_id: ${{ needs.provision.outputs.d1_vault_id }}
+          d1_email_id: ${{ needs.provision.outputs.d1_email_id }}
+          api_base_url: ${{ vars.API_BASE_URL || needs.provision.outputs.api_url }}
 
-      - name: Deploy Pages (docs)
+      - name: Build spec
+        run: pnpm --filter @citizenry/spec run build
+
+      - name: Deploy ${{ matrix.app }}
+        run: (cd apps/${{ matrix.app }} && pnpm exec wrangler deploy)
+
+  # ── Bootstrap Worker secrets from D1 _config ──────────────────────────
+  bootstrap-secrets:
+    name: Bootstrap Worker secrets
+    needs: [provision, deploy-workers]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: ./.github/actions/setup
+
+      - uses: ./.github/actions/render
+        with:
+          d1_identity_id: ${{ needs.provision.outputs.d1_identity_id }}
+          d1_vault_id: ${{ needs.provision.outputs.d1_vault_id }}
+          d1_email_id: ${{ needs.provision.outputs.d1_email_id }}
+          api_base_url: ${{ vars.API_BASE_URL || needs.provision.outputs.api_url }}
+
+      - name: Bootstrap (read or generate, push to Worker secrets)
         env:
-          GITHUB_SHA: ${{ github.sha }}
-        run: ./scripts/ci/deploy-pages.sh docs
-
-      - name: Bootstrap Worker secrets (from D1 _config, or generate)
-        env:
-          # Operator overrides — when unset, the script reads/generates
-          # values in D1 `citizenry-identity._config`.
           ENROLLMENT_PEPPER: ${{ secrets.ENROLLMENT_PEPPER }}
           SERVICE_KEY: ${{ secrets.SERVICE_KEY }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
         run: ./scripts/ci/bootstrap-secrets.sh
 
-      - name: Deploy Pages (web, admin-web)
+  # ── Deploy Pages (parallel, independent of Workers) ───────────────────
+  deploy-pages:
+    name: Deploy Pages
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [web, admin-web, docs]
+    steps:
+      - uses: ./.github/actions/setup
+
+      - name: Download page bundles
+        uses: actions/download-artifact@v4
+        with:
+          name: page-bundles
+          path: .
+
+      - name: Deploy ${{ matrix.app }}
         env:
           GITHUB_SHA: ${{ github.sha }}
-        run: ./scripts/ci/deploy-pages.sh web admin-web
+        run: ./scripts/ci/deploy-pages.sh ${{ matrix.app }}
 
-      - name: Deployment summary
-        if: success()
+  # ── Summary ───────────────────────────────────────────────────────────
+  summary:
+    name: Summary
+    if: always()
+    needs: [build, provision, migrate, deploy-workers, bootstrap-secrets, deploy-pages]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Render step summary
         env:
-          SUBDOMAIN: ${{ steps.subdomain.outputs.subdomain }}
+          SUBDOMAIN: ${{ needs.provision.outputs.subdomain }}
+          R_BUILD: ${{ needs.build.result }}
+          R_PROV: ${{ needs.provision.result }}
+          R_MIG: ${{ needs.migrate.result }}
+          R_WORK: ${{ needs.deploy-workers.result }}
+          R_BS: ${{ needs.bootstrap-secrets.result }}
+          R_PAGES: ${{ needs.deploy-pages.result }}
         run: |
-          P="$SERVICE_PREFIX"
+          P="${SERVICE_PREFIX:-citizenry}"
           {
-            echo "## ✓ Deployment complete"
-            echo ""
-            echo "Service prefix: \`${P}\`"
-            echo ""
-            echo "| Service | Type | Default endpoint |"
-            echo "|---|---|---|"
-            echo "| ${P}-migrator  | Worker | \`${P}-migrator.${SUBDOMAIN}.workers.dev\` |"
-            echo "| ${P}-api       | Worker | \`${P}-api.${SUBDOMAIN}.workers.dev\` |"
-            echo "| ${P}-admin-api | Worker | \`${P}-admin-api.${SUBDOMAIN}.workers.dev\` |"
-            echo "| ${P}-mcp       | Worker | \`${P}-mcp.${SUBDOMAIN}.workers.dev\` |"
-            echo "| ${P}-email     | Worker | \`${P}-email.${SUBDOMAIN}.workers.dev\` |"
-            echo "| ${P}-web       | Pages  | \`${P}-web.pages.dev\` |"
-            echo "| ${P}-admin-web | Pages  | \`${P}-admin-web.pages.dev\` |"
-            echo "| ${P}-docs      | Pages  | \`${P}-docs.pages.dev\` |"
+            echo "## Deployment summary"
+            echo
+            echo "| Stage | Result |"
+            echo "|---|---|"
+            echo "| build              | $R_BUILD |"
+            echo "| provision          | $R_PROV |"
+            echo "| migrate            | $R_MIG |"
+            echo "| deploy-workers     | $R_WORK |"
+            echo "| bootstrap-secrets  | $R_BS |"
+            echo "| deploy-pages       | $R_PAGES |"
+            echo
+            if [[ -n "$SUBDOMAIN" ]]; then
+              echo "Service prefix: \`${P}\`  ·  Subdomain: \`${SUBDOMAIN}.workers.dev\`"
+              echo
+              echo "| Service | Type | Default endpoint |"
+              echo "|---|---|---|"
+              echo "| ${P}-migrator  | Worker | \`${P}-migrator.${SUBDOMAIN}.workers.dev\` |"
+              echo "| ${P}-api       | Worker | \`${P}-api.${SUBDOMAIN}.workers.dev\` |"
+              echo "| ${P}-admin-api | Worker | \`${P}-admin-api.${SUBDOMAIN}.workers.dev\` |"
+              echo "| ${P}-mcp       | Worker | \`${P}-mcp.${SUBDOMAIN}.workers.dev\` |"
+              echo "| ${P}-email     | Worker | \`${P}-email.${SUBDOMAIN}.workers.dev\` |"
+              echo "| ${P}-web       | Pages  | \`${P}-web.pages.dev\` |"
+              echo "| ${P}-admin-web | Pages  | \`${P}-admin-web.pages.dev\` |"
+              echo "| ${P}-docs      | Pages  | \`${P}-docs.pages.dev\` |"
+            fi
           } >> "$GITHUB_STEP_SUMMARY"

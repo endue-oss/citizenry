@@ -1,6 +1,6 @@
 name: CI
 
-# Lightweight checks for pushes and PRs. Doesn't touch Cloudflare.
+# Lightweight pre-merge checks. Doesn't touch Cloudflare.
 
 on:
   pull_request:
@@ -13,26 +13,16 @@ concurrency:
 
 jobs:
   build:
-    name: Build & typecheck
+    uses: ./.github/workflows/_build.yml
+
+  verify:
+    name: Typecheck, lint, test
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
       contents: read
-
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: pnpm
-
-      - run: pnpm install --frozen-lockfile
-
-      - name: Typecheck
-        run: pnpm typecheck
-
-      - name: Build (dry-run for Workers, real for SvelteKit)
-        run: pnpm build
+      - uses: ./.github/actions/setup
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test

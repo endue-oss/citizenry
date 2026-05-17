@@ -1,0 +1,42 @@
+name: Build
+
+# Reusable build job. Produces:
+#   - TypeSpec-generated types under packages/spec/build/*
+#   - SvelteKit Pages bundles for web, admin-web, docs
+#
+# Page bundles are uploaded as a single `page-bundles` artifact so
+# deploy-pages can fan out without rebuilding.
+
+on:
+  workflow_call:
+
+jobs:
+  build:
+    name: Build pages and spec
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+
+    steps:
+      - uses: ./.github/actions/setup
+
+      - name: Build spec (TypeSpec → generated types)
+        run: pnpm --filter @citizenry/spec run build
+
+      - name: Build Pages bundles
+        run: |
+          pnpm --filter @citizenry/web       run build
+          pnpm --filter @citizenry/admin-web run build
+          pnpm --filter @citizenry/docs      run build
+
+      - name: Upload page bundles
+        uses: actions/upload-artifact@v4
+        with:
+          name: page-bundles
+          path: |
+            apps/web/.svelte-kit/cloudflare
+            apps/admin-web/.svelte-kit/cloudflare
+            apps/docs/dist
+          if-no-files-found: error
+          retention-days: 1

@@ -132,16 +132,61 @@ export async function statusD1(
   })
 }
 
-// D1 exec()'s statement splitter (1) sometimes drags a line comment into
-// the next statement, commenting out the whole thing, and (2) sometimes
-// misreads blank lines as statement boundaries. Normalize up-front.
-function prepareForD1Exec(sql: string): string {
-  return sql
-    .split('\n')
-    .map((line) => {
-      const idx = line.indexOf('--')
-      return idx === -1 ? line : line.slice(0, idx)
-    })
-    .join('\n')
-    .replace(/\n{2,}/g, '\n')
+// D1 exec()'s statement splitter is line-based: every newline ends a
+// statement. Multi-line `CREATE TABLE` bodies therefore arrive as
+// "incomplete input" errors. Strip `--` line comments (outside strings),
+// then flatten each `;`-terminated statement to a single line.
+export function prepareForD1Exec(sql: string): string {
+  const statements: string[] = []
+  let current = ''
+  let inString = false
+  let i = 0
+
+  while (i < sql.length) {
+    const ch = sql[i]
+
+    if (inString) {
+      current += ch
+      if (ch === "'") {
+        // SQLite: '' inside a string is an escaped single quote.
+        if (sql[i + 1] === "'") {
+          current += sql[i + 1]
+          i += 2
+          continue
+        }
+        inString = false
+      }
+      i++
+      continue
+    }
+
+    if (ch === '-' && sql[i + 1] === '-') {
+      const nl = sql.indexOf('\n', i)
+      i = nl === -1 ? sql.length : nl
+      continue
+    }
+
+    if (ch === "'") {
+      inString = true
+      current += ch
+      i++
+      continue
+    }
+
+    if (ch === ';') {
+      const flat = current.replace(/\s+/g, ' ').trim()
+      if (flat) statements.push(flat + ';')
+      current = ''
+      i++
+      continue
+    }
+
+    current += ch
+    i++
+  }
+
+  const tail = current.replace(/\s+/g, ' ').trim()
+  if (tail) statements.push(tail)
+
+  return statements.join('\n')
 }

@@ -1,11 +1,12 @@
 name: Setup workspace
-description: Checkout, pnpm, Node 24, frozen install (with cache).
+description: |
+  pnpm, Node 24, frozen install (with cache). Callers must run
+  actions/checkout@v4 first — local composite actions cannot be
+  loaded until the workspace exists.
 
 runs:
   using: composite
   steps:
-    - uses: actions/checkout@v4
-
     - uses: pnpm/action-setup@v4
 
     - uses: actions/setup-node@v4

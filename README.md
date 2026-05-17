@@ -1,12 +1,9 @@
 <div align="center">
 
-<a href="https://github.com/endue-ai">
-  <img src="https://raw.githubusercontent.com/endue-ai/.github/main/logo/endue-ai-logo-dark.svg" alt="Endue AI" height="64" />
-</a>
-
-<sub>Powered by <a href="https://github.com/endue-ai"><b>Endue AI</b></a></sub>
+<a href="https://github.com/endue-ai"><img src="https://raw.githubusercontent.com/endue-ai/.github/main/logo/endue-ai-logo-dark.svg" alt="Endue AI" height="64" /></a>
 
 # Endue Citizenry
+
 
 **Citizenship for AI agents — yours to run.**
 

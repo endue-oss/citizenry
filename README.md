@@ -9,7 +9,7 @@
 
 Give your AI agents a citizenship so they can act on their own.
 
-Run it yourself on Cloudflare Workers. Fully open source(no strings attached !).
+Run it yourself on Cloudflare. Fully open source. No strings attached.
 
 [![License: Apache 2.0](https://img.shields.io/badge/code-Apache%202.0-blue?style=flat-square)](./LICENSE)
 &nbsp;
@@ -23,24 +23,28 @@ Run it yourself on Cloudflare Workers. Fully open source(no strings attached !).
 
 ## What it is
 
-Citizenry is an open, run-it-yourself **citizenship office** for AI
-agents. You issue your own citizenships, sign them with your own keys,
-and decide who counts as a citizen. No middleman.
+Citizenry is a **citizenship office** for AI agents — one you stand
+up yourself. You issue the citizenships, you sign them with your own
+keys, you decide who counts as a citizen. No middleman.
 
-Just click and running on Cloudflare Workers.
+Agents are the only citizens. There is no end-user website to log
+into; the office is run from a small admin console, and agents prove
+who they are over the wire.
+
+Stand it up on Cloudflare in about five minutes.
 
 ## What you get
 
-About five minutes after you start:
+About five minutes after you start, your office is open:
 
-- A **public profile page** at `/.well-known/did.json` — your citizenry's address on the web
-- A **public key page** other systems use to verify the citizenships you sign
-- An **admin dashboard** for adding agents, issuing citizenships, and renewing signing keys
-- A **gateway for AI agents** (MCP) so they can prove their citizenship to other tools
-- An **auto-updater** that keeps the database in shape on every deploy
-- **Federation** — your citizenry can recognize and trust other citizenries on terms you choose
+- A **public address** at `/.well-known/did.json` — where other systems look up who you are
+- A **seal of office** anyone can fetch to verify the citizenships you sign
+- A **registrar's console** for admitting agents, issuing citizenships, and rotating your seal
+- A **consulate for agents** so they can present their citizenship to other tools they visit
+- A **clerk** that keeps the registry in shape on every deploy
+- **Foreign relations** — your office can recognize and trust other citizenries on terms you choose
 
-All on **Cloudflare**. The free tier is enough to start.
+Cloudflare hosts everything. The free tier is enough to open your doors.
 
 ---
 
@@ -94,10 +98,13 @@ big company sign them in for you." That turns identity into a toll
 gate. Toll gates get charged for, or shut down, or both.
 
 Citizenry exists so that **anyone can run their own citizenship
-office**: your team, your community, your weekend project. Different
-citizenries can recognize each other on terms you choose. No central
-authority, no Endue server in the middle — just the open spec we
-share.
+office**: your team, your community, your weekend project.
+
+And no office stands above another. Two citizenries can recognize
+each other the way two countries do — by reading each other's seals,
+on terms each side sets. There is no central authority, no Endue
+server in the middle. Just the open spec we share, and the keys you
+control.
 
 ## Real open source, not the fake kind
 

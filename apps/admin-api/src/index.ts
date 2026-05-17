@@ -25,16 +25,11 @@ app.use('*', adminAuth)
  * admin routes only check SERVICE_KEY, so we avoid leaking extra tokens.
  */
 app.all('*', async (c) => {
-  const base = (c.env.API_BASE_URL || '').replace(/\/$/, '')
-  if (!base) {
-    return c.json(
-      { code: 'misconfigured', message: 'API_BASE_URL not set on admin-api' },
-      500,
-    )
-  }
-
+  // Route through the api service binding. The host portion of the URL is
+  // ignored by the binding, so we use a synthetic origin — only path and
+  // query matter to api's router.
   const url = new URL(c.req.url)
-  const target = `${base}/_admin${url.pathname}${url.search}`
+  const target = `https://api${'/_admin' + url.pathname}${url.search}`
 
   const upstreamHeaders = new Headers()
   upstreamHeaders.set('X-Service-Key', c.env.SERVICE_KEY)
@@ -46,7 +41,7 @@ app.all('*', async (c) => {
   const body =
     c.req.method === 'GET' || c.req.method === 'HEAD' ? undefined : await c.req.arrayBuffer()
 
-  const upstream = await fetch(target, {
+  const upstream = await c.env.API.fetch(target, {
     method: c.req.method,
     headers: upstreamHeaders,
     body,

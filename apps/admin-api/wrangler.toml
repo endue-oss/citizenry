@@ -7,11 +7,17 @@ compatibility_flags = ["nodejs_compat"]
 port = 13001
 
 # admin-api no longer accesses the DB directly.
-# Every admin action is HTTP-proxied to api's /_admin/* routes → authenticated by SERVICE_KEY.
+# Every admin action is forwarded to api's /_admin/* routes via the service
+# binding below, authenticated by SERVICE_KEY. The binding is required:
+# workers.dev disallows Worker→Worker fetch by public URL (CF 1042).
+
+[[services]]
+binding = "API"
+service = "citizenry-api"
 
 [vars]
-# api's base URL — production: the workers.dev subdomain or a custom domain.
-# local dev: port 13000 served by api's `wrangler dev`.
+# Retained as a path/origin hint for local dev only. The service binding
+# ignores the URL host in production, so only the path matters there.
 API_BASE_URL = "http://127.0.0.1:13000"
 
 # secrets — `wrangler secret put`

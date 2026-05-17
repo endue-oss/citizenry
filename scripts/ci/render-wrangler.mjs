@@ -84,6 +84,7 @@ function patchPrefix(content, prefix) {
   return content
     .replace(/(^|\n)(\s*name\s*=\s*)"citizenry-/g, `$1$2"${prefix}-`)
     .replace(/(^|\n)(\s*database_name\s*=\s*)"citizenry-/g, `$1$2"${prefix}-`)
+    .replace(/(^|\n)(\s*service\s*=\s*)"citizenry-/g, `$1$2"${prefix}-`)
 }
 
 let changed = 0

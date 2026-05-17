@@ -1,15 +1,15 @@
-// Bearer auth verifier surface. apps/api 와 vault 등 다른 패키지가
-// `@citizenry/identity/auth` 로 import — router/repo/db 의존 없이.
+// Bearer auth verifier surface. Other packages (apps/api, vault, etc.)
+// import it as `@citizenry/identity/auth` — no router/repo/db dependency.
 
 import { eq, inArray, and } from 'drizzle-orm'
-import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js'
+import type { DrizzleD1Database } from 'drizzle-orm/d1'
 import { agent as agentTable, agentKey as agentKeyTable } from './db/schema'
 import type { Schema } from './db/schema'
 
 export interface TokenPayload {
   /** Subject — agent_id */
   sub: string
-  /** Issuer — `sub` 와 동일 (self-signed) */
+  /** Issuer — equal to `sub` (self-signed) */
   iss: string
   /** Audience */
   aud: string | string[]
@@ -17,9 +17,9 @@ export interface TokenPayload {
   iat: number
   /** Expires at (epoch seconds) */
   exp: number
-  /** Key ID — header.kid 와 동일 */
+  /** Key ID — matches header.kid */
   kid: string
-  /** JWT ID (선택, replay 방지) */
+  /** JWT ID (optional, replay protection) */
   jti?: string
 }
 
@@ -41,12 +41,12 @@ export class AuthError extends Error {
 }
 
 export interface TokenVerifier {
-  /** EdDSA JWT 검증 → payload 반환. 실패 시 throw. */
+  /** EdDSA JWT verify → returns payload. Throws on failure. */
   verifyJwt(token: string): Promise<TokenPayload>
 }
 
 /**
- * Noop verifier — 의존성 주입 placeholder. 실제 검증은 `verifyAgentJwt` 사용.
+ * Noop verifier — dependency-injection placeholder. Use `verifyAgentJwt` for real verification.
  */
 export const createNoopVerifier = (): TokenVerifier => ({
   verifyJwt: async () => {
@@ -67,12 +67,12 @@ const base64urlToString = (s: string): string =>
   new TextDecoder().decode(base64urlToBytes(s))
 
 export interface VerifyJwtOptions {
-  /** 허용된 audience 목록 (전부 일치 아닌 임의 1건 매칭). */
+  /** Allowed audience list (any one match, not all). */
   audience: string[]
 }
 
 /**
- * Self-signed Ed25519 JWT 검증.
+ * Self-signed Ed25519 JWT verification.
  *
  * Steps:
  *  1. parse compact JWS
@@ -84,7 +84,7 @@ export interface VerifyJwtOptions {
  *  7. Ed25519.verify(public_key, signature, signing_input)
  */
 export const verifyAgentJwt = async (
-  db: PostgresJsDatabase<Schema>,
+  db: DrizzleD1Database<Schema>,
   token: string,
   opts: VerifyJwtOptions,
 ): Promise<TokenPayload> => {
@@ -179,8 +179,8 @@ export const verifyAgentJwt = async (
 }
 
 /**
- * Enrollment Bearer token 형식 검사 — 실제 hash 비교 / atomic decrement 는
- * `/api/v1/agent/register` 핸들러에서 처리. 미들웨어는 prefix 만 확인.
+ * Enrollment Bearer token shape check — actual hash compare / atomic decrement
+ * happens in the `/api/v1/agent/register` handler. Middleware only checks the prefix.
  */
 export const checkEnrollmentBearerShape = (token: string): void => {
   if (!/^eret_[A-Za-z0-9]{32,}$/.test(token)) {

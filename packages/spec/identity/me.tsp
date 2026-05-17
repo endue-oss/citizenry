@@ -10,11 +10,11 @@ using Citizenry.Common;
 namespace Citizenry.Identity;
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// /me — 등록된 에이전트의 self-service
+// /me — self-service for a registered agent
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 /**
- * 자기 정보 응답 (`GET /api/v1/agent/me`).
+ * Self-info response (`GET /api/v1/agent/me`).
  * @status confirmed
  */
 model AgentMeGetResponse {
@@ -22,7 +22,7 @@ model AgentMeGetResponse {
   slug: slug;
   display_name?: string;
 
-  /** 활성 Ed25519 공개키 (raw 32 bytes, base64url) */
+  /** Active Ed25519 public key (raw 32 bytes, base64url) */
   public_key_b64: base64url;
 
   status: AgentStatus;
@@ -41,20 +41,21 @@ model AgentMeGetResponse {
 // ── Rotate-key (JWS body) ──────────────────────────────────
 
 /**
- * `rotate-key` JWS payload 의 inner `payload` 필드.
+ * Inner `payload` field of the `rotate-key` JWS payload.
  *
  * @status confirmed
  */
 model RotateKeyJwsInner {
-  /** 새 Ed25519 공개키 JWK. `kid` 는 서버가 신규 발급 (제출 시 포함 안 함). */
+  /** New Ed25519 public-key JWK. The server issues `kid` (must not be included). */
   new_public_key_jwk: JwkOkpEd25519Submission;
 }
 
 /**
- * `rotate-key` body JWS 의 decoded payload (RFC 7515 §4.1 의 두 번째 segment).
+ * Decoded payload of the `rotate-key` body JWS (the second segment per
+ * RFC 7515 §4.1).
  *
- * Header: `JwsProtectedHeader` (alg=EdDSA, kid=현 active 키)
- * Signature: 현 active 키 (Ed25519) 로 서명
+ * Header: `JwsProtectedHeader` (alg=EdDSA, kid=current active key).
+ * Signature: signed with the current active key (Ed25519).
  *
  * @status confirmed
  */
@@ -62,56 +63,58 @@ model RotateKeyJwsPayload extends JwsPayloadBase {
   /** Action discriminator — `rotate-key` */
   action: "rotate-key";
 
-  /** Rotate 대상 데이터 */
+  /** Rotation payload */
   payload: RotateKeyJwsInner;
 }
 
 /**
- * Rotate-key 요청 — 본문에 compact JWS 자체를 담는다.
+ * Rotate-key request — the body carries the compact JWS itself.
  *
- * 검증:
- * 1. JWS 서명을 **구 키** (현재 active) 로 검증.
- * 2. `jti` 1회성 강제.
+ * Validation:
+ * 1. Verify the JWS signature using the **old key** (currently active).
+ * 2. Enforce single-use `jti`.
  * 3. `action == "rotate-key"`.
- * 4. payload 의 새 JWK 가 Ed25519 / EdDSA.
- * 5. 새 kid 발급, 구 kid → `rotated` 상태 (grace period 동안 verify 가능).
+ * 4. The new JWK in the payload is Ed25519 / EdDSA.
+ * 5. Issue the new kid, mark the old kid `rotated` (still usable for
+ *    verify during the grace period).
  *
  * @status confirmed
  */
 model RotateKeyCreateRequest {
-  /** Compact JWS — `header.payload.signature`. inner payload 는 `RotateKeyJwsPayload`. */
+  /** Compact JWS — `header.payload.signature`. Inner payload is `RotateKeyJwsPayload`. */
   jws: string;
 }
 
 /**
- * Rotate-key 응답.
+ * Rotate-key response.
  * @status confirmed
  */
 model RotateKeyCreateResponse {
-  /** 직전 활성 키. 이제 `rotated` 상태. */
+  /** Previously active key, now in the `rotated` state. */
   prev_kid: kid;
 
-  /** 신규 활성 키. */
+  /** Newly active key. */
   new_kid: kid;
 
-  /** 구 키가 verify 가능한 만료 시각 (grace period 끝). */
+  /** Deadline until which the old key is still valid for verify (end of grace period). */
   rotated_until: iso8601;
 }
 
 // ── Self-revoke (JWS body) ─────────────────────────────────
 
 /**
- * `revoke` JWS payload 의 inner `payload` 필드. 의도 매칭 외 추가 데이터 없음.
+ * Inner `payload` field of the `revoke` JWS payload. No extra data
+ * beyond the intent match.
  *
  * @status confirmed
  */
 model SelfRevokeJwsInner {}
 
 /**
- * Self-revoke body JWS 의 decoded payload.
+ * Decoded payload of the self-revoke body JWS.
  *
- * Header: `JwsProtectedHeader` (alg=EdDSA, kid=현 active 키)
- * Signature: 현 active 키 (Ed25519) 로 서명
+ * Header: `JwsProtectedHeader` (alg=EdDSA, kid=current active key).
+ * Signature: signed with the current active key (Ed25519).
  *
  * @status confirmed
  */
@@ -119,19 +122,19 @@ model SelfRevokeJwsPayload extends JwsPayloadBase {
   /** Action discriminator — `revoke` */
   action: "revoke";
 
-  /** 빈 payload */
+  /** Empty payload */
   payload: SelfRevokeJwsInner;
 }
 
 /**
- * Self-revoke 요청 — 본문에 compact JWS.
+ * Self-revoke request — the body carries a compact JWS.
  *
- * 효과: agent + 모든 keys → `revoked`. 즉시 발효.
+ * Effect: agent + all keys → `revoked`. Effective immediately.
  *
  * @status confirmed
  */
 model SelfRevokeRequest {
-  /** Compact JWS — inner payload 는 `SelfRevokeJwsPayload`. */
+  /** Compact JWS — inner payload is `SelfRevokeJwsPayload`. */
   jws: string;
 }
 
@@ -140,12 +143,12 @@ model SelfRevokeRequest {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 /**
- * 등록된 에이전트의 self-service.
+ * Self-service for a registered agent.
  *
- * 인증:
- * - GET            : Bearer self-signed JWT (RFC 7523 private_key_jwt)
- * - POST rotate-key: body 내 JWS (구 키 서명) — Authorization 헤더 무관
- * - DELETE         : body 내 JWS (현 키 서명) — 동일
+ * Authentication:
+ * - GET             : Bearer self-signed JWT (RFC 7523 private_key_jwt).
+ * - POST rotate-key : JWS in the body (signed by the old key) — Authorization header ignored.
+ * - DELETE          : JWS in the body (signed by the current key) — same.
  *
  * @status confirmed
  */
@@ -153,9 +156,9 @@ model SelfRevokeRequest {
 @route("/api/v1/agent/me")
 interface Me {
   /**
-   * 자기 정보 조회. `Authorization: Bearer <self-signed JWT>` 필요.
+   * Read self-info. Requires `Authorization: Bearer <self-signed JWT>`.
    *
-   * 가능한 에러: 401, 404, 429, 500
+   * Possible errors: 401, 404, 429, 500.
    */
   @summary("Read the current agent's identity")
   @operationId("agent-me-whoami")
@@ -168,10 +171,11 @@ interface Me {
     | InternalError;
 
   /**
-   * 키 회전. body 내 JWS 가 구 키로 서명되어 있어야 함.
-   * 인증은 헤더가 아니라 본문 JWS 자체이므로 OpenAPI security 는 noAuth.
+   * Rotate keys. The body JWS must be signed with the old key.
+   * Authentication comes from the body JWS, not the header, so the
+   * OpenAPI security is noAuth.
    *
-   * 가능한 에러: 400, 401, 404, 422, 429, 500
+   * Possible errors: 400, 401, 404, 422, 429, 500.
    */
   @summary("Rotate the agent's signing key via body JWS")
   @operationId("agent-me-rotate-key")
@@ -187,10 +191,11 @@ interface Me {
     | InternalError;
 
   /**
-   * 자가 폐기. body 내 JWS 가 현 active 키로 서명.
-   * 발효 후 모든 키 → `revoked`. 헤더 인증 없음 (본문 JWS).
+   * Self-revoke. The body JWS must be signed with the current active
+   * key. Once effective, all keys → `revoked`. No header authentication
+   * (the body JWS is the credential).
    *
-   * 가능한 에러: 400, 401, 404, 429, 500
+   * Possible errors: 400, 401, 404, 429, 500.
    */
   @summary("Self-revoke the agent via body JWS")
   @operationId("agent-me-revoke")

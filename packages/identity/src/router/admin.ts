@@ -10,7 +10,7 @@ type Vars = { db: Db } & Partial<FederationVars>
 /**
  * Admin identity router.
  *
- * 라우트 (참조 spec 와 동일 — root 마운트 시 그대로 노출):
+ * Routes (mirror the reference spec — exposed as-is when mounted at root):
  *   POST   /api/v1/enrollments              (X-Service-Key)
  *   DELETE /api/v1/enrollments/:id          (X-Service-Key)
  *   GET    /api/v1/admin/enrollments        (X-Service-Key, paginated)
@@ -18,14 +18,14 @@ type Vars = { db: Db } & Partial<FederationVars>
  *   GET    /api/v1/admin/agents/:id         (X-Service-Key)
  *   DELETE /api/v1/admin/agents/:id         (X-Service-Key)
  *
- * 인증은 apps/admin-api 의 미들웨어가 처리 (X-Service-Key PSK 검증).
+ * Auth is handled by apps/admin-api middleware (X-Service-Key PSK verification).
  */
 export const adminIdentityRouter = new Hono<{ Variables: Vars }>()
-  // ── Enrollment 발급 / 폐기 ────────────────────────────
+  // ── Enrollment issue / revoke ─────────────────────────
   .post('/api/v1/enrollments', (c) => c.json({ todo: 'create enrollment' }, 201))
   .delete('/api/v1/enrollments/:id', (c) => c.body(null, 204))
 
-  // ── Admin enrollments 목록 ────────────────────────────
+  // ── Admin enrollments list ────────────────────────────
   .get('/api/v1/admin/enrollments', (c) =>
     c.json({
       items: [],
@@ -33,7 +33,7 @@ export const adminIdentityRouter = new Hono<{ Variables: Vars }>()
     }),
   )
 
-  // ── Admin agents 목록 / 조회 / 강제 폐기 ──────────────
+  // ── Admin agents list / get / force-revoke ────────────
   .get('/api/v1/admin/agents', (c) =>
     c.json({
       items: [],

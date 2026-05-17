@@ -26,7 +26,7 @@ name: Deploy to Cloudflare
 # Optional GitHub variables (vars, not secrets) — control [vars] blocks in wrangler.toml:
 #   ISSUER_HOST      e.g. "id.example.com" (default: keep wrangler.toml value)
 #   JWT_AUDIENCE     e.g. "api.id.example.com,citizenry-id" (default: keep wrangler.toml value)
-#   API_BASE_URL     admin-api 가 호출할 api 의 URL (default: workers.dev 자동 감지)
+#   API_BASE_URL     URL of api that admin-api calls (default: auto-detected workers.dev subdomain)
 #
 # See docs/deploy.md for a full walkthrough.
 

@@ -1,5 +1,5 @@
-// Federation 공개 라우트 + admin 라우트. service 인스턴스는 c.var.federation 에서
-// 주입받음 (apps/api 와 apps/admin-api 가 미들웨어에서 build).
+// Federation public routes + admin routes. The service instance is injected via
+// c.var.federation (built by apps/api and apps/admin-api middleware).
 
 import type { Context, Hono } from 'hono'
 import type { Db } from '../db'
@@ -11,7 +11,7 @@ export type FederationVars = {
   db: Db
   federation: FederationService
 
-  /** 우리 인스턴스 self 정보 — discovery 응답에 사용. */
+  /** Our instance's self info — used in the discovery response. */
   selfIssuer: string
   selfInstanceId: string
   selfDisplayName?: string

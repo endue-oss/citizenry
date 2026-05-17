@@ -1,7 +1,7 @@
 // Federation service — admin CRUD + inbound handshake handler.
 //
-// Side-effects (HTTP outbound, ULID 생성, 시간) 는 모두 ports 로 주입한다.
-// 이렇게 하면 service 는 결정론적 — 테스트가 mock repo + fake ports 만으로 통과.
+// All side-effects (HTTP outbound, ULID generation, time) are injected as ports.
+// This keeps the service deterministic — tests pass with mock repo + fake ports alone.
 
 import type { FederationPeerRow } from '../../db/schema'
 import type { FederationPeerRepo } from '../../repo/federation_peer'
@@ -22,31 +22,31 @@ export * from './errors'
 export { isTransitionAllowed, allowedNextStates, isTerminalState } from './state'
 
 export interface FederationServicePorts {
-  /** ULID + prefix 생성기. */
+  /** ULID + prefix generator. */
   newId: (prefix: 'fdp_' | 'tn_') => string
 
-  /** 32B base64url nonce 생성. */
+  /** 32B base64url nonce generator. */
   newNonce: () => string
 
   /** outbound HTTP fetch — undici / global `fetch` / fake. */
   fetcher: Fetcher
 
-  /** compact JWS 검증기 (peer JWKS 기반 EdDSA). */
+  /** compact JWS verifier (EdDSA over peer JWKS). */
   jwsVerifier: JwsVerifier
 
   /**
-   * 우리 인스턴스가 nonce 까지 직접 채워 JWS 를 만들어 보낼 때 호출.
-   * 키 관리는 service 외부 책임이므로 ports 로 주입.
+   * Called when our instance signs and sends an outbound JWS (with nonce filled in).
+   * Key management is the responsibility of callers, so it is injected as a port.
    */
   signHandshake: (payload: FederationHandshakePayload) => Promise<string>
 
-  /** 우리 인스턴스의 issuer URL — 핸드셰이크 검증의 `to_issuer` 매칭에 사용. */
+  /** Our instance's issuer URL — used to match `to_issuer` during handshake verify. */
   selfIssuer: string
 
-  /** 우리 인스턴스의 instance_id (`ci_*`). */
+  /** Our instance's instance_id (`ci_*`). */
   selfInstanceId: string
 
-  /** epoch seconds. 테스트가 시간을 고정하려면 주입. */
+  /** epoch seconds. Inject to freeze time in tests. */
   now: () => number
 }
 
@@ -56,14 +56,14 @@ export const createFederationService = (
   repo: FederationPeerRepo,
   ports: FederationServicePorts,
 ) => {
-  /** 운영자가 새 peer 추가 — 외부 fetch + outbound 핸드셰이크 시작. */
+  /** Operator adds a new peer — external fetch + outbound handshake initiation. */
   const addPeer = async (input: {
     issuer_url: string
     display_name?: string
   }): Promise<FederationPeerView> => {
     const issuer = normalizeIssuer(input.issuer_url)
 
-    // 1) 같은 issuer 로 살아있는 peer 있는지 확인
+    // 1) Check for an existing live peer with the same issuer
     const existing = await repo.findActiveByIssuer(issuer)
     if (existing) {
       throw FED.peerAlreadyExists(`peer already in state ${existing.state}`, {
@@ -76,7 +76,7 @@ export const createFederationService = (
     const discovery = await fetchPeerDiscovery(ports.fetcher, issuer)
     const jwks = await fetchPeerJwks(ports.fetcher, discovery.federation_jwks_url)
 
-    // 3) row INSERT — state='invited', pending_nonce 채움
+    // 3) row INSERT — state='invited', pending_nonce populated
     const nonce = ports.newNonce()
     const id = ports.newId('fdp_')
     const expSec = ports.now() + 600
@@ -94,7 +94,7 @@ export const createFederationService = (
       pendingNonceExp: new Date(expSec * 1000),
     })
 
-    // 4) outbound invite — best-effort. 실패 시 row 는 invited 상태로 유지.
+    // 4) outbound invite — best-effort. On failure the row stays in invited state.
     const inviteJws = await ports.signHandshake({
       from_issuer: ports.selfIssuer,
       from_instance_id: ports.selfInstanceId,
@@ -116,8 +116,8 @@ export const createFederationService = (
         throw FED.remoteError(`peer responded ${res.status}`, { status: res.status })
       }
       const body = await res.text()
-      // 응답이 ack JWS 를 포함하면 verify 후 trusted 로 전이.
-      // (MVP: 응답이 JSON 인 경우만 처리; pure-JWS 응답은 다음 라운드에서 confirm 받음.)
+      // If the response includes an ack JWS, verify it and transition to trusted.
+      // (MVP: only JSON responses are handled; pure-JWS responses are confirmed in the next round.)
       try {
         const parsed = JSON.parse(body)
         if (parsed?.ack_jws && typeof parsed.ack_jws === 'string') {
@@ -132,7 +132,7 @@ export const createFederationService = (
           if (ack.nonce_echo !== nonce) {
             throw FED.nonceMismatch('peer ack returned different nonce_echo')
           }
-          // trusted 로 전이 + federated tenant materialize
+          // Transition to trusted + materialize federated tenant
           const linked = await repo.linkFederatedTenant(id, {
             tenantId: ports.newId('tn_'),
             slug: slugFromIssuer(issuer),
@@ -145,7 +145,7 @@ export const createFederationService = (
         }
       } catch (e) {
         if ((e as { code?: string })?.code?.startsWith('ERR-P01-FED-')) throw e
-        // JSON parse 실패는 무시 — pending 으로 유지
+        // Ignore JSON parse failure — stay pending
       }
     } catch (e) {
       if ((e as { code?: string })?.code?.startsWith('ERR-P01-FED-')) throw e
@@ -155,22 +155,23 @@ export const createFederationService = (
       )
     }
 
+    if (!inserted) throw FED.remoteError('insert returned no row')
     return toPeerView(inserted)
   }
 
-  /** Inbound 핸드셰이크 — peer 가 POST /federation/handshake 호출 시. */
+  /** Inbound handshake — invoked when a peer calls POST /federation/handshake. */
   const handleInbound = async (
     compactJws: string,
   ): Promise<{ state: FederationPeerState; ack_jws?: string; row: FederationPeerRow }> => {
-    // JWS payload 의 from_issuer 를 먼저 unsafely 파싱해서 (verify 전!) peer 를 조회 —
-    // 잘못된 payload 면 verifyHandshakeJws 가 어쨌든 던지므로 safe.
+    // Unsafely parse `from_issuer` from the JWS payload first (before verify!) so we can
+    // look up the peer — safe because verifyHandshakeJws will throw on a bad payload anyway.
     const peeked = peekFromIssuer(compactJws)
     if (!peeked) {
       throw FED.jwsVerifyFailed('JWS payload not parseable')
     }
     const fromIssuer = normalizeIssuer(peeked.from_issuer)
 
-    // peer JWKS — 기존 row 가 있으면 cached, 없으면 discovery 로 fetch.
+    // peer JWKS — use the cached value if a row exists, otherwise fetch via discovery.
     let row = await repo.findActiveByIssuer(fromIssuer)
     let jwks: Record<string, unknown>
     let discovery: PeerDiscoveryDocument | undefined
@@ -191,11 +192,11 @@ export const createFederationService = (
       ports.now(),
     )
 
-    // purpose 별 분기
+    // Branch on purpose
     switch (verified.purpose) {
       case 'federation.invite': {
         if (row && row.state !== 'invited' && row.state !== 'pending') {
-          // 이미 trusted/suspended 면 새 invite 거부 (재가입은 DELETE 후 새로)
+          // If already trusted/suspended, reject the new invite (rejoin requires DELETE first)
           throw FED.invalidTransition(
             `cannot accept invite while state=${row.state}`,
             { state: row.state },
@@ -216,6 +217,7 @@ export const createFederationService = (
             pendingNonce: verified.nonce,
             pendingNonceExp: new Date(verified.exp * 1000),
           })
+          if (!inserted) throw FED.remoteError('insert returned no row')
           row = inserted
         } else {
           const [updated] = await repo.update(row.federationPeerId, {
@@ -224,10 +226,11 @@ export const createFederationService = (
             pendingNonce: verified.nonce,
             pendingNonceExp: new Date(verified.exp * 1000),
           })
+          if (!updated) throw FED.remoteError('update returned no row')
           row = updated
         }
 
-        // 즉시 ack — invite.ack JWS 동봉
+        // Immediate ack — invite.ack JWS attached
         const ackJws = await ports.signHandshake({
           from_issuer: ports.selfIssuer,
           from_instance_id: ports.selfInstanceId,
@@ -276,6 +279,7 @@ export const createFederationService = (
           state: 'suspended',
           suspendedAt: new Date(),
         })
+        if (!updated) throw FED.remoteError('update returned no row')
         return { state: 'suspended', row: updated }
       }
 
@@ -288,6 +292,7 @@ export const createFederationService = (
           state: 'trusted',
           suspendedAt: null,
         })
+        if (!updated) throw FED.remoteError('update returned no row')
         return { state: 'trusted', row: updated }
       }
 
@@ -296,7 +301,7 @@ export const createFederationService = (
     }
   }
 
-  /** 운영자가 명시적으로 state 전이. trusted ⇄ suspended 만 허용 (revoke 는 DELETE). */
+  /** Operator-initiated explicit state transition. Only trusted ⇄ suspended is allowed (revoke goes through DELETE). */
   const transitionPeer = async (
     id: string,
     target: FederationPeerState,
@@ -318,16 +323,17 @@ export const createFederationService = (
     if (target === 'suspended') patch.suspendedAt = new Date()
     if (target === 'trusted' && row.state === 'suspended') patch.suspendedAt = null
     const [updated] = await repo.update(id, patch as never)
+    if (!updated) throw FED.peerNotFound(`fdp ${id}`)
     return toPeerView(updated)
   }
 
-  /** 운영자 영구 폐기. peer 에게 best-effort 통보, 로컬은 무조건 종료. */
+  /** Operator-initiated permanent revoke. Best-effort notify the peer; local terminates unconditionally. */
   const revokePeer = async (id: string): Promise<void> => {
     const row = await repo.findById(id)
     if (!row) throw FED.peerNotFound(`fdp ${id}`)
-    if (row.state === 'revoked') return // 멱등
+    if (row.state === 'revoked') return // Idempotent
 
-    // best-effort outbound revoke 통보 — 실패해도 로컬 진행
+    // best-effort outbound revoke notification — local proceeds even on failure
     if (row.state === 'trusted' || row.state === 'suspended') {
       try {
         const jws = await ports.signHandshake({
@@ -348,7 +354,7 @@ export const createFederationService = (
           body: jws,
         })
       } catch {
-        // 무시 — local revoke 는 진행
+        // Ignore — local revoke still proceeds
       }
     }
 
@@ -389,6 +395,7 @@ export const createFederationService = (
       jwksCachedAt: new Date(),
       peerMetadata: discovery as unknown as Record<string, unknown>,
     })
+    if (!updated) throw FED.peerNotFound(`fdp ${id}`)
     return toPeerView(updated)
   }
 
@@ -412,10 +419,10 @@ export const slugFromIssuer = (issuer: string): string => {
 }
 
 /**
- * compact JWS 의 payload 부분만 base64url-decode 해서 `from_issuer` peek.
+ * Peek at `from_issuer` by base64url-decoding only the payload segment of a compact JWS.
  *
- * **서명 검증 전** 의 신뢰할 수 없는 값. peer JWKS 를 조회하기 위한 용도로만 쓰며,
- * 모든 신뢰 결정은 verify 통과 후 payload 를 따른다.
+ * The value is **pre-signature-verification** and untrusted. Used only to look up the
+ * peer JWKS; all trust decisions follow the payload returned after verify succeeds.
  */
 export const peekFromIssuer = (
   compactJws: string,
@@ -423,7 +430,7 @@ export const peekFromIssuer = (
   const parts = compactJws.split('.')
   if (parts.length !== 3) return null
   try {
-    const json = base64urlDecode(parts[1])
+    const json = base64urlDecode(parts[1]!)
     const obj = JSON.parse(json) as { from_issuer?: unknown }
     if (typeof obj?.from_issuer !== 'string') return null
     return { from_issuer: obj.from_issuer }
@@ -435,8 +442,6 @@ export const peekFromIssuer = (
 const base64urlDecode = (s: string): string => {
   const pad = s.length % 4 === 2 ? '==' : s.length % 4 === 3 ? '=' : ''
   const b64 = s.replace(/-/g, '+').replace(/_/g, '/') + pad
-  // atob 는 Workers 환경 표준.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const a = (globalThis as any).atob as (s: string) => string
-  return a ? a(b64) : Buffer.from(b64, 'base64').toString('utf8')
+  // Workers, browsers, and Node 20+ all expose globalThis.atob.
+  return atob(b64)
 }

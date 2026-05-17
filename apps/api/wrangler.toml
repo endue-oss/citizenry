@@ -6,13 +6,14 @@ compatibility_flags = ["nodejs_compat"]
 [dev]
 port = 13000
 
-# identity 도메인 — Postgres via Hyperdrive
-[[hyperdrive]]
-binding = "HYPERDRIVE"
-id = "local-dev-placeholder"
-localConnectionString = "postgresql://endue_workspace:endue_workspace@localhost:15438/citizenry_identity"
+# identity domain — D1
+[[d1_databases]]
+binding = "DB_IDENTITY"
+database_name = "citizenry-identity"
+database_id = "local-dev-placeholder"
+migrations_dir = "../../packages/identity/migrations"
 
-# vault 도메인 — D1
+# vault domain — D1
 [[d1_databases]]
 binding = "DB_VAULT"
 database_name = "citizenry-vault"
@@ -25,3 +26,4 @@ ISSUER_HOST = "citizenry.id"
 
 # secrets — `wrangler secret put`
 #   ENROLLMENT_PEPPER
+#   SERVICE_KEY        — X-Service-Key check for /_admin/* routes (admin-api uses this)

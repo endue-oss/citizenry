@@ -1,6 +1,6 @@
 export { identityRouter } from './router'
 export { adminIdentityRouter } from './router/admin'
-export { schema, type Schema, type Db, createDb } from './db'
+export { schema, type Schema, type Db } from './db'
 export type {
   PrincipalRow,
   TenantRow,

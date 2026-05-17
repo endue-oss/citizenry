@@ -2,34 +2,39 @@
 
 This repository ships a single GitHub Actions workflow
 (`.github/workflows/deploy.yml`) that takes a fresh fork and turns it into a
-running citizenry deployment on Cloudflare. You provide a Cloudflare account
-plus a Postgres database; the workflow provisions everything else and applies
-migrations on every run.
+running citizenry deployment on Cloudflare. You provide a Cloudflare account;
+the workflow provisions everything else and applies migrations on every run.
+
+**External dependencies: zero.** Both identity and vault run on D1 —
+no Postgres, no Hyperdrive.
 
 ## Architecture being deployed
 
-| Service              | Type           | Storage / Bindings                                 |
-| -------------------- | -------------- | -------------------------------------------------- |
-| `citizenry-api`       | Workers        | `DB_VAULT` (D1), `HYPERDRIVE` (Hyperdrive → Postgres) |
-| `citizenry-admin-api` | Workers        | `DB_VAULT` (D1), `HYPERDRIVE`                       |
-| `citizenry-mcp`       | Workers        | —                                                  |
-| `citizenry-web`       | Pages          | static SvelteKit user web                          |
-| `citizenry-admin-web` | Pages          | static SvelteKit admin web                         |
+| Service              | Type    | Storage / Bindings                               |
+| -------------------- | ------- | ------------------------------------------------ |
+| `citizenry-api`       | Workers | `DB_IDENTITY` (D1), `DB_VAULT` (D1)              |
+| `citizenry-admin-api` | Workers | none — proxies to api `/_admin/*` via SERVICE_KEY |
+| `citizenry-mcp`       | Workers | —                                                |
+| `citizenry-web`       | Pages   | static SvelteKit user web                        |
+| `citizenry-admin-web` | Pages   | static SvelteKit admin web                       |
 
 Storage:
 
-- **D1** — `citizenry-vault` (vault domain). Migrations: `packages/vault/migrations/*.sql`.
-- **Hyperdrive** — `citizenry-identity` (identity domain). Origin: any Postgres
-  16+ instance you supply (Neon, Supabase, Cloud SQL, self-hosted, …).
-  Migrations: `packages/identity/migrations/*.sql`.
+- **D1** `citizenry-vault` — vault domain. Migrations: `packages/vault/migrations/*.sql`.
+- **D1** `citizenry-identity` — identity domain. Migrations: `packages/identity/migrations/*.sql`.
+
+Admin model:
+
+- `admin-api` no longer touches a database directly. Every admin
+  operation is HTTP-proxied to `api`'s `/_admin/*` routes; both Workers
+  share the same `SERVICE_KEY` PSK to authenticate the hop. Because of
+  this layout, **the api Worker alone provides every essential
+  function** — `admin-api` is optional.
 
 ## What you need (one time)
 
-1. **A Cloudflare account.** Free tier is enough to start.
-2. **A Postgres database** reachable from the public internet — Neon and
-   Supabase both have free tiers that work. Save its connection URL in
-   `postgresql://user:pass@host:5432/dbname` form. Hyperdrive sits in front
-   of it, so you don't expose it on the hot path.
+**A Cloudflare account.** The free tier is enough to get started. No
+external database, no credit card.
 
 ## Step 1 — Fork and clone
 
@@ -46,7 +51,6 @@ Grant **Edit** on:
 - Account · Workers Scripts
 - Account · Cloudflare Pages
 - Account · D1
-- Account · Hyperdrive
 
 (All scoped to your account.) Copy the token.
 
@@ -58,41 +62,56 @@ In your fork: **Settings → Secrets and variables → Actions → New repositor
 
 ### Required
 
-| Name                      | Value                                                          |
-| ------------------------- | -------------------------------------------------------------- |
-| `CLOUDFLARE_API_TOKEN`    | the token from step 2                                          |
-| `CLOUDFLARE_ACCOUNT_ID`   | your account ID                                                |
-| `IDENTITY_DATABASE_URL`   | `postgresql://user:pass@host:5432/db` (Postgres origin)        |
+| Name                      | Value                |
+| ------------------------- | -------------------- |
+| `CLOUDFLARE_API_TOKEN`    | the token from step 2 |
+| `CLOUDFLARE_ACCOUNT_ID`   | your account ID      |
 
-### Optional
+### Optional secrets (overrides only)
 
-If you skip these, the workflow auto-generates random 32-byte hex values on
-first run and stores them as Cloudflare Worker secrets. The values then
-persist in Cloudflare; the workflow won't overwrite them on subsequent runs.
-Set them yourself if you want to control rotation from GitHub.
+These have no required values — every deploy reads them from D1
+`citizenry-identity._config`, generating a random 32-byte hex on first
+run if absent. The value persists there for the life of the database
+and is copied into the matching Worker secrets on each deploy.
 
-| Name                | Default behavior                                                 |
-| ------------------- | ---------------------------------------------------------------- |
-| `ENROLLMENT_PEPPER` | auto-generated (`openssl rand -hex 32`)                          |
-| `SERVICE_KEY`       | auto-generated                                                   |
-| `ADMIN_ALLOWLIST`   | not set; `admin-api` falls back to whatever its code defaults to |
+Set the matching GitHub secret only if you want to pin or rotate the
+value from the repository — the override is written into `_config`
+(upsert), then pushed to the workers.
 
-If you want to pre-generate values yourself:
+| Name                | Stored in                            | Used by                              |
+| ------------------- | ------------------------------------ | ------------------------------------ |
+| `ENROLLMENT_PEPPER` | D1 `_config(key='enrollment_pepper')` | `api` (Worker secret)                |
+| `SERVICE_KEY`       | D1 `_config(key='service_key')`       | `api` and `admin-api` (same value)   |
+
+#### Inspecting values
 
 ```bash
-openssl rand -hex 32   # paste into GitHub as the secret value
+wrangler d1 execute citizenry-identity --remote \
+  --command="SELECT key, value FROM _config;"
 ```
+
+Or open Cloudflare Dashboard → D1 → `citizenry-identity` → **Console**.
+
+#### Rotating a value
+
+```bash
+wrangler d1 execute citizenry-identity --remote \
+  --command="DELETE FROM _config WHERE key='service_key';"
+```
+
+The next deploy generates a fresh value and pushes it to both Workers.
 
 ### Optional GitHub **variables** (not secrets)
 
 For public configuration: **Settings → Secrets and variables → Actions → Variables**.
 
-| Name           | Purpose                                                      | Example                            |
-| -------------- | ------------------------------------------------------------ | ---------------------------------- |
-| `ISSUER_HOST`  | DID issuer host, written into `[vars] ISSUER_HOST`           | `id.example.com`                   |
-| `JWT_AUDIENCE` | JWT audience list, written into `[vars] JWT_AUDIENCE`        | `api.id.example.com,citizenry-id`  |
+| Name           | Purpose                                                                                  | Example                            |
+| -------------- | ---------------------------------------------------------------------------------------- | ---------------------------------- |
+| `ISSUER_HOST`  | DID issuer host, written into api/admin-api `[vars] ISSUER_HOST`                         | `id.example.com`                   |
+| `JWT_AUDIENCE` | JWT audience list, written into api `[vars] JWT_AUDIENCE`                                | `api.id.example.com,citizenry-id`  |
+| `API_BASE_URL` | URL that `admin-api` proxies to. Auto-detected from the workers.dev subdomain if unset. | `https://api.example.com`          |
 
-If you omit these the value committed in each `wrangler.toml` is kept as-is.
+When omitted, the committed `wrangler.toml` value is kept as-is.
 
 ## Step 4 — Run the workflow
 
@@ -103,28 +122,27 @@ Two options:
 
 On the first run, the workflow:
 
-1. Creates the `citizenry-vault` D1 database.
-2. Creates the `citizenry-identity` Hyperdrive config pointing at
-   `IDENTITY_DATABASE_URL`.
-3. Applies SQL migrations to both.
-4. Builds and deploys three Workers (`api`, `admin-api`, `mcp`).
-5. Builds the two SvelteKit apps and deploys them as Cloudflare Pages projects.
-6. Pushes secrets to each Worker (auto-generated if not provided).
+1. Creates the `citizenry-vault` and `citizenry-identity` D1 databases.
+2. Patches the real database UUIDs and any optional `[vars]` overrides
+   into the committed `wrangler.toml` files in place.
+3. Applies migrations to both D1 databases via
+   `wrangler d1 migrations apply`.
+4. Builds and deploys the three Workers (`api`, `admin-api`, `mcp`).
+5. Builds the two SvelteKit apps and deploys them as Cloudflare Pages
+   projects.
+6. Pushes Worker secrets, auto-generating any value that's missing.
 
-After the first run the same workflow is **idempotent**:
+Subsequent runs are idempotent:
 
-- D1 and Hyperdrive are looked up by name and only created if missing.
-- Hyperdrive's origin connection is re-applied each run (so rotating
-  `IDENTITY_DATABASE_URL` "just works").
-- D1 migrations use Wrangler's tracking table; identity Postgres migrations
-  use `identity._migrations` (filename-keyed). Re-running applies nothing
-  if there's nothing new.
-- Worker secrets are only pushed when you change them in GitHub or on the
-  very first deploy.
+- D1 databases are looked up by name and only created when missing.
+- D1 migrations rely on Wrangler's tracking table; only new files are
+  applied.
+- Worker secrets are pushed only when a GitHub secret changes or on the
+  first deploy.
 
 ## What gets deployed where
 
-After a successful run, expect (replace `<sub>` with your `*.workers.dev` subdomain):
+After a successful run (`<sub>` = your `*.workers.dev` subdomain):
 
 - `https://citizenry-api.<sub>.workers.dev`
 - `https://citizenry-admin-api.<sub>.workers.dev`
@@ -132,52 +150,49 @@ After a successful run, expect (replace `<sub>` with your `*.workers.dev` subdom
 - `https://citizenry-web.pages.dev`
 - `https://citizenry-admin-web.pages.dev`
 
-The job summary at the bottom of each workflow run reproduces this table.
+The same table is rendered in the Summary of every workflow run.
 
 ## Adding migrations later
 
-- **D1 (vault)** — `cd packages/vault && pnpm db:generate` writes a new
-  numbered file to `migrations/`. Commit. Next deploy will apply it.
-- **Postgres (identity)** — `cd packages/identity && pnpm db:generate` writes
-  a new SQL file. Commit. Next deploy will apply it via
-  `scripts/ci/migrate-identity.sh`, which tracks applied files in
-  `identity._migrations`.
+Add SQL files under `packages/vault/migrations/` or
+`packages/identity/migrations/`. Each file must be idempotent
+(`CREATE ... IF NOT EXISTS`).
+
+The next deploy applies them via `wrangler d1 migrations apply`, which
+uses its tracking table to skip files that are already present.
 
 ## Custom domains
 
-The workflow uses Cloudflare's default `*.workers.dev` and `*.pages.dev`
-hostnames. To bind a custom domain:
+The defaults are `*.workers.dev` / `*.pages.dev`. To attach a custom
+domain:
 
-1. Cloudflare dashboard → Workers & Pages → select a project → **Custom domains**.
-2. Add your hostname. Cloudflare provisions a certificate and routes traffic.
-3. Update the GitHub variables `ISSUER_HOST` and `JWT_AUDIENCE` so the next
-   deploy bakes the new host into `[vars]`. Existing deploys can read the
-   old `[vars]` until the next deploy.
+1. Cloudflare dashboard → Workers & Pages → select a project →
+   **Custom domains**.
+2. Add the hostname. Cloudflare issues a certificate automatically.
+3. Update the GitHub variables `ISSUER_HOST` / `JWT_AUDIENCE` /
+   `API_BASE_URL`. The next deploy bakes the new host into `[vars]`.
 
 ## Troubleshooting
 
-- **`Missing required secret(s): …`** — the workflow checks for the three
-  required secrets up front and fails fast. Add them and re-run.
-- **`CF ... failed: [10000] Authentication error`** — token doesn't include
-  the permission Wrangler is asking for. Re-issue with the four Edit scopes
-  listed in step 2.
-- **Hyperdrive origin update fails** — make sure the Postgres database is
-  reachable from the public internet (Cloudflare connects from its edge,
-  not from GitHub) and that the credentials in `IDENTITY_DATABASE_URL` are
-  current.
-- **`wrangler d1 migrations apply` hangs on a confirmation prompt** — the
-  workflow pipes `yes` into it. If you run it locally, append `--remote`
-  and confirm interactively.
+- **`Missing required secret(s): …`** — the first step checks the two
+  required secrets and fails fast.
+- **`CF ... failed: [10000] Authentication error`** — the token lacks
+  a required permission. Re-issue with the three Edit scopes listed in
+  step 2.
+- **admin-api calls return 401** — `SERVICE_KEY` must be the same value
+  on both `api` and `admin-api`. Set the GitHub secret explicitly and
+  redeploy.
+- **`wrangler d1 migrations apply` hangs at the confirmation prompt** —
+  the workflow pipes `yes` into it. When you run it locally, type `y`
+  yourself.
 
 ## Local development
 
-Nothing in this guide changes local dev. You still run:
-
 ```bash
 pnpm install
-pnpm dev   # builds spec, then runs all five apps in parallel
+pnpm dev   # builds spec, then runs all apps in parallel
 ```
 
-`wrangler dev` uses miniflare for local D1 and ignores the production
-`database_id`, so the committed `local-dev-placeholder` placeholders are
-fine for offline use.
+`wrangler dev` uses miniflare's local D1 and ignores the production
+`database_id` — the committed `local-dev-placeholder` works as-is for
+offline development.

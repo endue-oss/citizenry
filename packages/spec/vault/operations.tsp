@@ -57,7 +57,7 @@ model VaultEntryCreateResponse extends VaultEntryBase {}
 /**
  * Agent-scoped Vault routes.
  *
- * 인증: `Authorization: Bearer <self-signed agent JWT>` (RFC 7523).
+ * Auth: `Authorization: Bearer <self-signed agent JWT>` (RFC 7523).
  *
  * @status draft
  */
@@ -66,9 +66,9 @@ model VaultEntryCreateResponse extends VaultEntryBase {}
 @useAuth(AgentJwtAuth)
 interface Entries {
   /**
-   * 호출자(에이전트) 소유의 entry 목록.
+   * Entries owned by the caller (agent).
    *
-   * 가능한 에러: 401 (jwt invalid), 429, 500
+   * Possible errors: 401 (jwt invalid), 429, 500.
    */
   @summary("List the caller's vault entries (paginated)")
   @operationId("vault-entry-list")
@@ -79,9 +79,9 @@ interface Entries {
     | InternalError;
 
   /**
-   * 단일 entry 조회. 비-소유자가 조회 시 404.
+   * Read a single entry. Returns 404 when a non-owner reads.
    *
-   * 가능한 에러: 401, 404, 500
+   * Possible errors: 401, 404, 500.
    */
   @summary("Read a single vault entry by id")
   @operationId("vault-entry-read")
@@ -93,9 +93,9 @@ interface Entries {
     | InternalError;
 
   /**
-   * 신규 entry 생성.
+   * Create a new entry.
    *
-   * 가능한 에러: 400, 401, 422, 429, 500
+   * Possible errors: 400, 401, 422, 429, 500.
    */
   @summary("Create a vault entry under the caller")
   @operationId("vault-entry-create")
@@ -122,7 +122,7 @@ interface Entries {
 model VaultEntryAdminGetResponse extends VaultEntryBase {}
 
 /**
- * Admin / 운영자 호출. 모든 요청에 `X-Service-Key` 헤더 필요.
+ * Called by an admin or operator. Every request requires the `X-Service-Key` header.
  *
  * @status draft
  */
@@ -131,9 +131,9 @@ model VaultEntryAdminGetResponse extends VaultEntryBase {}
 @useAuth(ServiceKeyAuth)
 interface AdminEntries {
   /**
-   * 모든 owner 의 entry 목록.
+   * Entries across every owner.
    *
-   * 가능한 에러: 401 (psk_invalid), 500
+   * Possible errors: 401 (psk_invalid), 500.
    */
   @summary("List all vault entries across owners (admin)")
   @operationId("admin-vault-entry-list")
@@ -143,9 +143,9 @@ interface AdminEntries {
   ): PaginatedList<VaultEntryAdminGetResponse> | UnauthorizedError | InternalError;
 
   /**
-   * 운영자 강제 삭제. 멱등.
+   * Operator-forced delete. Idempotent.
    *
-   * 가능한 에러: 401 (psk_invalid), 404 (not_found), 500
+   * Possible errors: 401 (psk_invalid), 404 (not_found), 500.
    */
   @summary("Force-delete a vault entry (admin, idempotent)")
   @operationId("admin-vault-entry-delete")

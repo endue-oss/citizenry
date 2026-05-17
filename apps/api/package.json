@@ -15,8 +15,7 @@
     "@citizenry/spec": "workspace:*",
     "@citizenry/vault": "workspace:*",
     "drizzle-orm": "^0.36.4",
-    "hono": "^4.6.10",
-    "postgres": "^3.4.5"
+    "hono": "^4.6.10"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260516.0",

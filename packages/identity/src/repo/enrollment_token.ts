@@ -34,8 +34,8 @@ export const createEnrollmentTokenRepo = (db: Db) => ({
 
   /**
    * uses_left atomic decrement.
-   * WHERE: token_hash 매칭 AND not revoked AND uses_left > 0 AND expires_at > now.
-   * 반환 row 가 비면 invalid/exhausted → caller 가 410 처리.
+   * WHERE: token_hash matches AND not revoked AND uses_left > 0 AND expires_at > now.
+   * Empty returned row means invalid/exhausted → caller responds 410.
    */
   consume: (tokenHash: Uint8Array, now: Date) =>
     db

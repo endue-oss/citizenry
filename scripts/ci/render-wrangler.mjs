@@ -11,16 +11,16 @@
 //   JWT_AUDIENCE    defaults to the value already in wrangler.toml
 //
 // Optional env (admin-api):
-//   API_BASE_URL    overrides admin-api 의 [vars] API_BASE_URL — 보통 api 워커의
-//                   workers.dev 서브도메인 또는 커스텀 도메인.
+//   API_BASE_URL    overrides admin-api's [vars] API_BASE_URL — usually the api
+//                   worker's workers.dev subdomain or a custom domain.
 //
 // Targets:
 //   apps/api/wrangler.toml         — DB_VAULT, DB_IDENTITY
-//   apps/admin-api/wrangler.toml   — vars only (DB 직접 접근 없음)
+//   apps/admin-api/wrangler.toml   — vars only (no direct DB access)
 //   apps/mcp/wrangler.toml         — no DB bindings
-//   apps/migrator/wrangler.toml    — DB_VAULT, DB_IDENTITY (마이그레이션 실행 worker)
+//   apps/migrator/wrangler.toml    — DB_VAULT, DB_IDENTITY (migration runner worker)
 //
-// 치환은 `binding = "..."` 앵커에 묶여 있어 의도한 binding 만 건드린다.
+// The replacement is anchored on `binding = "..."`, so only the intended binding is touched.
 
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 

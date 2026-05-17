@@ -8,14 +8,14 @@ using Citizenry.Common;
 namespace Citizenry.Identity;
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// Identity (P01-S01) 에러 코드 카탈로그
+// Identity (P01-S01) error code catalog.
 //
-// 포맷: `{LEVEL}-P01-S01-{NNNN}` — LEVEL ∈ {ERR, WARN, INFO}
-// 본 enum 은 ERR 코드만 (응답 body 에 노출).
+// Format: `{LEVEL}-P01-S01-{NNNN}` — LEVEL ∈ {ERR, WARN, INFO}.
+// This enum lists ERR codes only (the ones exposed in response bodies).
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 /**
- * Identity (P01-S01) 의 에러 코드 카탈로그 (ERR only).
+ * Identity (P01-S01) error code catalog (ERR only).
  *
  * @status confirmed
  */
@@ -23,60 +23,60 @@ enum IdentityErrorCode {
   // ── 0xxx Transport / HTTP ─────────────────────────────
   /** 400 — malformed request body / query */
   bad_request: "ERR-P01-S01-0400",
-  /** 401 — 인증 누락 또는 검증 실패 (포괄) */
+  /** 401 — missing or failed authentication (catch-all) */
   unauthorized: "ERR-P01-S01-0401",
-  /** 404 — 리소스 없음 (agent / enrollment / key) */
+  /** 404 — resource not found (agent / enrollment / key) */
   not_found: "ERR-P01-S01-0404",
-  /** 409 — slug 중복 등 conflict */
+  /** 409 — conflict (e.g. slug duplicate) */
   conflict: "ERR-P01-S01-0409",
-  /** 410 — enrollment 토큰 만료 / 소진 */
+  /** 410 — enrollment token expired or exhausted */
   gone: "ERR-P01-S01-0410",
   /** 429 — rate limited */
   rate_limited: "ERR-P01-S01-0429",
-  /** 500 — 내부 오류 */
+  /** 500 — internal error */
   internal: "ERR-P01-S01-0500",
-  /** 503 — backend 가용 불가 */
+  /** 503 — backend unavailable */
   unavailable: "ERR-P01-S01-0503",
 
   // ── 1xxx Auth (JWT / JWS / PSK) ───────────────────────
   /** JWT alg ≠ EdDSA */
   jwt_alg_mismatch: "ERR-P01-S01-1001",
-  /** JWT aud 불일치 (`api.citizenry.id` / `citizenry-id` 외) */
+  /** JWT aud mismatch (not `api.citizenry.id` / `citizenry-id`) */
   jwt_aud_mismatch: "ERR-P01-S01-1002",
-  /** JWT exp 만료 */
+  /** JWT exp expired */
   jwt_expired: "ERR-P01-S01-1003",
-  /** JWT kid 미존재 또는 revoked */
+  /** JWT kid unknown or revoked */
   jwt_kid_unknown: "ERR-P01-S01-1004",
-  /** JWS replay (jti 중복) */
+  /** JWS replay (duplicate jti) */
   jws_replay: "ERR-P01-S01-1010",
-  /** JWS payload action 불일치 */
+  /** JWS payload action mismatch */
   jws_action_mismatch: "ERR-P01-S01-1011",
-  /** JWS lifetime 초과 (`exp - iat > 권장 max`) */
+  /** JWS lifetime exceeded (`exp - iat > recommended max`) */
   jws_lifetime_exceeded: "ERR-P01-S01-1012",
-  /** Service PSK 검증 실패 (`X-Service-Key`) */
+  /** Service PSK verification failed (`X-Service-Key`) */
   psk_invalid: "ERR-P01-S01-1020",
-  /** Bearer enrollment token 형식 오류 또는 검증 실패 */
+  /** Bearer enrollment token malformed or failed verification */
   enrollment_token_invalid: "ERR-P01-S01-1030",
 
-  // ── 2xxx Schema / 입력 검증 ──────────────────────────
-  /** public_key_jwk 형식 오류 (kty/crv/길이 등) */
+  // ── 2xxx Schema / input validation ───────────────────
+  /** public_key_jwk malformed (kty/crv/length, etc.) */
   jwk_invalid: "ERR-P01-S01-2001",
-  /** slug pattern 위반 */
+  /** slug pattern violation */
   slug_invalid: "ERR-P01-S01-2002",
-  /** tenant 값 enum 외 */
+  /** tenant value outside the enum */
   tenant_invalid: "ERR-P01-S01-2003",
 
-  // ── 3xxx Business 규칙 ───────────────────────────────
-  /** rotate-key 시 active 키가 아닌 키로 서명 시도 */
+  // ── 3xxx Business rules ──────────────────────────────
+  /** rotate-key signed by a key that is not active */
   key_not_active: "ERR-P01-S01-3001",
-  /** revoked 에이전트가 self-service 호출 */
+  /** revoked agent called a self-service route */
   agent_revoked: "ERR-P01-S01-3002",
 
-  // ── 4xxx 외부 의존 ────────────────────────────────────
-  /** Postgres 쿼리 실패 */
+  // ── 4xxx External dependencies ───────────────────────
+  /** Postgres query failure */
   db_failure: "ERR-P01-S01-4001",
 
-  // ── 7xxx 도메인 특화 ─────────────────────────────────
-  /** enrollment 토큰 invalid 또는 소진 */
+  // ── 7xxx Domain-specific ─────────────────────────────
+  /** enrollment token invalid or exhausted */
   enrollment_invalid_or_exhausted: "ERR-P01-S01-7100",
 }

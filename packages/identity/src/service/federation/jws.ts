@@ -1,17 +1,18 @@
-// 페더레이션 핸드셰이크 JWS verify.
+// Federation handshake JWS verification.
 //
-// 외부 crypto 라이브러리를 직접 의존하지 않도록 verifier 를 주입한다.
-// production 에서는 `jose` (또는 동등한 EdDSA 검증 함수) 를 전달.
+// The verifier is injected so this module does not depend directly on any
+// crypto library. Production callers pass `jose` (or an equivalent EdDSA
+// verifier).
 
 import { FED } from './errors'
 import type { FederationHandshakePayload, FederationPurpose } from './types'
 
 /**
- * JWS verifier 시그니처.
+ * JWS verifier signature.
  *
- * - 입력: compact JWS, peer JWKS (JSON 객체).
- * - 성공: parsed payload (JSON object — caller 가 narrowing).
- * - 실패: throw FederationError (FED.jwsVerifyFailed 권장).
+ * - Inputs: compact JWS, peer JWKS (JSON object).
+ * - Success: parsed payload (JSON object — caller narrows the type).
+ * - Failure: throw FederationError (FED.jwsVerifyFailed recommended).
  */
 export type JwsVerifier = (
   compactJws: string,
@@ -42,18 +43,19 @@ const requireString = (
 }
 
 /**
- * Compact JWS → 검증된 핸드셰이크 payload.
+ * Compact JWS → verified handshake payload.
  *
- * 검사 순서 (RFC-0001 §"Handshake initiate"):
- *   1) verifier 호출 → alg=EdDSA, kid ∈ jwks 검증 + 서명 확인
- *   2) `purpose` enum 멤버 확인
- *   3) `to_issuer` 가 우리쪽 issuer 와 일치
- *   4) `from_issuer` host 가 정상 https URL
- *   5) iat/exp 범위 (`exp - iat ≤ 600`, `exp ≥ now`)
- *   6) nonce 형식 — base64url 16+ chars
+ * Check order (RFC-0001 §"Handshake initiate"):
+ *   1) Call verifier → asserts alg=EdDSA, kid ∈ jwks, and a valid signature.
+ *   2) `purpose` is a known enum member.
+ *   3) `to_issuer` matches our issuer.
+ *   4) `from_issuer` is a well-formed https URL.
+ *   5) iat/exp window (`exp - iat ≤ 600`, `exp ≥ now`).
+ *   6) nonce shape — base64url, 16+ chars.
  *
- * `selfIssuer` 는 우리 인스턴스의 issuer URL — 이 verify 가 inbound 요청을 받는 측에서 호출됨.
- * `expectedFromIssuer` 가 주어지면 (예: 알려진 peer 의 ack 검증) 그 issuer 와도 매칭.
+ * `selfIssuer` is our instance's issuer URL — this verify runs on the
+ * inbound side. When `expectedFromIssuer` is provided (e.g. verifying the
+ * ack from a known peer), the payload's `from_issuer` must match it too.
  */
 export const verifyHandshakeJws = async (
   verifier: JwsVerifier,

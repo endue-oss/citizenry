@@ -3,15 +3,15 @@ import type { Db } from '../db'
 export type RegisterService = ReturnType<typeof createRegisterService>
 
 /**
- * Agent 자가 등록.
+ * Agent self-registration.
  *
- * 미구현 — service 단에서:
- *   1. Authorization 헤더에서 enrollment token 추출
+ * Not implemented — at the service layer:
+ *   1. Extract enrollment token from the Authorization header
  *   2. peppered SHA-256 hash, enrollment_token.consume (atomic)
- *   3. slug unique 검사
- *   4. principal + agent 생성 (ULID), tenant_principal_membership row
- *   5. agent_key (active, kid_<ULID>) insert
- *   6. audit_log insert
+ *   3. slug uniqueness check
+ *   4. Create principal + agent (ULID), tenant_principal_membership row
+ *   5. Insert agent_key (active, kid_<ULID>)
+ *   6. Insert audit_log
  */
 export const createRegisterService = (_deps: {
   db: Db

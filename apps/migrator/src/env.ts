@@ -1,10 +1,10 @@
 import type { D1Database } from '@cloudflare/workers-types'
 
 export type Bindings = {
-  /** D1 binding — identity 도메인 (principal, tenant, agent, key, ...) */
+  /** D1 binding — identity domain (principal, tenant, agent, key, ...) */
   DB_IDENTITY: D1Database
 
-  /** D1 binding — vault 도메인 (encrypted entries) */
+  /** D1 binding — vault domain (encrypted entries) */
   DB_VAULT: D1Database
 
   /** Bearer token required on every authenticated request. */

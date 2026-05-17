@@ -10,7 +10,7 @@ type Vars = { db: Db } & Partial<FederationVars>
 /**
  * User-facing identity router.
  *
- * 라우트 (참조 spec 와 동일 — root 마운트 시 그대로 노출):
+ * Routes (mirror the reference spec — exposed as-is when mounted at root):
  *   POST   /api/v1/agent/register      (Bearer enrollment token)
  *   GET    /api/v1/agent/me            (Bearer self-signed JWT)
  *   POST   /api/v1/agent/me/rotate-key (body JWS, old key signed)
@@ -62,5 +62,5 @@ export const identityRouter = new Hono<{ Variables: Vars }>()
 // ── Federation public surface (RFC-0001) ──────────────────
 //   GET  /.well-known/citizenry-peer
 //   POST /federation/handshake
-// 라우트는 c.var.federation 서비스 인스턴스를 기대 — apps/api 미들웨어에서 주입.
+// Routes expect a c.var.federation service instance — injected by apps/api middleware.
 mountPublicFederationRoutes(identityRouter as unknown as Hono<{ Variables: FederationVars }>)

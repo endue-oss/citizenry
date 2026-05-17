@@ -1,6 +1,6 @@
 // ULID helpers — Crockford Base32 26-char IDs with prefixes.
-// 실제 ULID 라이브러리는 service 구현 시 추가 (ulidx 등). 이 파일은
-// prefix 컨벤션을 한 곳에 모아둔다.
+// The actual ULID library (e.g. ulidx) is added when services are implemented.
+// This file just centralizes the prefix convention.
 
 export const ID_PREFIX = {
   agent: 'ag_',
@@ -17,26 +17,26 @@ export const ID_PREFIX = {
 export type IdPrefix = keyof typeof ID_PREFIX
 
 /**
- * ULID 형식인지 확인 (prefix 매칭 안 함).
- * Crockford Base32 — 0/I/L/O/U 제외, 26자.
+ * Check ULID shape (does not match prefix).
+ * Crockford Base32 — excludes 0/I/L/O/U, 26 chars.
  */
 export const isUlid = (s: string): boolean =>
   /^[0-9A-HJKMNP-TV-Z]{26}$/.test(s)
 
 /**
- * Prefix 매칭 확인. 예: `hasPrefix('ag_01H...', 'agent')`.
+ * Check prefix match. Example: `hasPrefix('ag_01H...', 'agent')`.
  */
 export const hasPrefix = (id: string, kind: IdPrefix): boolean =>
   id.startsWith(ID_PREFIX[kind])
 
 /**
- * Agent DID 빌더. 호출자가 issuer host 를 주입.
+ * Agent DID builder. Caller injects the issuer host.
  * `did:web:{issuer}:agent:{id}`
  */
 export const agentDid = (issuer: string, agentId: string): string =>
   `did:web:${issuer}:agent:${agentId}`
 
 /**
- * Issuer DID 빌더. `did:web:{issuer}`
+ * Issuer DID builder. `did:web:{issuer}`
  */
 export const issuerDid = (issuer: string): string => `did:web:${issuer}`

@@ -1,7 +1,8 @@
-// Federation 도메인 전용 에러 — service 가 던지고 router 가 envelope.
+// Federation-domain errors — thrown by the service, enveloped by the router.
 //
-// RFC-0001 §"New error codes" 의 코드와 1:1 대응. envelope 변환은
-// router 단의 onError 가 BaseError → HTTP response 로 맞춰 처리.
+// 1:1 with the codes in RFC-0001 §"New error codes". The envelope is
+// produced by the router's onError, which maps the BaseError to an
+// HTTP response.
 
 export class FederationError extends Error {
   readonly code: string

@@ -1,4 +1,4 @@
-// federation_peer DB row → public view 변환.
+// federation_peer DB row → public view conversion.
 
 import type { FederationPeerRow } from '../../db/schema'
 import type { FederationPeerState, FederationPeerView } from './types'

@@ -6,27 +6,27 @@ using TypeSpec.Http;
 namespace Citizenry.Common;
 
 /**
- * Service PSK — admin / 운영자 호출. `X-Service-Key` 헤더.
+ * Service PSK — admin / operator calls. `X-Service-Key` header.
  *
- * constant-time 비교, 32+ bytes 권장.
+ * Constant-time comparison; 32+ bytes recommended.
  *
  * @status confirmed
  */
 model ServiceKeyAuth is ApiKeyAuth<ApiKeyLocation.header, "X-Service-Key">;
 
 /**
- * Enrollment Bearer token — 부트스트랩 1회성 자가등록.
+ * Enrollment Bearer token — one-shot bootstrap self-registration.
  *
- * `Authorization: Bearer eret_…`. peppered SHA-256 으로 검증.
+ * `Authorization: Bearer eret_…`. Verified against the peppered SHA-256.
  *
  * @status confirmed
  */
 model EnrollmentBearerAuth is BearerAuth;
 
 /**
- * Self-signed JWT Bearer — 등록 완료된 에이전트의 self-service 인증.
+ * Self-signed JWT Bearer — self-service auth for a registered agent.
  *
- * `Authorization: Bearer eyJ…`. Ed25519 서명, `iss = sub` (self-signed).
+ * `Authorization: Bearer eyJ…`. Ed25519-signed, `iss = sub` (self-signed).
  *
  * @status confirmed
  */

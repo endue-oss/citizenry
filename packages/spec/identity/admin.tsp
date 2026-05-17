@@ -10,12 +10,12 @@ using Citizenry.Common;
 namespace Citizenry.Identity;
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// Admin — 운영자 read + 강제 revoke (admin BFF 가 호출)
-// 모든 요청에 `X-Service-Key` 필요.
+// Admin — operator read + force-revoke (called by the admin BFF).
+// Every request requires `X-Service-Key`.
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 /**
- * 에이전트 admin row.
+ * Agent admin row.
  * @status confirmed
  */
 model AgentAdminGetResponse {
@@ -28,7 +28,7 @@ model AgentAdminGetResponse {
   owner_human_principal_id: humanId;
   metadata?: Record<unknown>;
 
-  /** 현재 활성 키. revoked 에이전트면 undefined. */
+  /** Currently active key. Undefined for revoked agents. */
   active_kid?: kid;
 
   created_at: iso8601;
@@ -36,7 +36,7 @@ model AgentAdminGetResponse {
 }
 
 /**
- * Enrollment admin 목록 / 상세는 EnrollmentGetResponse 재사용.
+ * Enrollment admin list / detail reuses EnrollmentGetResponse.
  *
  * @status confirmed
  */
@@ -45,7 +45,7 @@ model AgentAdminGetResponse {
 @useAuth(ServiceKeyAuth)
 interface AdminEnrollments {
   /**
-   * 가능한 에러: 401 (psk_invalid), 500
+   * Possible errors: 401 (psk_invalid), 500.
    */
   @summary("List enrollments (admin, paginated)")
   @operationId("admin-enrollment-list")
@@ -57,7 +57,7 @@ interface AdminEnrollments {
 }
 
 /**
- * 에이전트 admin 목록 / 상세 / 강제 폐기.
+ * Agent admin list / detail / force-revoke.
  *
  * @status confirmed
  */
@@ -66,7 +66,7 @@ interface AdminEnrollments {
 @useAuth(ServiceKeyAuth)
 interface AdminAgents {
   /**
-   * 가능한 에러: 401 (psk_invalid), 500
+   * Possible errors: 401 (psk_invalid), 500.
    */
   @summary("List agents (admin, paginated, filterable)")
   @operationId("admin-agent-list")
@@ -78,7 +78,7 @@ interface AdminAgents {
   ): PaginatedList<AgentAdminGetResponse> | UnauthorizedError | InternalError;
 
   /**
-   * 가능한 에러: 401 (psk_invalid), 404 (agent_not_found), 500
+   * Possible errors: 401 (psk_invalid), 404 (agent_not_found), 500.
    */
   @summary("Read an agent (admin)")
   @operationId("admin-agent-read")
@@ -89,13 +89,13 @@ interface AdminAgents {
     | InternalError;
 
   /**
-   * 운영자 강제 폐기. 멱등. 즉시 발효 — 모든 키 `revoked`.
+   * Operator-forced revoke. Idempotent. Takes effect immediately — all keys `revoked`.
    *
-   * 자가 폐기와 다른 점:
-   * - 본인 서명 불필요 (운영자 권한)
-   * - audit log 에 actor_type='operator' 기록
+   * Differences from self-revoke:
+   * - No self-signature required (operator authority).
+   * - Audit log records actor_type='operator'.
    *
-   * 가능한 에러: 401 (psk_invalid), 404 (agent_not_found), 500
+   * Possible errors: 401 (psk_invalid), 404 (agent_not_found), 500.
    */
   @summary("Operator-force revoke an agent (idempotent)")
   @operationId("admin-agent-revoke")

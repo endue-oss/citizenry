@@ -1,6 +1,6 @@
-// `/.well-known/citizenry-peer` 와 JWKS 를 fetch + parse.
+// Fetch + parse `/.well-known/citizenry-peer` and JWKS.
 //
-// 외부 HTTP fetch 는 주입된 `fetcher` 를 통해 — 테스트에서 fake 로 교체 가능.
+// External HTTP fetch goes through the injected `fetcher` — replaceable with a fake in tests.
 
 import { FED } from './errors'
 import type { PeerDiscoveryDocument } from './types'
@@ -13,10 +13,10 @@ export type Fetcher = (
 const TIMEOUT_MS = 10_000
 
 /**
- * issuer URL 정규화.
- *   - scheme: https 강제 (localhost 예외 — dev/test)
- *   - trailing slash 제거
- *   - path 없어야 함 (있으면 invalid)
+ * Normalize an issuer URL.
+ *   - scheme: https enforced (localhost excepted — dev/test)
+ *   - trailing slash stripped
+ *   - must have no path (invalid if present)
  */
 export const normalizeIssuer = (raw: string): string => {
   let url: URL
@@ -67,7 +67,7 @@ const fetchJsonWithTimeout = async <T,>(
   }
 }
 
-/** issuer 의 `/.well-known/citizenry-peer` 를 가져와 형식 검증. */
+/** Fetch the issuer's `/.well-known/citizenry-peer` and validate its shape. */
 export const fetchPeerDiscovery = async (
   fetcher: Fetcher,
   issuer: string,
@@ -90,7 +90,7 @@ export const fetchPeerDiscovery = async (
   return doc
 }
 
-/** issuer 의 JWKS 를 가져와 obj 그대로 반환 (서명 검증 시 sub-step 에서 파싱). */
+/** Fetch the issuer's JWKS and return the object as-is (parsed during a signature-verify sub-step). */
 export const fetchPeerJwks = async (
   fetcher: Fetcher,
   jwksUrl: string,

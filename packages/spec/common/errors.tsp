@@ -3,53 +3,53 @@ import "./scalars.tsp";
 
 using TypeSpec.Http;
 
-// @status draft — 확정된 타입에는 개별 @status confirmed 표기
+// @status draft — confirmed types carry an individual @status confirmed marker.
 namespace Citizenry.Common;
 
 /**
- * 표준 RESTful API 에러 응답 base.
+ * Standard RESTful API error response base.
  *
- * 에러 코드 포맷: `ERR-{P##}-{S##}-{NNNN}`
- * - `P##` 제품 코드 (Product)
+ * Error code format: `ERR-{P##}-{S##}-{NNNN}`
+ * - `P##` product code
  *   - **P01** = citizenry-id, P02 = endue-ai, P03 = endue-space
- * - `S##` 제품 내 서비스 코드 (Service)
- *   - citizenry-id 의 경우: **S01** = identity, S02 = mail, S03 = vault, S04 = wallet, S05 = tenant
- * - `NNNN` 4자리 일련번호 (서비스 내 unique).
+ * - `S##` service code within the product
+ *   - For citizenry-id: **S01** = identity, S02 = mail, S03 = vault, S04 = wallet, S05 = tenant
+ * - `NNNN` 4-digit serial (unique within the service).
  *   - 0xxx=transport, 1xxx=auth, 2xxx=schema, 3xxx=business, 4xxx=external dep, 5xxx=invariant, 7xxx=domain, 9xxx=fallback
  *
- * 예: `ERR-P01-S01-0401` = citizenry-id (P01) 의 identity (S01) 401 인증 실패
+ * Example: `ERR-P01-S01-0401` = citizenry-id (P01) identity (S01) 401 auth failure.
  *
  * @status confirmed
  */
 @error
 model BaseError {
-  /** 에러 제목 (예: "Unauthorized", "EnrollmentExhausted") */
+  /** Error title (e.g. "Unauthorized", "EnrollmentExhausted") */
   title: string;
 
-  /** 사람이 읽을 수 있는 메시지 */
+  /** Human-readable message */
   message: string;
 
-  /** 추가 정보 (예: `{ "field": "slug", "reason": "duplicate" }`) */
+  /** Extra detail (e.g. `{ "field": "slug", "reason": "duplicate" }`) */
   detail?: Record<unknown>;
 
-  /** 에러 코드 — `ERR-{P##}-{S##}-{NNNN}` */
+  /** Error code — `ERR-{P##}-{S##}-{NNNN}` */
   code: string;
 
-  /** HTTP 메서드 (예: "POST") */
+  /** HTTP method (e.g. "POST") */
   method: string;
 
-  /** 요청 경로 (예: "/api/v1/agent/register") */
+  /** Request path (e.g. "/api/v1/agent/register") */
   instance: string;
 
-  /** 전체 요청 URL */
+  /** Full request URL */
   request_url: string;
 
-  /** 발생 시각 (ISO 8601 UTC) */
+  /** Occurrence timestamp (ISO 8601 UTC) */
   timestamp: iso8601;
 }
 
 /**
- * 400 Bad Request — 요청 본문/쿼리 파싱 실패, schema 위반.
+ * 400 Bad Request — body/query parsing failed or schema violation.
  * @status confirmed
  */
 @error
@@ -58,7 +58,7 @@ model BadRequestError extends BaseError {
 }
 
 /**
- * 401 Unauthorized — 인증 정보 누락, JWT/JWS/PSK 검증 실패, replay.
+ * 401 Unauthorized — missing credentials, JWT/JWS/PSK verification failure, replay.
  * @status confirmed
  */
 @error
@@ -67,7 +67,7 @@ model UnauthorizedError extends BaseError {
 }
 
 /**
- * 403 Forbidden — 인증은 됐으나 권한 부족.
+ * 403 Forbidden — authenticated but lacking permission.
  * @status confirmed
  */
 @error
@@ -76,7 +76,7 @@ model ForbiddenError extends BaseError {
 }
 
 /**
- * 404 Not Found — 리소스 없음.
+ * 404 Not Found — resource does not exist.
  * @status confirmed
  */
 @error
@@ -85,7 +85,7 @@ model NotFoundError extends BaseError {
 }
 
 /**
- * 409 Conflict — slug 중복 등 unique 위반.
+ * 409 Conflict — unique violation (e.g. duplicate slug).
  * @status confirmed
  */
 @error
@@ -94,7 +94,7 @@ model ConflictError extends BaseError {
 }
 
 /**
- * 410 Gone — enrollment 토큰 만료/소진.
+ * 410 Gone — enrollment token expired or exhausted.
  * @status confirmed
  */
 @error
@@ -103,7 +103,7 @@ model GoneError extends BaseError {
 }
 
 /**
- * 422 Unprocessable Entity — schema 통과했으나 도메인 규칙 위반.
+ * 422 Unprocessable Entity — schema passed but domain rule violated.
  * @status confirmed
  */
 @error
@@ -140,7 +140,7 @@ model BadGatewayError extends BaseError {
 }
 
 /**
- * 503 Service Unavailable — backend down, healthcheck 실패.
+ * 503 Service Unavailable — backend down or healthcheck failed.
  * @status confirmed
  */
 @error
@@ -149,7 +149,7 @@ model ServiceUnavailableError extends BaseError {
 }
 
 /**
- * 모든 에러 응답의 union — 라우트별 narrowing 이 어려운 경우 fallback.
+ * Union of all error responses — fallback when per-route narrowing is awkward.
  * @status confirmed
  */
 alias RestfulApiErrorResponse =
@@ -166,7 +166,7 @@ alias RestfulApiErrorResponse =
   | ServiceUnavailableError;
 
 /**
- * 페이지네이션 메타.
+ * Pagination meta.
  * @status confirmed
  */
 model PaginationMeta {
@@ -177,7 +177,7 @@ model PaginationMeta {
 }
 
 /**
- * 페이지네이션 응답 wrapper.
+ * Pagination response wrapper.
  * @status confirmed
  */
 model PaginatedList<T> {
@@ -186,7 +186,7 @@ model PaginatedList<T> {
 }
 
 /**
- * 공통 페이지네이션 query 파라미터.
+ * Shared pagination query parameters.
  * @status confirmed
  */
 model PaginationParams {

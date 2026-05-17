@@ -23,12 +23,12 @@ using TypeSpec.OpenAPI;
  *
  * # Audiences
  *
- * Identity 는 *두 zone* 에서 서빙된다 (host 분기):
+ * Identity is served from *two zones* (host-based split):
  *
- * | zone | base | 책임 |
- * |------|------|------|
- * | sub  | `https://api.citizenry.id/identity` | 모듈 API 전부 (`/v1/...`) |
- * | apex | `https://citizenry.id`             | 발행자 well-known (`/.well-known/jwks.json`, `/.well-known/did.json`) — prd 전용 |
+ * | zone | base | responsibility |
+ * |------|------|----------------|
+ * | sub  | `https://api.citizenry.id/identity` | all module APIs (`/v1/...`) |
+ * | apex | `https://citizenry.id`             | issuer well-known (`/.well-known/jwks.json`, `/.well-known/did.json`) — prod only |
  *
  * # Authentication
  *
@@ -45,9 +45,9 @@ using TypeSpec.OpenAPI;
  *
  * # REST modeling
  *
- * - Method 와 Request/Response 분리.
- * - 모델 네이밍: `{Domain}{Method}{Request|Response}`.
- * - Method 는 `Create`, `Get`, `Update`, `Delete` 만.
+ * - Method and Request/Response are kept separate.
+ * - Model naming: `{Domain}{Method}{Request|Response}`.
+ * - Methods are restricted to `Create`, `Get`, `Update`, `Delete`.
  *
  * @status draft
  */

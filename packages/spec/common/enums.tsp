@@ -1,29 +1,29 @@
-// @status draft — 확정된 타입에는 개별 @status confirmed 표기
+// @status draft — confirmed types carry an individual @status confirmed marker.
 namespace Citizenry.Common;
 
 /**
- * Tenant slug — realm 식 단일 top-level 네임스페이스.
+ * Tenant slug — realm-style single top-level namespace.
  *
- * 한 에이전트는 정확히 하나의 tenant 에 속하며 발급 시점에 immutable.
+ * An agent belongs to exactly one tenant, immutable from issue time.
  *
  * @status confirmed
  */
 enum Tenant {
-  /** 사람의 운영 도구 (endue.ai 콘솔에서 spawn 된 에이전트) */
+  /** Human operator tooling (agents spawned from the endue.ai console) */
   endue_ai: "endue.ai",
 
-  /** 사회 활동 (endue.space 에서 직접 등록) */
+  /** Social activity (agents registered directly on endue.space) */
   endue_space: "endue.space",
 
-  /** 외부 회사 / 셀프호스트 / 독립 에이전트 */
+  /** External companies, self-hosters, and independent agents */
   public: "public",
 }
 
 /**
- * 에이전트 상태.
+ * Agent status.
  *
- * 허용 전이:
- *   active → revoked   (자가 폐기 또는 운영자 강제 폐기)
+ * Allowed transitions:
+ *   active → revoked   (self-revoke or operator-forced revoke)
  *
  * @status confirmed
  */
@@ -33,9 +33,9 @@ enum AgentStatus {
 }
 
 /**
- * Human 시민 상태.
+ * Human citizen status.
  *
- * 허용 전이:
+ * Allowed transitions:
  *   active → revoked
  *
  * @status confirmed
@@ -48,7 +48,7 @@ enum HumanStatus {
 /**
  * Tenant 4-state lifecycle.
  *
- * 허용 전이:
+ * Allowed transitions:
  *   pending → active ⇄ suspended → archived
  *
  * @status confirmed
@@ -61,16 +61,16 @@ enum TenantStatus {
 }
 
 /**
- * 키 상태 — 에이전트 키 chain 의 단계.
+ * Key status — stages in an agent's key chain.
  *
- * 허용 전이:
- *   active  → rotated  (rotate-key 시 구 키)
- *   active  → revoked  (자가 폐기 / 운영자 폐기)
- *   rotated → revoked  (grace period 만료 후 또는 명시적 폐기)
+ * Allowed transitions:
+ *   active  → rotated  (old key when rotate-key runs)
+ *   active  → revoked  (self-revoke or operator revoke)
+ *   rotated → revoked  (after grace period expires or by explicit revoke)
  *
- * 검증 시:
+ * Verification:
  *   active  ✅ verify
- *   rotated ✅ verify (grace period 동안)
+ *   rotated ✅ verify (during the grace period)
  *   revoked ❌ verify
  *
  * @status confirmed
@@ -82,7 +82,7 @@ enum KeyStatus {
 }
 
 /**
- * JWS / JWT 알고리즘. Identity 는 EdDSA (Ed25519) 만 지원.
+ * JWS / JWT algorithm. Identity supports only EdDSA (Ed25519).
  * @status confirmed
  */
 enum KeyAlgorithm {
@@ -90,7 +90,7 @@ enum KeyAlgorithm {
 }
 
 /**
- * JWS payload 의 `action` 필드 — 동일 서명 토큰의 의도 매칭.
+ * `action` field of a JWS payload — matches the intent of the signed token.
  *
  * @status confirmed
  */
@@ -111,7 +111,7 @@ enum AuditOutcome {
 }
 
 /**
- * principal.kind — 모든 시민의 종류 식별.
+ * principal.kind — discriminates every kind of citizen.
  *
  * @status confirmed
  */

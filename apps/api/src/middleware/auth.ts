@@ -5,8 +5,7 @@ import {
   verifyAgentJwt,
   type TokenPayload,
 } from '@citizenry/identity/auth'
-import postgres from 'postgres'
-import { drizzle } from 'drizzle-orm/postgres-js'
+import { drizzle } from 'drizzle-orm/d1'
 import { schema } from '@citizenry/identity/schema'
 import type { Bindings } from '../env'
 
@@ -50,7 +49,10 @@ export const auth: MiddlewareHandler<{
   const path = c.req.path
   if (isPublic(path)) return next()
 
-  // body-JWS endpoints: header Bearer 무관 (본문 JWS 가 인증)
+  // /_admin/* is handled by the serviceKeyAuth middleware — skip agent JWT verification.
+  if (path.startsWith('/_admin/')) return next()
+
+  // body-JWS endpoints: header Bearer is irrelevant (the body JWS authenticates).
   if (
     (c.req.method === 'POST' && path === '/api/v1/agent/me/rotate-key') ||
     (c.req.method === 'DELETE' && path === '/api/v1/agent/me')
@@ -63,7 +65,7 @@ export const auth: MiddlewareHandler<{
     return unauthorized(c, new AuthError('ERR-P01-S01-0401', 'Authorization Bearer missing'))
   }
 
-  // ── Register: enrollment Bearer 형식만 확인 ─────────────
+  // ── Register: only validate the enrollment Bearer shape ─────────────
   if (path === '/api/v1/agent/register') {
     try {
       checkEnrollmentBearerShape(bearer)
@@ -74,13 +76,8 @@ export const auth: MiddlewareHandler<{
     return next()
   }
 
-  // ── Agent JWT 검증 (GET /me + /vault/*) ────────────────
-  const client = postgres(c.env.HYPERDRIVE.connectionString, {
-    prepare: false,
-    max: 5,
-    fetch_types: false,
-  })
-  const db = drizzle(client, { schema })
+  // ── Agent JWT verification (GET /me + /vault/*) ────────────────
+  const db = drizzle(c.env.DB_IDENTITY, { schema })
   const audience = (c.env.JWT_AUDIENCE || '')
     .split(',')
     .map((s) => s.trim())
@@ -93,4 +90,30 @@ export const auth: MiddlewareHandler<{
     throw err
   }
   await next()
+}
+
+/**
+ * `/_admin/*` gate — admin-api calls in with the X-Service-Key header. Pass when PSK matches.
+ * Comparison is constant-time (XOR diff).
+ */
+export const serviceKeyAuth: MiddlewareHandler<{
+  Bindings: Bindings
+  Variables: AuthVars
+}> = async (c, next) => {
+  const provided = c.req.header('X-Service-Key') || c.req.header('x-service-key') || ''
+  const expected = c.env.SERVICE_KEY || ''
+  if (!expected || !safeEqual(provided, expected)) {
+    return unauthorized(
+      c,
+      new AuthError('ERR-P01-S01-0401', 'admin service key invalid or missing'),
+    )
+  }
+  await next()
+}
+
+function safeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false
+  let diff = 0
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i)
+  return diff === 0
 }

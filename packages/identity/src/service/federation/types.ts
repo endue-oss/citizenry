@@ -32,7 +32,7 @@ export interface FederationHandshakePayload {
   metadata?: Record<string, unknown>
 }
 
-/** `/.well-known/citizenry-peer` 응답 모양. */
+/** Shape of the `/.well-known/citizenry-peer` response. */
 export interface PeerDiscoveryDocument {
   protocol_version: number
   issuer: string
@@ -46,7 +46,7 @@ export interface PeerDiscoveryDocument {
   }
 }
 
-/** Admin GET 응답 모양. DB row → view 변환. */
+/** Admin GET response shape — produced by transforming a DB row to a view. */
 export interface FederationPeerView {
   id: string
   issuer: string

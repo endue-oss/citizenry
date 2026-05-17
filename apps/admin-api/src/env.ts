@@ -1,21 +1,7 @@
-import type { D1Database, Hyperdrive } from '@cloudflare/workers-types'
-
 export type Bindings = {
-  /** Hyperdrive binding — origin Postgres (identity 도메인) */
-  HYPERDRIVE: Hyperdrive
+  /** api's base URL — proxy target for admin-api's /_admin/* requests. */
+  API_BASE_URL: string
 
-  /** D1 binding — vault 도메인 */
-  DB_VAULT: D1Database
-
-  /** Service PSK — admin endpoints `X-Service-Key` 검증 */
+  /** Service PSK — the X-Service-Key value admin-api sends to api. Must match api's SECRET_KEY. */
   SERVICE_KEY: string
-
-  /** Enrollment token peppered hash 의 pepper */
-  ENROLLMENT_PEPPER: string
-
-  /** Issuer host — DID 빌더 */
-  ISSUER_HOST: string
-
-  /** Admin actor allowlist (선택, comma-separated) */
-  ADMIN_ALLOWLIST?: string
 }

@@ -10,14 +10,15 @@ using Citizenry.Common;
 namespace Citizenry.Identity;
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// Register Models — 에이전트 자가 등록 (RFC 7591 호환)
+// Register Models — agent self-registration (RFC 7591 compatible)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 /**
- * 에이전트 자가 등록 요청.
+ * Agent self-registration request.
  *
- * 헤더 `Authorization: Bearer eret_…` 로 enrollment token 제시.
- * 본문에는 에이전트가 **로컬에서 생성한** Ed25519 공개키 JWK 만 포함.
+ * Presents the enrollment token in `Authorization: Bearer eret_…`.
+ * The body carries only the Ed25519 public-key JWK that the agent
+ * **generated locally**.
  *
  * @status confirmed
  * @example
@@ -33,26 +34,26 @@ namespace Citizenry.Identity;
  * ```
  */
 model AgentRegisterRequest {
-  /** 사람 친화 식별자. 인스턴스 내 unique. */
+  /** Human-friendly identifier. Unique within the instance. */
   slug: slug;
 
-  /** 사람이 읽을 이름 (선택) */
+  /** Human-readable name (optional) */
   display_name?: string;
 
-  /** 에이전트가 로컬에서 생성한 Ed25519 공개키 JWK (kid 없음 — 서버 발급) */
+  /** Ed25519 public-key JWK generated locally by the agent (no kid — server issues it) */
   public_key_jwk: JwkOkpEd25519Submission;
 
-  /** 자유 메타데이터 (선택) */
+  /** Free-form metadata (optional) */
   metadata?: Record<unknown>;
 }
 
 /**
- * 에이전트 자가 등록 응답.
+ * Agent self-registration response.
  *
  * @status confirmed
  */
 model AgentRegisterResponse {
-  /** 발급된 agent_id */
+  /** Issued agent_id */
   id: agentId;
 
   slug: slug;
@@ -61,13 +62,13 @@ model AgentRegisterResponse {
   /** `did:web:citizenry.id:agent:{id}` */
   did: did;
 
-  /** 공개키 식별자 (JWS / JWT header `kid`) */
+  /** Public-key identifier (JWS / JWT header `kid`) */
   kid: kid;
 
-  /** 상속된 tenant (enrollment 가 결정) */
+  /** Inherited tenant (determined by the enrollment) */
   tenant: Tenant;
 
-  /** 책임 chain 종착점 — owner human */
+  /** End of the responsibility chain — owner human */
   owner_human_principal_id: humanId;
 
   metadata?: Record<unknown>;
@@ -80,13 +81,13 @@ model AgentRegisterResponse {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 /**
- * 에이전트 자가 등록.
+ * Agent self-registration.
  *
- * 검증:
- * 1. `Authorization: Bearer eret_…` 토큰 prefix.
- * 2. peppered SHA-256 비교 + 사용 횟수 차감 (atomic).
- * 3. tenant 상속 (enrollment 의 tenant → agent 의 tenant membership).
- * 4. slug unique 검사.
+ * Validation:
+ * 1. `Authorization: Bearer eret_…` token prefix.
+ * 2. peppered SHA-256 comparison + use-count decrement (atomic).
+ * 3. tenant inheritance (enrollment tenant → agent tenant membership).
+ * 4. slug uniqueness check.
  *
  * @status confirmed
  */
@@ -95,11 +96,11 @@ model AgentRegisterResponse {
 @useAuth(EnrollmentBearerAuth)
 interface Register {
   /**
-   * 가능한 에러:
+   * Possible errors:
    * - 400 BadRequest (malformed body)
    * - 401 Unauthorized (enrollment_token_invalid)
    * - 409 Conflict (slug duplicate)
-   * - 410 Gone (enrollment 만료/소진)
+   * - 410 Gone (enrollment expired/exhausted)
    * - 422 Unprocessable (jwk_invalid / slug_invalid / tenant_invalid)
    * - 429 RateLimited
    */

@@ -2,11 +2,11 @@ import type { MiddlewareHandler } from 'hono'
 import type { Bindings } from '../env'
 
 /**
- * Service PSK 검증 미들웨어 — 모든 admin 요청에 `X-Service-Key` 헤더 필수.
- * constant-time 비교.
+ * Service PSK verification middleware — every admin request must carry the `X-Service-Key` header.
+ * Constant-time comparison.
  */
 export const adminAuth: MiddlewareHandler<{ Bindings: Bindings }> = async (c, next) => {
-  // /_health 만 예외 (헬스체크).
+  // Only /_health is exempt (health check).
   if (c.req.path === '/_health') return next()
 
   const provided = c.req.header('X-Service-Key')

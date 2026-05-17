@@ -6,23 +6,13 @@ compatibility_flags = ["nodejs_compat"]
 [dev]
 port = 13001
 
-# identity 도메인 — Postgres via Hyperdrive
-[[hyperdrive]]
-binding = "HYPERDRIVE"
-id = "local-dev-placeholder"
-localConnectionString = "postgresql://endue_workspace:endue_workspace@localhost:15438/citizenry_identity"
-
-# vault 도메인 — D1
-[[d1_databases]]
-binding = "DB_VAULT"
-database_name = "citizenry-vault"
-database_id = "local-dev-placeholder"
-migrations_dir = "../../packages/vault/migrations"
+# admin-api no longer accesses the DB directly.
+# Every admin action is HTTP-proxied to api's /_admin/* routes → authenticated by SERVICE_KEY.
 
 [vars]
-ISSUER_HOST = "citizenry.id"
+# api's base URL — production: the workers.dev subdomain or a custom domain.
+# local dev: port 13000 served by api's `wrangler dev`.
+API_BASE_URL = "http://127.0.0.1:13000"
 
 # secrets — `wrangler secret put`
-#   SERVICE_KEY
-#   ENROLLMENT_PEPPER
-#   ADMIN_ALLOWLIST (optional)
+#   SERVICE_KEY        — the X-Service-Key admin-api sends must match api's expected value

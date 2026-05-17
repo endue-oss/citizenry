@@ -1,18 +1,21 @@
-import type { D1Database, Hyperdrive } from '@cloudflare/workers-types'
+import type { D1Database } from '@cloudflare/workers-types'
 
 export type Bindings = {
-  /** Hyperdrive binding — origin Postgres (identity 도메인) */
-  HYPERDRIVE: Hyperdrive
+  /** D1 binding — identity domain */
+  DB_IDENTITY: D1Database
 
-  /** D1 binding — vault 도메인 */
+  /** D1 binding — vault domain */
   DB_VAULT: D1Database
 
-  /** JWT 검증 audience (e.g. "api.citizenry.id,citizenry-id") */
+  /** JWT verification audience (e.g. "api.citizenry.id,citizenry-id") */
   JWT_AUDIENCE: string
 
-  /** Enrollment token peppered hash 의 pepper */
+  /** Pepper for the enrollment token peppered hash */
   ENROLLMENT_PEPPER: string
 
-  /** Issuer host — DID 빌더 (`did:web:{ISSUER_HOST}`) */
+  /** Issuer host — DID builder (`did:web:{ISSUER_HOST}`) */
   ISSUER_HOST: string
+
+  /** Service key — value checked against the X-Service-Key header on `/_admin/*` routes. Sent by admin-api. */
+  SERVICE_KEY: string
 }

@@ -14,13 +14,12 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "echo 'apply migrations/*.sql against your Postgres (Hyperdrive origin)'"
+    "db:migrate": "echo 'apply migrations/*.sql against D1 via wrangler d1 migrations apply'"
   },
   "dependencies": {
     "@citizenry/spec": "workspace:*",
     "drizzle-orm": "^0.36.4",
     "hono": "^4.6.10",
-    "postgres": "^3.4.5",
     "zod": "^3.23.8"
   },
   "devDependencies": {

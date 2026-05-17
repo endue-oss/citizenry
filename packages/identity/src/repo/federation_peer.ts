@@ -5,10 +5,15 @@ import type { FederationPeerRow } from '../db/schema'
 
 export type FederationPeerRepo = ReturnType<typeof createFederationPeerRepo>
 
+const nowMs = () => sql`(unixepoch() * 1000)`
+
 /**
- * Drizzle repo — federation_peer 와 tenant 의 1:1 링크 유지가 책임.
+ * Drizzle repo — responsible for maintaining the 1:1 link between federation_peer and tenant.
  *
- * Service 가 호출 — auth / 검증은 service 단.
+ * Called by the service layer — auth / validation live in the service.
+ *
+ * Built on D1 (SQLite), so we use batch instead of transactions. tenant.tenant_id
+ * is an app-generated ULID PK, so a batch does not have to wait on a prior INSERT result.
  */
 export const createFederationPeerRepo = (db: Db) => ({
   findById: async (id: string): Promise<FederationPeerRow | undefined> => {
@@ -30,7 +35,7 @@ export const createFederationPeerRepo = (db: Db) => ({
   },
 
   /**
-   * issuer 가 unique 이지만 revoked 가 누적될 수 있으므로 "현재 살아있는" row 만 조회.
+   * issuer is unique, but revoked rows accumulate — so this returns only the "currently live" row.
    */
   findActiveByIssuer: async (issuer: string): Promise<FederationPeerRow | undefined> => {
     const rows = await db
@@ -55,57 +60,90 @@ export const createFederationPeerRepo = (db: Db) => ({
 
   count: async (state?: string): Promise<number> => {
     const rows = await db
-      .select({ count: sql<number>`count(*)::int` })
+      .select({ count: sql<number>`count(*)` })
       .from(federationPeer)
       .where(state ? eq(federationPeer.state, state) : undefined)
     return Number(rows[0]?.count ?? 0)
   },
 
-  insert: (input: typeof federationPeer.$inferInsert) =>
+  insert: (input: typeof federationPeer.$inferInsert): Promise<FederationPeerRow[]> =>
     db.insert(federationPeer).values(input).returning(),
 
-  update: (id: string, patch: Partial<typeof federationPeer.$inferInsert>) =>
+  update: async (
+    id: string,
+    patch: Partial<typeof federationPeer.$inferInsert>,
+  ): Promise<FederationPeerRow[]> =>
     db
       .update(federationPeer)
-      .set({ ...patch, updatedAt: sql`NOW()` })
+      .set({ ...patch, updatedAt: nowMs() as unknown as Date })
       .where(eq(federationPeer.federationPeerId, id))
       .returning(),
 
-  /** trusted 진입 시 federated tenant materialize + peer.tenant_id 갱신을 한 트랜잭션에서. */
-  linkFederatedTenant: (id: string, tenantInput: typeof tenant.$inferInsert) =>
-    db.transaction(async (tx) => {
-      const [createdTenant] = await tx.insert(tenant).values(tenantInput).returning()
-      const [updatedPeer] = await tx
+  /** On entering trusted state, atomically materialize the federated tenant + update peer.tenant_id. */
+  linkFederatedTenant: async (
+    id: string,
+    tenantInput: typeof tenant.$inferInsert,
+  ) => {
+    await db.batch([
+      db.insert(tenant).values(tenantInput),
+      db
         .update(federationPeer)
         .set({
-          tenantId: createdTenant.tenantId,
+          tenantId: tenantInput.tenantId,
           state: 'trusted',
-          trustedAt: sql`NOW()`,
-          updatedAt: sql`NOW()`,
+          trustedAt: nowMs() as unknown as Date,
+          updatedAt: nowMs() as unknown as Date,
         })
-        .where(eq(federationPeer.federationPeerId, id))
-        .returning()
-      return { tenant: createdTenant, peer: updatedPeer }
-    }),
+        .where(eq(federationPeer.federationPeerId, id)),
+    ])
 
-  /** revoke — peer 폐기 + 연결된 tenant 를 archived 로. */
-  revoke: (id: string, tenantId: string | null) =>
-    db.transaction(async (tx) => {
-      const [updatedPeer] = await tx
+    const [createdTenant] = await db
+      .select()
+      .from(tenant)
+      .where(eq(tenant.tenantId, tenantInput.tenantId!))
+      .limit(1)
+    const [updatedPeer] = await db
+      .select()
+      .from(federationPeer)
+      .where(eq(federationPeer.federationPeerId, id))
+      .limit(1)
+    if (!createdTenant || !updatedPeer) {
+      throw new Error('linkFederatedTenant failed to read back row(s)')
+    }
+    return { tenant: createdTenant, peer: updatedPeer }
+  },
+
+  /** revoke — terminate the peer + move its linked tenant to archived. */
+  revoke: async (id: string, tenantId: string | null) => {
+    const stmts = [
+      db
         .update(federationPeer)
         .set({
           state: 'revoked',
-          revokedAt: sql`NOW()`,
-          updatedAt: sql`NOW()`,
+          revokedAt: nowMs() as unknown as Date,
+          updatedAt: nowMs() as unknown as Date,
         })
-        .where(eq(federationPeer.federationPeerId, id))
-        .returning()
-      if (tenantId) {
-        await tx
+        .where(eq(federationPeer.federationPeerId, id)),
+    ] as const
+
+    if (tenantId) {
+      await db.batch([
+        ...stmts,
+        db
           .update(tenant)
-          .set({ status: 'archived', updatedAt: sql`NOW()` })
-          .where(eq(tenant.tenantId, tenantId))
-      }
-      return updatedPeer
-    }),
+          .set({ status: 'archived', updatedAt: nowMs() as unknown as Date })
+          .where(eq(tenant.tenantId, tenantId)),
+      ] as unknown as Parameters<typeof db.batch>[0])
+    } else {
+      await db.batch(stmts as unknown as Parameters<typeof db.batch>[0])
+    }
+
+    const [updatedPeer] = await db
+      .select()
+      .from(federationPeer)
+      .where(eq(federationPeer.federationPeerId, id))
+      .limit(1)
+    if (!updatedPeer) throw new Error('revoke failed to read back row')
+    return updatedPeer
+  },
 })

@@ -1,15 +1,16 @@
-// citizenry-migrator — D1 (identity + vault) 마이그레이션 실행 worker.
+// citizenry-migrator — worker that runs D1 (identity + vault) migrations.
 //
-// 운영 흐름:
-//   CI (deploy.yml) 가 이 worker 를 먼저 배포한 뒤, MIGRATOR_TOKEN 으로
-//   POST /apply 를 호출한다. 응답 JSON 에 파일별 status 가 있고, 하나라도
-//   `failed` 면 HTTP 500 으로 응답한다. CI 는 그걸 보고 다음 단계 (앱
-//   worker 배포) 를 진행하거나 중단한다.
+// Operational flow:
+//   CI (deploy.yml) deploys this worker first, then calls POST /apply
+//   with MIGRATOR_TOKEN. The response JSON carries a per-file status;
+//   if any entry is `failed`, the worker responds HTTP 500. CI uses that
+//   to decide whether to proceed with the next step (app worker deploy)
+//   or abort.
 //
-// 라우트:
-//   GET  /_health   — 무인증, version & migration count
-//   GET  /status    — 인증, identity/vault 각 파일의 applied | pending | drifted
-//   POST /apply     — 인증, identity → vault 순으로 미적용 파일 적용
+// Routes:
+//   GET  /_health   — unauthenticated, version & migration count
+//   GET  /status    — authenticated, applied | pending | drifted per file (identity/vault)
+//   POST /apply     — authenticated, applies pending files in identity → vault order
 
 import { Hono, type MiddlewareHandler } from 'hono'
 import type { Bindings } from './env'
@@ -19,8 +20,8 @@ import { identityMigrations, vaultMigrations } from './migrations.generated'
 const app = new Hono<{ Bindings: Bindings }>()
 
 // ── auth ────────────────────────────────────────────────────────────
-// 상수시간 비교. Workers 글로벌엔 `crypto.timingSafeEqual` 이 없어서 직접 짠다.
-// MIGRATOR_TOKEN 은 32B (64 hex) 정도라 비용은 무시 가능.
+// Constant-time compare. The Workers global lacks `crypto.timingSafeEqual`,
+// so roll our own. MIGRATOR_TOKEN is ~32B (64 hex), so cost is negligible.
 function safeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) return false
   let diff = 0
@@ -47,7 +48,7 @@ app.get('/_health', (c) =>
   }),
 )
 
-// 인증이 필요한 라우트만 게이트한다 — health 는 public.
+// Gate only the routes that require auth — health is public.
 app.use('/status', bearerAuth)
 app.use('/apply', bearerAuth)
 
@@ -60,8 +61,8 @@ app.get('/status', async (c) => {
 })
 
 app.post('/apply', async (c) => {
-  // identity 먼저 — 향후 vault 가 identity 의 principal_id 같은 외부 참조를
-  // 가질 수 있어 의존 순서를 고정한다.
+  // identity first — vault may eventually carry external references such
+  // as identity's principal_id, so pin the dependency order.
   const identity = await applyD1(c.env.DB_IDENTITY, identityMigrations)
   const vault = await applyD1(c.env.DB_VAULT, vaultMigrations)
 

@@ -26,10 +26,10 @@ const DID_CONTEXT = [
 ]
 
 /**
- * DID Document 빌더.
+ * DID Document builder.
  *
- * issuer: 전체 활성 키 verificationMethod 로.
- * agent: 해당 agent 의 active 키만 verificationMethod 로.
+ * issuer: every active key as a verificationMethod.
+ * agent: only the agent's active keys as verificationMethods.
  */
 export const createDidService = (deps: { db: Db; issuerHost: string }) => {
   const keys = createAgentKeyRepo(deps.db)

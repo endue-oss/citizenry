@@ -4,13 +4,13 @@ import { createEnrollmentTokenRepo } from '../repo/enrollment_token'
 export type EnrollmentService = ReturnType<typeof createEnrollmentService>
 
 /**
- * Enrollment 발급 / 폐기 / 소비.
+ * Enrollment issue / revoke / consume.
  *
- * 미구현 — service 단에서:
- *   - raw token 생성 (`eret_<32+chars>`)
+ * Not implemented — at the service layer:
+ *   - Generate raw token (`eret_<32+chars>`)
  *   - peppered SHA-256 hash
  *   - DB insert
- *   - 응답에 raw token 1회만 노출
+ *   - Expose raw token in the response exactly once
  */
 export const createEnrollmentService = (deps: {
   db: Db

@@ -1,16 +1,13 @@
 name: Deploy to Cloudflare
 
 # Production deploy. Runs on every push to main and on manual dispatch.
-# The pipeline is split into focused jobs so each stage's purpose is
-# obvious from its name and `needs:` chain:
+# Jobs run strictly in order to keep the DAG linear:
 #
-#   build              build spec + Pages bundles (reusable workflow)
-#   provision          create D1 databases, resolve workers.dev subdomain
-#   migrate            deploy migrator worker, apply pending migrations
-#   deploy-workers     deploy api / admin-api / mcp / email (matrix, parallel)
-#   bootstrap-secrets  read or generate _config values, push to Worker secrets
-#   deploy-pages       deploy admin-web / docs (matrix, parallel)
-#   summary            render a per-run status table
+#   build → provision → migrate → deploy-workers → bootstrap-secrets
+#         → deploy-pages → summary
+#
+# `migrate` forwards provision's outputs so downstream jobs only depend
+# on their immediate predecessor.
 #
 # Required GitHub secrets:
 #   CLOUDFLARE_API_TOKEN     Workers Scripts + Pages + D1 (Edit), Workers Subdomain (Read)
@@ -63,6 +60,7 @@ jobs:
   # ── Provision Cloudflare infra ────────────────────────────────────────
   provision:
     name: Provision D1 and resolve subdomain
+    needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -119,6 +117,12 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read
+    outputs:
+      d1_identity_id: ${{ needs.provision.outputs.d1_identity_id }}
+      d1_vault_id: ${{ needs.provision.outputs.d1_vault_id }}
+      d1_email_id: ${{ needs.provision.outputs.d1_email_id }}
+      subdomain: ${{ needs.provision.outputs.subdomain }}
+      api_url: ${{ needs.provision.outputs.api_url }}
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
@@ -189,7 +193,7 @@ jobs:
   # ── Deploy Workers (parallel) ─────────────────────────────────────────
   deploy-workers:
     name: Deploy worker
-    needs: [provision, migrate]
+    needs: migrate
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -204,10 +208,10 @@ jobs:
 
       - uses: ./.github/actions/render
         with:
-          d1_identity_id: ${{ needs.provision.outputs.d1_identity_id }}
-          d1_vault_id: ${{ needs.provision.outputs.d1_vault_id }}
-          d1_email_id: ${{ needs.provision.outputs.d1_email_id }}
-          api_base_url: ${{ vars.API_BASE_URL || needs.provision.outputs.api_url }}
+          d1_identity_id: ${{ needs.migrate.outputs.d1_identity_id }}
+          d1_vault_id: ${{ needs.migrate.outputs.d1_vault_id }}
+          d1_email_id: ${{ needs.migrate.outputs.d1_email_id }}
+          api_base_url: ${{ vars.API_BASE_URL || needs.migrate.outputs.api_url }}
 
       - name: Build spec
         run: pnpm --filter @citizenry/spec run build
@@ -218,7 +222,7 @@ jobs:
   # ── Bootstrap Worker secrets from D1 _config ──────────────────────────
   bootstrap-secrets:
     name: Bootstrap Worker secrets
-    needs: [provision, deploy-workers]
+    needs: [migrate, deploy-workers]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -229,10 +233,10 @@ jobs:
 
       - uses: ./.github/actions/render
         with:
-          d1_identity_id: ${{ needs.provision.outputs.d1_identity_id }}
-          d1_vault_id: ${{ needs.provision.outputs.d1_vault_id }}
-          d1_email_id: ${{ needs.provision.outputs.d1_email_id }}
-          api_base_url: ${{ vars.API_BASE_URL || needs.provision.outputs.api_url }}
+          d1_identity_id: ${{ needs.migrate.outputs.d1_identity_id }}
+          d1_vault_id: ${{ needs.migrate.outputs.d1_vault_id }}
+          d1_email_id: ${{ needs.migrate.outputs.d1_email_id }}
+          api_base_url: ${{ vars.API_BASE_URL || needs.migrate.outputs.api_url }}
 
       - name: Bootstrap (read or generate, push to Worker secrets)
         env:
@@ -241,10 +245,10 @@ jobs:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
         run: ./scripts/ci/bootstrap-secrets.sh
 
-  # ── Deploy Pages (parallel, independent of Workers) ───────────────────
+  # ── Deploy Pages (parallel within the matrix) ─────────────────────────
   deploy-pages:
     name: Deploy Pages
-    needs: build
+    needs: bootstrap-secrets
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:

@@ -1,7 +1,9 @@
 import "@typespec/http";
+import "@typespec/openapi";
 import "../common/main.tsp";
 
 using TypeSpec.Http;
+using TypeSpec.OpenAPI;
 using Citizenry.Common;
 
 // @status draft
@@ -40,12 +42,14 @@ model AgentAdminGetResponse {
  */
 @tag("Admin")
 @route("/api/v1/admin/enrollments")
+@useAuth(ServiceKeyAuth)
 interface AdminEnrollments {
   /**
    * 가능한 에러: 401 (psk_invalid), 500
    */
+  @summary("List enrollments (admin, paginated)")
+  @operationId("admin-enrollment-list")
   @get list(
-    @header("X-Service-Key") serviceKey: serviceKey,
     @query tenant?: Tenant,
     @query owner_human_principal_id?: humanId,
     ...PaginationParams,
@@ -59,12 +63,14 @@ interface AdminEnrollments {
  */
 @tag("Admin")
 @route("/api/v1/admin/agents")
+@useAuth(ServiceKeyAuth)
 interface AdminAgents {
   /**
    * 가능한 에러: 401 (psk_invalid), 500
    */
+  @summary("List agents (admin, paginated, filterable)")
+  @operationId("admin-agent-list")
   @get list(
-    @header("X-Service-Key") serviceKey: serviceKey,
     @query status?: AgentStatus,
     @query tenant?: Tenant,
     @query owner_human_principal_id?: humanId,
@@ -74,10 +80,13 @@ interface AdminAgents {
   /**
    * 가능한 에러: 401 (psk_invalid), 404 (agent_not_found), 500
    */
-  @get read(
-    @header("X-Service-Key") serviceKey: serviceKey,
-    @path id: agentId,
-  ): AgentAdminGetResponse | UnauthorizedError | NotFoundError | InternalError;
+  @summary("Read an agent (admin)")
+  @operationId("admin-agent-read")
+  @get read(@path id: agentId):
+    | AgentAdminGetResponse
+    | UnauthorizedError
+    | NotFoundError
+    | InternalError;
 
   /**
    * 운영자 강제 폐기. 멱등. 즉시 발효 — 모든 키 `revoked`.
@@ -88,10 +97,13 @@ interface AdminAgents {
    *
    * 가능한 에러: 401 (psk_invalid), 404 (agent_not_found), 500
    */
-  @delete revoke(
-    @header("X-Service-Key") serviceKey: serviceKey,
-    @path id: agentId,
-  ): {
-    @statusCode statusCode: 204;
-  } | UnauthorizedError | NotFoundError | InternalError;
+  @summary("Operator-force revoke an agent (idempotent)")
+  @operationId("admin-agent-revoke")
+  @delete revoke(@path id: agentId):
+    | {
+        @statusCode statusCode: 204;
+      }
+    | UnauthorizedError
+    | NotFoundError
+    | InternalError;
 }

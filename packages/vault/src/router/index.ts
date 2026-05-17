@@ -7,4 +7,4 @@ type Vars = { db: DrizzleD1Database<Schema> }
 export const vaultRouter = new Hono<{ Variables: Vars }>()
   .get('/entries', (c) => c.json({ todo: 'list entries' }))
   .get('/entries/:id', (c) => c.json({ todo: 'get entry' }))
-  .post('/entries', (c) => c.json({ todo: 'create entry' }))
+  .post('/entries', (c) => c.json({ todo: 'create entry' }, 201))

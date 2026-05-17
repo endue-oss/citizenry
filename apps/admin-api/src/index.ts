@@ -13,11 +13,11 @@ app.onError(errorHandler)
 
 app.get('/_health', (c) => c.json({ service: 'citizenry-admin-api', status: 'ok' }))
 
-// vault admin — D1
+// vault admin — D1. routes carry the full /api/v1/admin/vault path themselves.
 const vaultApp = new Hono<{ Bindings: Bindings; Variables: VaultVars }>()
   .use('*', vaultDb)
   .route('/', adminVaultRouter)
-app.route('/vault', vaultApp)
+app.route('/', vaultApp)
 
 // identity admin — Postgres + Hyperdrive, 절대 경로 라우트
 const identityApp = new Hono<{ Bindings: Bindings; Variables: IdentityVars }>()

@@ -1,7 +1,9 @@
 import "@typespec/http";
+import "@typespec/openapi";
 import "../common/main.tsp";
 
 using TypeSpec.Http;
+using TypeSpec.OpenAPI;
 using Citizenry.Common;
 
 // @status draft
@@ -155,29 +157,51 @@ interface Me {
    *
    * 가능한 에러: 401, 404, 429, 500
    */
-  @get whoami(
-    @header("Authorization") authorization: bearerJwt,
-  ): AgentMeGetResponse | UnauthorizedError | NotFoundError | RateLimitedError | InternalError;
+  @summary("Read the current agent's identity")
+  @operationId("agent-me-whoami")
+  @useAuth(AgentJwtAuth)
+  @get whoami():
+    | AgentMeGetResponse
+    | UnauthorizedError
+    | NotFoundError
+    | RateLimitedError
+    | InternalError;
 
   /**
    * 키 회전. body 내 JWS 가 구 키로 서명되어 있어야 함.
+   * 인증은 헤더가 아니라 본문 JWS 자체이므로 OpenAPI security 는 noAuth.
    *
    * 가능한 에러: 400, 401, 404, 422, 429, 500
    */
+  @summary("Rotate the agent's signing key via body JWS")
+  @operationId("agent-me-rotate-key")
+  @useAuth(NoAuth)
   @route("rotate-key")
-  @post rotateKey(
-    @body body: RotateKeyCreateRequest,
-  ): RotateKeyCreateResponse | BadRequestError | UnauthorizedError | NotFoundError | UnprocessableError | RateLimitedError | InternalError;
+  @post rotateKey(@body body: RotateKeyCreateRequest):
+    | RotateKeyCreateResponse
+    | BadRequestError
+    | UnauthorizedError
+    | NotFoundError
+    | UnprocessableError
+    | RateLimitedError
+    | InternalError;
 
   /**
    * 자가 폐기. body 내 JWS 가 현 active 키로 서명.
-   * 발효 후 모든 키 → `revoked`.
+   * 발효 후 모든 키 → `revoked`. 헤더 인증 없음 (본문 JWS).
    *
    * 가능한 에러: 400, 401, 404, 429, 500
    */
-  @delete revoke(
-    @body body: SelfRevokeRequest,
-  ): {
-    @statusCode statusCode: 204;
-  } | BadRequestError | UnauthorizedError | NotFoundError | RateLimitedError | InternalError;
+  @summary("Self-revoke the agent via body JWS")
+  @operationId("agent-me-revoke")
+  @useAuth(NoAuth)
+  @delete revoke(@body body: SelfRevokeRequest):
+    | {
+        @statusCode statusCode: 204;
+      }
+    | BadRequestError
+    | UnauthorizedError
+    | NotFoundError
+    | RateLimitedError
+    | InternalError;
 }

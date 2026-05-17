@@ -5,5 +5,10 @@ import type { Schema } from '../db/schema'
 type Vars = { db: DrizzleD1Database<Schema> }
 
 export const adminVaultRouter = new Hono<{ Variables: Vars }>()
-  .get('/entries', (c) => c.json({ todo: 'admin list all entries' }))
-  .delete('/entries/:id', (c) => c.json({ todo: 'admin delete entry' }))
+  .get('/api/v1/admin/vault/entries', (c) =>
+    c.json({
+      items: [],
+      meta: { total: 0, page: 1, limit: 50, has_next_page: false },
+    }),
+  )
+  .delete('/api/v1/admin/vault/entries/:id', (c) => c.body(null, 204))

@@ -2,6 +2,7 @@
   "name": "@citizenry/identity",
   "version": "0.0.0",
   "private": true,
+  "license": "Apache-2.0",
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
@@ -23,7 +24,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20241022.0",
+    "@cloudflare/workers-types": "^4.20260516.0",
     "@types/node": "^22.7.5",
     "drizzle-kit": "^0.28.1",
     "typescript": "^5.6.3"

@@ -1,7 +1,9 @@
 import "@typespec/http";
+import "@typespec/openapi";
 import "../common/main.tsp";
 
 using TypeSpec.Http;
+using TypeSpec.OpenAPI;
 using Citizenry.Common;
 
 // @status draft
@@ -110,6 +112,7 @@ model EnrollmentGetResponse {
  */
 @tag("Enrollment")
 @route("/api/v1/enrollments")
+@useAuth(ServiceKeyAuth)
 interface Enrollments {
   /**
    * 신규 enrollment 발급.
@@ -117,23 +120,30 @@ interface Enrollments {
    *
    * 가능한 에러: 400 (BadRequest), 401 (PSK invalid), 429 (RateLimited), 500
    */
-  @post create(
-    @header("X-Service-Key") serviceKey: serviceKey,
-    @body body: EnrollmentCreateRequest,
-  ): {
-    @statusCode statusCode: 201;
-    @body body: EnrollmentCreateResponse;
-  } | BadRequestError | UnauthorizedError | RateLimitedError | InternalError;
+  @summary("Issue a new enrollment bearer token (one-shot bootstrap)")
+  @operationId("enrollment-create")
+  @post create(@body body: EnrollmentCreateRequest):
+    | {
+        @statusCode statusCode: 201;
+        @body body: EnrollmentCreateResponse;
+      }
+    | BadRequestError
+    | UnauthorizedError
+    | RateLimitedError
+    | InternalError;
 
   /**
    * Enrollment 폐기 — 미사용 토큰 무효화. 멱등.
    *
    * 가능한 에러: 401 (PSK invalid), 404 (NotFound), 500
    */
-  @delete revoke(
-    @header("X-Service-Key") serviceKey: serviceKey,
-    @path id: enrollmentId,
-  ): {
-    @statusCode statusCode: 204;
-  } | UnauthorizedError | NotFoundError | InternalError;
+  @summary("Revoke an outstanding enrollment (idempotent)")
+  @operationId("enrollment-revoke")
+  @delete revoke(@path id: enrollmentId):
+    | {
+        @statusCode statusCode: 204;
+      }
+    | UnauthorizedError
+    | NotFoundError
+    | InternalError;
 }

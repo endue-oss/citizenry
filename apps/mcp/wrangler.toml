@@ -2,3 +2,6 @@ name = "citizenry-mcp"
 main = "src/index.ts"
 compatibility_date = "2025-01-01"
 compatibility_flags = ["nodejs_compat"]
+
+[dev]
+port = 13002

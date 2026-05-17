@@ -3,6 +3,9 @@ main = "src/index.ts"
 compatibility_date = "2025-01-01"
 compatibility_flags = ["nodejs_compat"]
 
+[dev]
+port = 13001
+
 # identity 도메인 — Postgres via Hyperdrive
 [[hyperdrive]]
 binding = "HYPERDRIVE"

@@ -1,0 +1,17 @@
+Endue Citizenry
+Copyright 2026 Endue
+
+This product includes software developed by Endue
+(https://citizenry.dev/).
+
+Licensed under the Apache License, Version 2.0 (the "License").
+You may obtain a copy of the License at:
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+"Endue" and "Endue Citizenry" are trademarks of Endue.
+Use of these marks is governed by the trademark policy at TRADEMARKS.md.
+
+The specification under packages/spec/ is licensed separately under the
+Creative Commons Attribution-ShareAlike 4.0 International License
+(CC-BY-SA 4.0). See packages/spec/LICENSE for details.

@@ -1,7 +1,9 @@
 import "@typespec/http";
+import "@typespec/openapi";
 import "../common/main.tsp";
 
 using TypeSpec.Http;
+using TypeSpec.OpenAPI;
 using Citizenry.Common;
 
 // @status draft
@@ -90,6 +92,7 @@ model AgentRegisterResponse {
  */
 @tag("Register")
 @route("/api/v1/agent/register")
+@useAuth(EnrollmentBearerAuth)
 interface Register {
   /**
    * 가능한 에러:
@@ -100,11 +103,18 @@ interface Register {
    * - 422 Unprocessable (jwk_invalid / slug_invalid / tenant_invalid)
    * - 429 RateLimited
    */
-  @post register(
-    @header("Authorization") authorization: bearerEnrollment,
-    @body body: AgentRegisterRequest,
-  ): {
-    @statusCode statusCode: 201;
-    @body body: AgentRegisterResponse;
-  } | BadRequestError | UnauthorizedError | ConflictError | GoneError | UnprocessableError | RateLimitedError | InternalError;
+  @summary("Self-register an agent with an enrollment bearer token")
+  @operationId("agent-register")
+  @post register(@body body: AgentRegisterRequest):
+    | {
+        @statusCode statusCode: 201;
+        @body body: AgentRegisterResponse;
+      }
+    | BadRequestError
+    | UnauthorizedError
+    | ConflictError
+    | GoneError
+    | UnprocessableError
+    | RateLimitedError
+    | InternalError;
 }

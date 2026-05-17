@@ -1,30 +1,27 @@
 #!/usr/bin/env node
-// Idempotently provision Cloudflare resources (D1 + Hyperdrive).
+// Idempotently provision Cloudflare D1 databases (identity + vault).
 //
 // Required env:
-//   CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, IDENTITY_DATABASE_URL
+//   CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID
 // Required env (when run by GitHub Actions): GITHUB_OUTPUT
 //
-// Looks up resources by name. Creates them if missing; updates Hyperdrive
-// origin if it already exists. Writes resource IDs to $GITHUB_OUTPUT for
-// downstream steps to consume.
+// Looks up each D1 by name; creates if missing. Writes UUIDs to $GITHUB_OUTPUT
+// for downstream steps (render-wrangler.mjs) to consume.
 
 import { appendFileSync } from 'node:fs'
 
-const D1_NAME = 'citizenry-vault'
-const HD_NAME = 'citizenry-identity'
+const D1_VAULT_NAME = 'citizenry-vault'
+const D1_IDENTITY_NAME = 'citizenry-identity'
 
 const {
   CLOUDFLARE_API_TOKEN: token,
   CLOUDFLARE_ACCOUNT_ID: account,
-  IDENTITY_DATABASE_URL: pgUrl,
   GITHUB_OUTPUT: outFile,
 } = process.env
 
 for (const [k, v] of Object.entries({
   CLOUDFLARE_API_TOKEN: token,
   CLOUDFLARE_ACCOUNT_ID: account,
-  IDENTITY_DATABASE_URL: pgUrl,
 })) {
   if (!v) {
     console.error(`::error::Missing required env: ${k}`)
@@ -57,58 +54,24 @@ async function cf(method, path, body) {
   return json.result
 }
 
-function parsePgUrl(raw) {
-  const u = new URL(raw)
-  const scheme = u.protocol.replace(/:$/, '').replace(/^postgres$/, 'postgresql')
-  if (scheme !== 'postgresql') {
-    throw new Error(`IDENTITY_DATABASE_URL must use postgres/postgresql scheme (got: ${u.protocol})`)
-  }
-  return {
-    scheme,
-    user: decodeURIComponent(u.username),
-    password: decodeURIComponent(u.password),
-    host: u.hostname,
-    port: u.port ? Number(u.port) : 5432,
-    database: decodeURIComponent(u.pathname.replace(/^\//, '')) || 'postgres',
-  }
-}
-
-async function ensureD1() {
-  const list = await cf('GET', `/accounts/${account}/d1/database?name=${encodeURIComponent(D1_NAME)}`)
-  const existing = (list || []).find((db) => db.name === D1_NAME)
+async function ensureD1(name) {
+  const list = await cf('GET', `/accounts/${account}/d1/database?name=${encodeURIComponent(name)}`)
+  const existing = (list || []).find((db) => db.name === name)
   if (existing) {
-    console.log(`D1 ${D1_NAME} exists (${existing.uuid})`)
+    console.log(`D1 ${name} exists (${existing.uuid})`)
     return existing.uuid
   }
-  console.log(`Creating D1 ${D1_NAME}…`)
-  const created = await cf('POST', `/accounts/${account}/d1/database`, { name: D1_NAME })
-  console.log(`D1 ${D1_NAME} created (${created.uuid})`)
+  console.log(`Creating D1 ${name}…`)
+  const created = await cf('POST', `/accounts/${account}/d1/database`, { name })
+  console.log(`D1 ${name} created (${created.uuid})`)
   return created.uuid
 }
 
-async function ensureHyperdrive(origin) {
-  const list = await cf('GET', `/accounts/${account}/hyperdrive/configs`)
-  const existing = (list || []).find((c) => c.name === HD_NAME)
-  if (existing) {
-    console.log(`Hyperdrive ${HD_NAME} exists (${existing.id}); updating origin`)
-    await cf('PATCH', `/accounts/${account}/hyperdrive/configs/${existing.id}`, { origin })
-    return existing.id
-  }
-  console.log(`Creating Hyperdrive ${HD_NAME}…`)
-  const created = await cf('POST', `/accounts/${account}/hyperdrive/configs`, {
-    name: HD_NAME,
-    origin,
-  })
-  console.log(`Hyperdrive ${HD_NAME} created (${created.id})`)
-  return created.id
-}
-
-const origin = parsePgUrl(pgUrl)
-const d1Id = await ensureD1()
-const hdId = await ensureHyperdrive(origin)
+const d1VaultId = await ensureD1(D1_VAULT_NAME)
+const d1IdentityId = await ensureD1(D1_IDENTITY_NAME)
 
 if (outFile) {
-  appendFileSync(outFile, `d1_vault_id=${d1Id}\n`)
-  appendFileSync(outFile, `hyperdrive_identity_id=${hdId}\n`)
+  appendFileSync(outFile, `d1_vault_id=${d1VaultId}\n`)
+  appendFileSync(outFile, `d1_identity_id=${d1IdentityId}\n`)
 }
 console.log(`\nProvisioning complete.`)

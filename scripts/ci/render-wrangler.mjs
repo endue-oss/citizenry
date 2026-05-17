@@ -3,27 +3,31 @@
 // and per-fork configuration values.
 //
 // Required env:
-//   D1_VAULT_ID            UUID returned by provision.mjs
-//   HYPERDRIVE_IDENTITY_ID UUID returned by provision.mjs
+//   D1_VAULT_ID     UUID returned by provision.mjs
+//   D1_IDENTITY_ID  UUID returned by provision.mjs
 //
 // Optional env (override [vars] blocks):
-//   ISSUER_HOST       defaults to the value already in wrangler.toml
-//   JWT_AUDIENCE      defaults to the value already in wrangler.toml
+//   ISSUER_HOST     defaults to the value already in wrangler.toml
+//   JWT_AUDIENCE    defaults to the value already in wrangler.toml
+//
+// Optional env (admin-api):
+//   API_BASE_URL    overrides admin-api 의 [vars] API_BASE_URL — 보통 api 워커의
+//                   workers.dev 서브도메인 또는 커스텀 도메인.
 //
 // Targets:
-//   apps/api/wrangler.toml
-//   apps/admin-api/wrangler.toml
-//   apps/mcp/wrangler.toml
+//   apps/api/wrangler.toml         — DB_VAULT, DB_IDENTITY
+//   apps/admin-api/wrangler.toml   — vars only (DB 직접 접근 없음)
+//   apps/mcp/wrangler.toml         — no DB bindings
+//   apps/migrator/wrangler.toml    — DB_VAULT, DB_IDENTITY (마이그레이션 실행 worker)
 //
-// The substitutions are anchored on `binding = "DB_VAULT"` / `binding = "HYPERDRIVE"`
-// so we only touch the intended bindings, not unrelated ones.
+// 치환은 `binding = "..."` 앵커에 묶여 있어 의도한 binding 만 건드린다.
 
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 
-const { D1_VAULT_ID, HYPERDRIVE_IDENTITY_ID, ISSUER_HOST, JWT_AUDIENCE } = process.env
+const { D1_VAULT_ID, D1_IDENTITY_ID, ISSUER_HOST, JWT_AUDIENCE, API_BASE_URL } = process.env
 
-if (!D1_VAULT_ID || !HYPERDRIVE_IDENTITY_ID) {
-  console.error('::error::render-wrangler.mjs: D1_VAULT_ID and HYPERDRIVE_IDENTITY_ID required')
+if (!D1_VAULT_ID || !D1_IDENTITY_ID) {
+  console.error('::error::render-wrangler.mjs: D1_VAULT_ID and D1_IDENTITY_ID required')
   process.exit(1)
 }
 
@@ -31,20 +35,15 @@ const TARGETS = [
   'apps/api/wrangler.toml',
   'apps/admin-api/wrangler.toml',
   'apps/mcp/wrangler.toml',
+  'apps/migrator/wrangler.toml',
 ]
 
-function patchD1(content, id) {
-  return content.replace(
-    /(\[\[d1_databases\]\][^\[]*?binding\s*=\s*"DB_VAULT"[^\[]*?database_id\s*=\s*)"[^"]*"/m,
-    `$1"${id}"`,
+function patchD1(content, binding, id) {
+  const re = new RegExp(
+    `(\\[\\[d1_databases\\]\\][^\\[]*?binding\\s*=\\s*"${binding}"[^\\[]*?database_id\\s*=\\s*)"[^"]*"`,
+    'm',
   )
-}
-
-function patchHyperdrive(content, id) {
-  return content.replace(
-    /(\[\[hyperdrive\]\][^\[]*?binding\s*=\s*"HYPERDRIVE"[^\[]*?\nid\s*=\s*)"[^"]*"/m,
-    `$1"${id}"`,
-  )
+  return content.replace(re, `$1"${id}"`)
 }
 
 function patchVar(content, key, value) {
@@ -57,10 +56,11 @@ for (const path of TARGETS) {
   if (!existsSync(path)) continue
   const before = readFileSync(path, 'utf8')
   let after = before
-  after = patchD1(after, D1_VAULT_ID)
-  after = patchHyperdrive(after, HYPERDRIVE_IDENTITY_ID)
+  after = patchD1(after, 'DB_VAULT', D1_VAULT_ID)
+  after = patchD1(after, 'DB_IDENTITY', D1_IDENTITY_ID)
   after = patchVar(after, 'ISSUER_HOST', ISSUER_HOST)
   after = patchVar(after, 'JWT_AUDIENCE', JWT_AUDIENCE)
+  after = patchVar(after, 'API_BASE_URL', API_BASE_URL)
   if (after !== before) {
     writeFileSync(path, after)
     console.log(`patched ${path}`)

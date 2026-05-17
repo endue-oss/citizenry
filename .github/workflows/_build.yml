@@ -32,12 +32,16 @@ jobs:
           pnpm --filter @citizenry/docs      run build
 
       - name: Upload page bundles
+        # SvelteKit's adapter-cloudflare emits `_worker.js` under
+        # `.svelte-kit/cloudflare/` that references sibling `output/`
+        # and `cloudflare-tmp/`, so the whole `.svelte-kit/` directory
+        # has to ride along — `cloudflare/` alone is not self-contained.
         uses: actions/upload-artifact@v4
         with:
           name: page-bundles
           path: |
-            apps/web/.svelte-kit/cloudflare
-            apps/admin-web/.svelte-kit/cloudflare
+            apps/web/.svelte-kit
+            apps/admin-web/.svelte-kit
             apps/docs/dist
           if-no-files-found: error
           retention-days: 1

@@ -1,0 +1,77 @@
+name: Destroy Cloudflare infrastructure
+
+# Tears down everything `deploy.yml` provisions for a given SERVICE_PREFIX:
+#   Workers (5):   <prefix>-api, <prefix>-admin-api, <prefix>-mcp,
+#                  <prefix>-mail, <prefix>-migrator
+#   Pages   (2):   <prefix>-admin-web, <prefix>-docs
+#   D1      (4):   <prefix>-identity-db, <prefix>-vault-db,
+#                  <prefix>-mail-db, <prefix>-config-db
+#
+# This is a manual-only workflow. The operator types the prefix twice as
+# a guard. Each delete is idempotent — missing resources are skipped.
+#
+# Required GitHub secrets:
+#   CLOUDFLARE_API_TOKEN     Same token used by deploy.yml; needs
+#                            Workers Scripts (Edit), Pages (Edit),
+#                            D1 (Edit) on the target account.
+#   CLOUDFLARE_ACCOUNT_ID    Cloudflare account ID.
+
+on:
+  workflow_dispatch:
+    inputs:
+      service_prefix:
+        description: 'SERVICE_PREFIX to destroy (e.g. "citizenry"). Must match the deployed prefix exactly.'
+        required: true
+        type: string
+      confirm:
+        description: 'Re-enter the SERVICE_PREFIX to confirm. ALL Workers, Pages projects, and D1 databases under this prefix will be permanently deleted.'
+        required: true
+        type: string
+
+concurrency:
+  group: destroy-${{ github.event.inputs.service_prefix }}
+  cancel-in-progress: false
+
+env:
+  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+  SERVICE_PREFIX: ${{ github.event.inputs.service_prefix }}
+
+jobs:
+  destroy:
+    name: Destroy Cloudflare resources
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Confirm SERVICE_PREFIX
+        env:
+          IN_PREFIX: ${{ github.event.inputs.service_prefix }}
+          IN_CONFIRM: ${{ github.event.inputs.confirm }}
+        run: |
+          if [[ -z "$IN_PREFIX" ]]; then
+            echo "::error::service_prefix is required"
+            exit 1
+          fi
+          if [[ "$IN_PREFIX" != "$IN_CONFIRM" ]]; then
+            echo "::error::Confirmation mismatch — 'confirm' must equal 'service_prefix' ($IN_PREFIX)"
+            exit 1
+          fi
+          echo "Confirmed. Destroying Cloudflare infrastructure for prefix: $IN_PREFIX"
+
+      - name: Verify required secrets
+        run: |
+          missing=()
+          [[ -n "$CLOUDFLARE_API_TOKEN" ]]  || missing+=(CLOUDFLARE_API_TOKEN)
+          [[ -n "$CLOUDFLARE_ACCOUNT_ID" ]] || missing+=(CLOUDFLARE_ACCOUNT_ID)
+          if (( ${#missing[@]} > 0 )); then
+            echo "::error::Missing required secret(s): ${missing[*]}"
+            echo "Set them at Settings → Secrets and variables → Actions. See docs/deploy.md."
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+
+      - name: Destroy Cloudflare resources
+        run: node scripts/ci/destroy.mjs

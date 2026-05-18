@@ -11,6 +11,7 @@ import type { Db } from '../db'
 import { createConfigRepo } from '../repo/config'
 
 export type ConfigEntry<T = unknown> = {
+  id: string
   key: string
   value: T
   updatedAt: Date
@@ -32,6 +33,7 @@ export const createConfigReader = (db: Db): ConfigReader => {
       const row = await repo.findByKey(key)
       if (!row) return null
       return {
+        id: row.configId,
         key: row.configKey,
         value: JSON.parse(row.configValue) as T,
         updatedAt: row.updatedAt,
@@ -42,6 +44,7 @@ export const createConfigReader = (db: Db): ConfigReader => {
     async list<T = unknown>(prefix?: string): Promise<ConfigEntry<T>[]> {
       const rows = await repo.list(prefix)
       return rows.map((r) => ({
+        id: r.configId,
         key: r.configKey,
         value: JSON.parse(r.configValue) as T,
         updatedAt: r.updatedAt,

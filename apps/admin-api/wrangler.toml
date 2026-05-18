@@ -6,19 +6,35 @@ compatibility_flags = ["nodejs_compat"]
 [dev]
 port = 13001
 
-# admin-api no longer accesses the DB directly.
-# Every admin action is forwarded to api's /_admin/* routes via the service
-# binding below, authenticated by SERVICE_KEY. The binding is required:
-# workers.dev disallows Worker→Worker fetch by public URL (CF 1042).
+# admin-api accesses identity D1 directly to read admin credentials
+# and manage refresh-token rotation. Every other admin action is still
+# forwarded to api's /_admin/* routes via the service binding below
+# (X-Service-Key PSK). The service binding is required because
+# workers.dev disallows Worker→Worker fetch via public URL (CF 1042).
 
 [[services]]
 binding = "API"
 service = "citizenry-api"
 
+# identity domain — D1. Read admin_account rows for login, write
+# admin_refresh_token rows on issue/rotate/revoke.
+[[d1_databases]]
+binding = "DB_IDENTITY"
+database_name = "citizenry-identity-db"
+database_id = "local-dev-placeholder"
+migrations_dir = "../../packages/identity/migrations"
+
 [vars]
 # Retained as a path/origin hint for local dev only. The service binding
 # ignores the URL host in production, so only the path matters there.
 API_BASE_URL = "http://127.0.0.1:13000"
+# Default admin account id. Override via the GitHub variable ADMIN_ID
+# if you want a different login name baked into the deploy.
+ADMIN_ID = "admin"
+# Access token TTL in seconds — JWT exp claim. Default 15 minutes.
+ACCESS_TOKEN_TTL_SECS = "900"
 
 # secrets — `wrangler secret put`
-#   SERVICE_KEY        — the X-Service-Key admin-api sends must match api's expected value
+#   SERVICE_KEY              — X-Service-Key PSK shared with api
+#   ADMIN_JWT_SECRET         — HS256 secret used to sign access tokens
+#   ADMIN_REFRESH_PEPPER     — pepper folded into refresh-token hashes

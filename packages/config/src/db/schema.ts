@@ -2,13 +2,15 @@ import { sql } from 'drizzle-orm'
 import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core'
 
 // ── config ───────────────────────────────────────────────────
-// Single key/value table. `config_value` stores JSON; callers parse
-// and stringify. Singular table name, snake_case, matches the rest of
-// the citizenry schema.
+// Row identity is the ULID `config_id`. `config_key` is the
+// natural lookup key (dot-separated namespace by convention,
+// e.g. `mail.provider`). `config_value` is JSON-encoded;
+// callers parse and stringify.
 export const config = sqliteTable(
   'config',
   {
-    configKey: text('config_key').primaryKey(),
+    configId: text('config_id').primaryKey(),
+    configKey: text('config_key').notNull().unique('config_key_uniq'),
     configValue: text('config_value').notNull(),
     updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
       .notNull()

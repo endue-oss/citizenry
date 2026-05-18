@@ -50,6 +50,7 @@ env:
   ISSUER_HOST: ${{ vars.ISSUER_HOST }}
   JWT_AUDIENCE: ${{ vars.JWT_AUDIENCE }}
   MAIL_DOMAIN: ${{ vars.MAIL_DOMAIN }}
+  ADMIN_ID: ${{ vars.ADMIN_ID }}
   WRANGLER_SEND_METRICS: 'false'
 
 jobs:
@@ -247,6 +248,10 @@ jobs:
         env:
           ENROLLMENT_PEPPER: ${{ secrets.ENROLLMENT_PEPPER }}
           SERVICE_KEY: ${{ secrets.SERVICE_KEY }}
+          ADMIN_JWT_SECRET: ${{ secrets.ADMIN_JWT_SECRET }}
+          ADMIN_REFRESH_PEPPER: ${{ secrets.ADMIN_REFRESH_PEPPER }}
+          ADMIN_ID: ${{ vars.ADMIN_ID }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
         run: ./scripts/ci/bootstrap-secrets.sh
 

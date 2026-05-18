@@ -12,12 +12,17 @@
 #     the `_config` row, so an operator can pin or rotate from the repo.
 #
 # Key → Worker mapping:
-#   enrollment_pepper  → apps/api         ENROLLMENT_PEPPER
-#   service_key        → apps/api         SERVICE_KEY
-#                       apps/admin-api   SERVICE_KEY    (same value)
+#   enrollment_pepper      → apps/api         ENROLLMENT_PEPPER
+#   service_key            → apps/api         SERVICE_KEY
+#                           apps/admin-api    SERVICE_KEY    (same value)
+#   admin_jwt_secret       → apps/admin-api   ADMIN_JWT_SECRET
+#   admin_refresh_pepper   → apps/admin-api   ADMIN_REFRESH_PEPPER
 #
-# Operator-supplied (no auto-gen — outbound mail stays log-only until set):
-#   RESEND_API_KEY     → apps/mail        RESEND_API_KEY
+# Operator-supplied (no auto-gen):
+#   ADMIN_PASSWORD     → seed-admin.mjs upserts admin_account row
+#                        (skipped when unset, leaving an existing row untouched)
+#   RESEND_API_KEY     → apps/mail        RESEND_API_KEY (outbound stays
+#                        log-only when unset)
 #
 # Inspect values:
 #   wrangler d1 execute citizenry-identity-db --remote \
@@ -111,6 +116,41 @@ echo "::add-mask::$service_key"
 push_secret apps/api       SERVICE_KEY "$service_key"
 push_secret apps/admin-api SERVICE_KEY "$service_key"
 echo "::endgroup::"
+
+# ── ADMIN_JWT_SECRET (admin-api only) ──────────────────────────────
+# HS256 signing secret for admin-api access tokens. Auto-generated on
+# first deploy, persisted in _config, and pushed verbatim thereafter.
+echo "::group::ADMIN_JWT_SECRET"
+admin_jwt_secret=$(ensure_config 'admin_jwt_secret' "${ADMIN_JWT_SECRET:-}")
+echo "::add-mask::$admin_jwt_secret"
+push_secret apps/admin-api ADMIN_JWT_SECRET "$admin_jwt_secret"
+echo "::endgroup::"
+
+# ── ADMIN_REFRESH_PEPPER (admin-api only) ──────────────────────────
+# Pepper folded into refresh-token hashes stored in
+# admin_refresh_token.token_hash. Auto-generated and pinned.
+echo "::group::ADMIN_REFRESH_PEPPER"
+admin_refresh_pepper=$(ensure_config 'admin_refresh_pepper' "${ADMIN_REFRESH_PEPPER:-}")
+echo "::add-mask::$admin_refresh_pepper"
+push_secret apps/admin-api ADMIN_REFRESH_PEPPER "$admin_refresh_pepper"
+echo "::endgroup::"
+
+# ── Seed / rotate admin_account row ────────────────────────────────
+# Only runs when ADMIN_PASSWORD is provided. On a fresh deploy the
+# operator MUST set this once; subsequent deploys without the env var
+# leave the stored hash alone. With the env var set, the password is
+# rotated atomically (new salt + new PBKDF2 hash).
+if [[ -n "${ADMIN_PASSWORD:-}" ]]; then
+  echo "::group::seed-admin"
+  echo "::add-mask::$ADMIN_PASSWORD"
+  ADMIN_ID="${ADMIN_ID:-admin}" \
+    ADMIN_PASSWORD="$ADMIN_PASSWORD" \
+    SERVICE_PREFIX="$PREFIX" \
+    node scripts/ci/seed-admin.mjs
+  echo "::endgroup::"
+else
+  echo "ADMIN_PASSWORD not set — leaving existing admin_account row (if any) untouched."
+fi
 
 # ── RESEND_API_KEY (apps/mail, operator-supplied only) ─────────────
 # Resend is an external provider credential, so there's no auto-gen

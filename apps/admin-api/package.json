@@ -11,6 +11,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@citizenry/identity": "workspace:*",
+    "drizzle-orm": "^0.36.4",
     "hono": "^4.6.10"
   },
   "devDependencies": {

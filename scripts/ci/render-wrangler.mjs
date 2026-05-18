@@ -20,6 +20,7 @@
 //   ISSUER_HOST     defaults to the value already in wrangler.toml
 //   JWT_AUDIENCE    defaults to the value already in wrangler.toml
 //   MAIL_DOMAIN     defaults to the value already in wrangler.toml
+//   ADMIN_ID        admin login id baked into apps/admin-api
 //
 // Optional env (admin-api):
 //   API_BASE_URL    overrides admin-api's [vars] API_BASE_URL — usually the api
@@ -45,6 +46,7 @@ const {
   JWT_AUDIENCE,
   MAIL_DOMAIN,
   API_BASE_URL,
+  ADMIN_ID,
 } = process.env
 
 const SERVICE_PREFIX = process.env.SERVICE_PREFIX || 'citizenry'
@@ -105,6 +107,7 @@ for (const path of TARGETS) {
   after = patchVar(after, 'JWT_AUDIENCE', JWT_AUDIENCE)
   after = patchVar(after, 'MAIL_DOMAIN', MAIL_DOMAIN)
   after = patchVar(after, 'API_BASE_URL', API_BASE_URL)
+  after = patchVar(after, 'ADMIN_ID', ADMIN_ID)
   if (after !== before) {
     writeFileSync(path, after)
     console.log(`patched ${path}`)

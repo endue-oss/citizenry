@@ -13,7 +13,7 @@ no Postgres, no Hyperdrive.
 | Service              | Type    | Storage / Bindings                                                 |
 | -------------------- | ------- | ------------------------------------------------------------------ |
 | `citizenry-api`       | Workers | `DB_IDENTITY` (D1), `DB_VAULT` (D1), `DB_CONFIG` (D1)              |
-| `citizenry-admin-api` | Workers | none — proxies to api `/_admin/*` via SERVICE_KEY                  |
+| `citizenry-admin-api` | Workers | `DB_IDENTITY` (D1, admin auth), API service binding (X-Service-Key) |
 | `citizenry-mcp`       | Workers | —                                                                  |
 | `citizenry-mail`      | Workers | `DB_IDENTITY` (D1), `DB_MAIL` (D1), `DB_CONFIG` (D1), MAIL binding |
 | `citizenry-admin-web` | Pages   | static SvelteKit admin console (ops-only)                          |
@@ -30,11 +30,21 @@ Storage:
 
 Admin model:
 
-- `admin-api` no longer touches a database directly. Every admin
-  operation is HTTP-proxied to `api`'s `/_admin/*` routes; both Workers
-  share the same `SERVICE_KEY` PSK to authenticate the hop. Because of
-  this layout, **the api Worker alone provides every essential
-  function** — `admin-api` is optional.
+- Operators sign in to `admin-api` with an **admin ID + password**.
+  `admin-api` issues an HS256 JWT **access token** (default 15 min TTL)
+  and an opaque **refresh token** that is rotated on every use. Both
+  tokens are signed/peppered with secrets the deploy generates and
+  stores in identity D1 `_config`:
+  - `admin_jwt_secret`  → admin-api `ADMIN_JWT_SECRET`
+  - `admin_refresh_pepper` → admin-api `ADMIN_REFRESH_PEPPER`
+- Admin credentials live in identity D1 (`admin_account` table,
+  PBKDF2-SHA-256 200k iterations). The CI bootstrap step seeds /
+  rotates the row whenever the GitHub secret `ADMIN_PASSWORD` is set.
+- Every `/api/v1/admin/*` route on `admin-api` requires the access
+  token. After verification, `admin-api` proxies the request to api
+  `/_admin/*` with the existing `SERVICE_KEY` PSK plus an `X-Admin-Id`
+  breadcrumb. The two layers of auth keep operator credentials
+  separate from inter-worker PSKs.
 
 ## What you need (one time)
 
@@ -83,10 +93,19 @@ Set the matching GitHub secret only if you want to pin or rotate the
 value from the repository — the override is written into `_config`
 (upsert), then pushed to the workers.
 
-| Name                | Stored in                            | Used by                              |
-| ------------------- | ------------------------------------ | ------------------------------------ |
-| `ENROLLMENT_PEPPER` | D1 `_config(key='enrollment_pepper')` | `api` (Worker secret)                |
-| `SERVICE_KEY`       | D1 `_config(key='service_key')`       | `api` and `admin-api` (same value)   |
+| Name                  | Stored in                                | Used by                              |
+| --------------------- | ---------------------------------------- | ------------------------------------ |
+| `ENROLLMENT_PEPPER`   | D1 `_config(key='enrollment_pepper')`     | `api` (Worker secret)                |
+| `SERVICE_KEY`         | D1 `_config(key='service_key')`           | `api` and `admin-api` (same value)   |
+| `ADMIN_JWT_SECRET`    | D1 `_config(key='admin_jwt_secret')`      | `admin-api` (HS256 sign + verify)    |
+| `ADMIN_REFRESH_PEPPER`| D1 `_config(key='admin_refresh_pepper')`  | `admin-api` (refresh-token hash pepper) |
+
+### Admin credential (operator-supplied)
+
+| Name             | Effect                                                                |
+| ---------------- | --------------------------------------------------------------------- |
+| `ADMIN_PASSWORD` | When set, the CI bootstrap upserts the `admin_account` row (PBKDF2 hash + salt). Leave unset on subsequent deploys to keep the existing password. |
+| `ADMIN_ID` (var) | Admin login id baked into `apps/admin-api`. Defaults to `admin`.       |
 
 #### Inspecting values
 

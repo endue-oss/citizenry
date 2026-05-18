@@ -24,6 +24,7 @@ export const adminConfigRouter = new Hono<{ Variables: Vars }>()
     const items = await reader.list(prefix)
     return c.json({
       items: items.map((e) => ({
+        id: e.id,
         key: e.key,
         value: e.value,
         updated_at: e.updatedAt.toISOString(),
@@ -40,6 +41,7 @@ export const adminConfigRouter = new Hono<{ Variables: Vars }>()
       return c.json({ error: 'config_not_found', key: c.req.param('key') }, 404)
     }
     return c.json({
+      id: entry.id,
       key: entry.key,
       value: entry.value,
       updated_at: entry.updatedAt.toISOString(),
@@ -70,6 +72,7 @@ export const adminConfigRouter = new Hono<{ Variables: Vars }>()
     })
     return c.json(
       {
+        id: entry.id,
         key: entry.key,
         value: entry.value,
         updated_at: entry.updatedAt.toISOString(),

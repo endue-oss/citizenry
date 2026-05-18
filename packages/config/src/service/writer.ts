@@ -36,6 +36,7 @@ export const createConfigWriter = (db: Db): ConfigWriter => {
         throw new Error(`config upsert returned no row for key=${input.key}`)
       }
       return {
+        id: row.configId,
         key: row.configKey,
         value: JSON.parse(row.configValue) as T,
         updatedAt: row.updatedAt,
@@ -47,6 +48,7 @@ export const createConfigWriter = (db: Db): ConfigWriter => {
       const row = await repo.remove(key)
       if (!row) return null
       return {
+        id: row.configId,
         key: row.configKey,
         value: JSON.parse(row.configValue),
         updatedAt: row.updatedAt,

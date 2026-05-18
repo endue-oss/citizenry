@@ -7,7 +7,13 @@ import { withTtlCache } from './cache'
 // deterministic without setTimeout or real D1.
 
 function mockEntry<T>(key: string, value: T): ConfigEntry<T> {
-  return { key, value, updatedAt: new Date(0), updatedBy: null }
+  return {
+    id: `cfg_${key}`,
+    key,
+    value,
+    updatedAt: new Date(0),
+    updatedBy: null,
+  }
 }
 
 function fakeReader(store: Record<string, ConfigEntry | null>): ConfigReader & {

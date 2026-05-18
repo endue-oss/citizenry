@@ -13,6 +13,7 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "echo 'apply migrations/*.sql against D1 via wrangler d1 migrations apply'"
   },
@@ -26,6 +27,7 @@
     "@cloudflare/workers-types": "^4.20260516.0",
     "@types/node": "^24.12.4",
     "drizzle-kit": "^0.28.1",
-    "typescript": "^5.6.3"
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.5"
   }
 }

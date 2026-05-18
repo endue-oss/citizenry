@@ -33,7 +33,7 @@ using TypeSpec.OpenAPI;
   version: "0.1.0",
   termsOfService: "https://citizenry.id/terms",
   contact: {
-    name: "EndueAI Team",
+    name: "Endue AI Team",
     email: "team@endue.ai",
     url: "https://citizenry.id",
   },
@@ -42,7 +42,6 @@ using TypeSpec.OpenAPI;
     url: "https://www.apache.org/licenses/LICENSE-2.0",
   },
 })
-@server("https://api.citizenry.id", "Production")
-@server("https://api-dev.citizenry.id", "Development")
+@server("https://citizenry.id", "Production")
 @server("http://localhost:13000", "Local Development")
 namespace Citizenry.Vault;

@@ -1,0 +1,49 @@
+name = "citizenry-mail"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+[dev]
+port = 13004
+
+# identity — D1. The Worker reads agent_key rows to verify Bearer JWTs.
+[[d1_databases]]
+binding = "DB_IDENTITY"
+database_name = "citizenry-identity-db"
+database_id = "local-dev-placeholder"
+migrations_dir = "../../packages/identity/migrations"
+
+# mail — D1. Mail-domain storage.
+[[d1_databases]]
+binding = "DB_MAIL"
+database_name = "citizenry-mail-db"
+database_id = "local-dev-placeholder"
+migrations_dir = "../../packages/mail/migrations"
+
+[vars]
+# JWT audience(s) accepted by this Worker. Comma-separated.
+JWT_AUDIENCE = "mail.citizenry.id,citizenry-mail"
+# Outbound default-From host. When a sender omits `from`, the address
+# becomes `<account_id>@<MAIL_DOMAIN>`.
+MAIL_DOMAIN = "citizenry.id"
+
+# Outbound — Cloudflare Email Service (public beta, 2026-04-16).
+# Highest-priority sender; when bound, supersedes RESEND_API_KEY. Requires
+# MAIL_DOMAIN to be hosted on Cloudflare DNS so CF auto-configures
+# SPF/DKIM/DMARC. Optionally restrict envelope senders with
+# `allowed_sender_addresses = ["noreply@citizenry.id"]`.
+[[send_email]]
+name = "MAIL"
+
+# secrets — `wrangler secret put`
+#   RESEND_API_KEY               Optional fallback when the Cloudflare MAIL
+#                                binding is unavailable.
+#   AWS_SES_ACCESS_KEY_ID        Optional AWS SES credentials, used as a fallback
+#   AWS_SES_SECRET_ACCESS_KEY    after Resend. Both access key and secret are
+#                                required to activate the SES sender.
+#   AWS_SES_REGION               Optional, defaults to us-east-1 (var, not secret —
+#                                set under [vars] if needed).
+#   AWS_SES_SESSION_TOKEN        Optional, for STS assumed-role / temporary creds.
+#
+# If none of the above are configured, outbound is logged-only and rows land
+# with deliveryStatus='queued'.

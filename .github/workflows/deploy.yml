@@ -17,13 +17,13 @@ name: Deploy to Cloudflare
 #   MIGRATOR_TOKEN     Pin a stable bearer for the migrator; auto-rotated when unset.
 #   ENROLLMENT_PEPPER  Override the auto-generated pepper stored in D1 `_config`.
 #   SERVICE_KEY        Override the auto-generated api ↔ admin-api PSK.
-#   RESEND_API_KEY     Resend key for outbound email; log-only when unset.
+#   RESEND_API_KEY     Resend key for outbound mail; log-only when unset.
 #
 # Optional GitHub variables (vars):
 #   SERVICE_PREFIX   Resource-name prefix for forks (default "citizenry").
 #   ISSUER_HOST      Override the value in wrangler.toml.
 #   JWT_AUDIENCE     Override the value in wrangler.toml.
-#   EMAIL_DOMAIN     Override the value in wrangler.toml.
+#   MAIL_DOMAIN     Override the value in wrangler.toml.
 #   API_BASE_URL     URL admin-api proxies to (defaults to the workers.dev URL).
 #
 # See docs/deploy.md for the adopter walkthrough.
@@ -49,7 +49,7 @@ env:
   SERVICE_PREFIX: ${{ vars.SERVICE_PREFIX || 'citizenry' }}
   ISSUER_HOST: ${{ vars.ISSUER_HOST }}
   JWT_AUDIENCE: ${{ vars.JWT_AUDIENCE }}
-  EMAIL_DOMAIN: ${{ vars.EMAIL_DOMAIN }}
+  MAIL_DOMAIN: ${{ vars.MAIL_DOMAIN }}
   WRANGLER_SEND_METRICS: 'false'
 
 jobs:
@@ -68,7 +68,7 @@ jobs:
     outputs:
       d1_identity_id: ${{ steps.d1.outputs.d1_identity_id }}
       d1_vault_id: ${{ steps.d1.outputs.d1_vault_id }}
-      d1_email_id: ${{ steps.d1.outputs.d1_email_id }}
+      d1_mail_id: ${{ steps.d1.outputs.d1_mail_id }}
       subdomain: ${{ steps.subdomain.outputs.subdomain }}
       api_url: ${{ steps.subdomain.outputs.api_url }}
       migrator_url: ${{ steps.subdomain.outputs.migrator_url }}
@@ -86,7 +86,7 @@ jobs:
 
       - uses: actions/checkout@v4
 
-      - name: Provision D1 databases (identity + vault + email)
+      - name: Provision D1 databases (identity + vault + mail)
         id: d1
         run: node scripts/ci/provision.mjs
 
@@ -120,7 +120,7 @@ jobs:
     outputs:
       d1_identity_id: ${{ needs.provision.outputs.d1_identity_id }}
       d1_vault_id: ${{ needs.provision.outputs.d1_vault_id }}
-      d1_email_id: ${{ needs.provision.outputs.d1_email_id }}
+      d1_mail_id: ${{ needs.provision.outputs.d1_mail_id }}
       subdomain: ${{ needs.provision.outputs.subdomain }}
       api_url: ${{ needs.provision.outputs.api_url }}
     steps:
@@ -131,7 +131,7 @@ jobs:
         with:
           d1_identity_id: ${{ needs.provision.outputs.d1_identity_id }}
           d1_vault_id: ${{ needs.provision.outputs.d1_vault_id }}
-          d1_email_id: ${{ needs.provision.outputs.d1_email_id }}
+          d1_mail_id: ${{ needs.provision.outputs.d1_mail_id }}
           api_base_url: ${{ vars.API_BASE_URL || needs.provision.outputs.api_url }}
 
       - name: Deploy migrator worker
@@ -201,7 +201,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        app: [api, admin-api, mcp, email]
+        app: [api, admin-api, mcp, mail]
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
@@ -210,7 +210,7 @@ jobs:
         with:
           d1_identity_id: ${{ needs.migrate.outputs.d1_identity_id }}
           d1_vault_id: ${{ needs.migrate.outputs.d1_vault_id }}
-          d1_email_id: ${{ needs.migrate.outputs.d1_email_id }}
+          d1_mail_id: ${{ needs.migrate.outputs.d1_mail_id }}
           api_base_url: ${{ vars.API_BASE_URL || needs.migrate.outputs.api_url }}
 
       - name: Build spec
@@ -235,7 +235,7 @@ jobs:
         with:
           d1_identity_id: ${{ needs.migrate.outputs.d1_identity_id }}
           d1_vault_id: ${{ needs.migrate.outputs.d1_vault_id }}
-          d1_email_id: ${{ needs.migrate.outputs.d1_email_id }}
+          d1_mail_id: ${{ needs.migrate.outputs.d1_mail_id }}
           api_base_url: ${{ vars.API_BASE_URL || needs.migrate.outputs.api_url }}
 
       - name: Bootstrap (read or generate, push to Worker secrets)
@@ -314,7 +314,7 @@ jobs:
               echo "| ${P}-api       | Worker | \`${P}-api.${SUBDOMAIN}.workers.dev\` |"
               echo "| ${P}-admin-api | Worker | \`${P}-admin-api.${SUBDOMAIN}.workers.dev\` |"
               echo "| ${P}-mcp       | Worker | \`${P}-mcp.${SUBDOMAIN}.workers.dev\` |"
-              echo "| ${P}-email     | Worker | \`${P}-email.${SUBDOMAIN}.workers.dev\` |"
+              echo "| ${P}-mail     | Worker | \`${P}-mail.${SUBDOMAIN}.workers.dev\` |"
               echo "| ${P}-admin-web | Pages  | \`${P}-admin-web.pages.dev\` |"
               echo "| ${P}-docs      | Pages  | \`${P}-docs.pages.dev\` |"
             fi

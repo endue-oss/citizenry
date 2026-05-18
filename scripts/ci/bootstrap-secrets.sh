@@ -16,8 +16,8 @@
 #   service_key        → apps/api         SERVICE_KEY
 #                       apps/admin-api   SERVICE_KEY    (same value)
 #
-# Operator-supplied (no auto-gen — outbound email stays log-only until set):
-#   RESEND_API_KEY     → apps/email        RESEND_API_KEY
+# Operator-supplied (no auto-gen — outbound mail stays log-only until set):
+#   RESEND_API_KEY     → apps/mail        RESEND_API_KEY
 #
 # Inspect values:
 #   wrangler d1 execute citizenry-identity-db --remote \
@@ -112,17 +112,17 @@ push_secret apps/api       SERVICE_KEY "$service_key"
 push_secret apps/admin-api SERVICE_KEY "$service_key"
 echo "::endgroup::"
 
-# ── RESEND_API_KEY (apps/email, operator-supplied only) ─────────────
+# ── RESEND_API_KEY (apps/mail, operator-supplied only) ─────────────
 # Resend is an external provider credential, so there's no auto-gen
-# fallback. When unset, apps/email uses its LogOnlySender — outbound
-# emails are written to D1 with deliveryStatus='queued' and only logged.
+# fallback. When unset, apps/mail uses its LogOnlySender — outbound
+# mails are written to D1 with deliveryStatus='queued' and only logged.
 if [[ -n "${RESEND_API_KEY:-}" ]]; then
   echo "::group::RESEND_API_KEY"
   echo "::add-mask::$RESEND_API_KEY"
-  push_secret apps/email RESEND_API_KEY "$RESEND_API_KEY"
+  push_secret apps/mail RESEND_API_KEY "$RESEND_API_KEY"
   echo "::endgroup::"
 else
-  echo "RESEND_API_KEY not set — apps/email will use the log-only sender."
+  echo "RESEND_API_KEY not set — apps/mail will use the log-only sender."
 fi
 
 echo

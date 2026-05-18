@@ -1,14 +1,14 @@
-// Email service layer — pure (no Worker globals). The apps/email Worker
-// instantiates a Db and a EmailSender and passes both in.
+// Mail service layer — pure (no Worker globals). The apps/mail Worker
+// instantiates a Db and a MailSender and passes both in.
 
 import { and, eq, desc, lte, sql } from 'drizzle-orm'
-import { schema, type Db, type EmailRow, type MailboxRow, type AddressEntry } from '../db'
+import { schema, type Db, type MailRow, type MailboxRow, type AddressEntry } from '../db'
 import { WELL_KNOWN_ROLES, type WellKnownRole } from '../db/schema'
 
-const { mailbox, email, emailAttachment } = schema
+const { mailbox, mail, mailAttachment } = schema
 
-/** Provider that delivers outbound email. Implementations live in apps/email. */
-export interface EmailSender {
+/** Provider that delivers outbound mail. Implementations live in apps/mail. */
+export interface MailSender {
   name: string
   /** Throws on hard failure. Returns the provider's message id on success. */
   send(msg: OutboundMessage): Promise<{ providerMessageId: string | null }>
@@ -25,8 +25,8 @@ export type OutboundMessage = {
   html?: string
 }
 
-/** Inputs to storeInbound — produced by apps/email/src/inbound from postal-mime. */
-export type InboundEmail = {
+/** Inputs to storeInbound — produced by apps/mail/src/inbound from postal-mime. */
+export type InboundMail = {
   accountId: string
   messageId: string | null
   inReplyTo: string | null
@@ -51,7 +51,7 @@ export type InboundEmail = {
   }>
 }
 
-export type IdMinter = (kind: 'MAILBOX' | 'EMAIL' | 'ATTACHMENT' | 'THREAD') => string
+export type IdMinter = (kind: 'MAILBOX' | 'MAIL' | 'ATTACHMENT' | 'THREAD') => string
 
 // ── mailboxes ──────────────────────────────────────────────────────
 
@@ -105,13 +105,13 @@ async function mailboxByRole(
   return rows[0] ?? null
 }
 
-// ── emails ─────────────────────────────────────────────────────────
+// ── mails ──────────────────────────────────────────────────────────
 
 const PREVIEW_LEN = 256
 
-export type EmailListItem = Omit<EmailRow, 'bodyText' | 'bodyHtml'>
+export type MailListItem = Omit<MailRow, 'bodyText' | 'bodyHtml'>
 
-export async function listEmails(
+export async function listMails(
   db: Db,
   args: {
     accountId: string
@@ -119,55 +119,55 @@ export async function listEmails(
     before?: Date
     limit?: number
   },
-): Promise<EmailListItem[]> {
+): Promise<MailListItem[]> {
   const limit = Math.min(args.limit ?? 50, 200)
-  const conditions = [eq(email.accountId, args.accountId)]
-  if (args.mailboxId) conditions.push(eq(email.mailboxId, args.mailboxId))
-  if (args.before) conditions.push(lte(email.receivedAt, args.before))
+  const conditions = [eq(mail.accountId, args.accountId)]
+  if (args.mailboxId) conditions.push(eq(mail.mailboxId, args.mailboxId))
+  if (args.before) conditions.push(lte(mail.receivedAt, args.before))
 
   const rows = await db
     .select({
-      emailId: email.emailId,
-      accountId: email.accountId,
-      mailboxId: email.mailboxId,
-      threadId: email.threadId,
-      messageId: email.messageId,
-      inReplyTo: email.inReplyTo,
-      refs: email.refs,
-      subject: email.subject,
-      preview: email.preview,
-      fromAddr: email.fromAddr,
-      toAddrs: email.toAddrs,
-      ccAddrs: email.ccAddrs,
-      bccAddrs: email.bccAddrs,
-      replyToAddrs: email.replyToAddrs,
-      keywords: email.keywords,
-      size: email.size,
-      hasAttachment: email.hasAttachment,
-      receivedAt: email.receivedAt,
-      sentAt: email.sentAt,
-      direction: email.direction,
-      deliveryStatus: email.deliveryStatus,
-      deliveryError: email.deliveryError,
-      providerMessageId: email.providerMessageId,
-      createdAt: email.createdAt,
+      mailId: mail.mailId,
+      accountId: mail.accountId,
+      mailboxId: mail.mailboxId,
+      threadId: mail.threadId,
+      messageId: mail.messageId,
+      inReplyTo: mail.inReplyTo,
+      refs: mail.refs,
+      subject: mail.subject,
+      preview: mail.preview,
+      fromAddr: mail.fromAddr,
+      toAddrs: mail.toAddrs,
+      ccAddrs: mail.ccAddrs,
+      bccAddrs: mail.bccAddrs,
+      replyToAddrs: mail.replyToAddrs,
+      keywords: mail.keywords,
+      size: mail.size,
+      hasAttachment: mail.hasAttachment,
+      receivedAt: mail.receivedAt,
+      sentAt: mail.sentAt,
+      direction: mail.direction,
+      deliveryStatus: mail.deliveryStatus,
+      deliveryError: mail.deliveryError,
+      providerMessageId: mail.providerMessageId,
+      createdAt: mail.createdAt,
     })
-    .from(email)
+    .from(mail)
     .where(and(...conditions))
-    .orderBy(desc(email.receivedAt))
+    .orderBy(desc(mail.receivedAt))
     .limit(limit)
 
   return rows
 }
 
-export async function getEmail(
+export async function getMail(
   db: Db,
-  args: { accountId: string; emailId: string },
-): Promise<EmailRow | null> {
+  args: { accountId: string; mailId: string },
+): Promise<MailRow | null> {
   const rows = await db
     .select()
-    .from(email)
-    .where(and(eq(email.accountId, args.accountId), eq(email.emailId, args.emailId)))
+    .from(mail)
+    .where(and(eq(mail.accountId, args.accountId), eq(mail.mailId, args.mailId)))
     .limit(1)
   return rows[0] ?? null
 }
@@ -183,16 +183,16 @@ export async function getEmail(
  */
 export async function storeInbound(
   db: Db,
-  msg: InboundEmail,
+  msg: InboundMail,
   mintId: IdMinter,
-): Promise<EmailRow> {
+): Promise<MailRow> {
   // Idempotency check on Message-ID. NULL message-id falls through and
   // always inserts — those are rare and replaying them is acceptable for v1.
   if (msg.messageId) {
     const dup = await db
       .select()
-      .from(email)
-      .where(and(eq(email.accountId, msg.accountId), eq(email.messageId, msg.messageId)))
+      .from(mail)
+      .where(and(eq(mail.accountId, msg.accountId), eq(mail.messageId, msg.messageId)))
       .limit(1)
     if (dup[0]) return dup[0]
   }
@@ -202,11 +202,11 @@ export async function storeInbound(
   if (!inbox) throw new Error('inbox mailbox missing after ensureDefaultMailboxes')
 
   const threadId = computeThreadId(msg.refs, msg.inReplyTo, msg.messageId, mintId)
-  const emailId = mintId('EMAIL')
+  const mailId = mintId('MAIL')
   const preview = (msg.bodyText ?? msg.bodyHtml ?? '').slice(0, PREVIEW_LEN)
 
-  await db.insert(email).values({
-    emailId,
+  await db.insert(mail).values({
+    mailId,
     accountId: msg.accountId,
     mailboxId: inbox.mailboxId,
     threadId,
@@ -217,7 +217,7 @@ export async function storeInbound(
     preview,
     bodyText: msg.bodyText,
     bodyHtml: msg.bodyHtml,
-    fromAddr: msg.from?.email ?? null,
+    fromAddr: msg.from?.mail ?? null,
     toAddrs: JSON.stringify(msg.to),
     ccAddrs: JSON.stringify(msg.cc),
     bccAddrs: JSON.stringify(msg.bcc),
@@ -232,9 +232,9 @@ export async function storeInbound(
   })
 
   for (const att of msg.attachments) {
-    await db.insert(emailAttachment).values({
+    await db.insert(mailAttachment).values({
       attachmentId: mintId('ATTACHMENT'),
-      emailId,
+      mailId,
       filename: att.filename,
       contentType: att.contentType,
       size: att.bytes.byteLength,
@@ -246,7 +246,7 @@ export async function storeInbound(
 
   await bumpMailboxCounters(db, inbox.mailboxId, { totalDelta: 1, unreadDelta: 1 })
 
-  const inserted = await getEmail(db, { accountId: msg.accountId, emailId })
+  const inserted = await getMail(db, { accountId: msg.accountId, mailId })
   if (!inserted) throw new Error('insert succeeded but row not found')
   return inserted
 }
@@ -254,33 +254,33 @@ export async function storeInbound(
 // ── outbound ───────────────────────────────────────────────────────
 
 /**
- * Send a message via the configured EmailSender, persist it into the Sent
+ * Send a message via the configured MailSender, persist it into the Sent
  * folder, and record the delivery status. Failures leave a row with
  * deliveryStatus='failed' so operators can inspect.
  */
-export async function sendEmail(
+export async function sendMail(
   db: Db,
   args: {
     accountId: string
-    sender: EmailSender
+    sender: MailSender
     message: OutboundMessage
   },
   mintId: IdMinter,
-): Promise<EmailRow> {
+): Promise<MailRow> {
   await ensureDefaultMailboxes(db, args.accountId, mintId)
   const sent = await mailboxByRole(db, args.accountId, 'sent')
   if (!sent) throw new Error('sent mailbox missing after ensureDefaultMailboxes')
 
   const now = new Date()
-  const emailId = mintId('EMAIL')
+  const mailId = mintId('MAIL')
   const threadId = mintId('THREAD')
   const preview = (args.message.text ?? args.message.html ?? '').slice(0, PREVIEW_LEN)
   const size = computeOutboundSize(args.message)
 
   // Insert as 'queued' before calling the provider so a crash mid-send
   // leaves a trace.
-  await db.insert(email).values({
-    emailId,
+  await db.insert(mail).values({
+    mailId,
     accountId: args.accountId,
     mailboxId: sent.mailboxId,
     threadId,
@@ -291,7 +291,7 @@ export async function sendEmail(
     preview,
     bodyText: args.message.text ?? null,
     bodyHtml: args.message.html ?? null,
-    fromAddr: args.message.from.email,
+    fromAddr: args.message.from.mail,
     toAddrs: JSON.stringify(args.message.to),
     ccAddrs: JSON.stringify(args.message.cc ?? []),
     bccAddrs: JSON.stringify(args.message.bcc ?? []),
@@ -308,23 +308,23 @@ export async function sendEmail(
   try {
     const { providerMessageId } = await args.sender.send(args.message)
     await db
-      .update(email)
+      .update(mail)
       .set({ deliveryStatus: 'sent', providerMessageId })
-      .where(eq(email.emailId, emailId))
+      .where(eq(mail.mailId, mailId))
   } catch (err) {
     await db
-      .update(email)
+      .update(mail)
       .set({
         deliveryStatus: 'failed',
         deliveryError: err instanceof Error ? err.message : String(err),
       })
-      .where(eq(email.emailId, emailId))
+      .where(eq(mail.mailId, mailId))
     throw err
   }
 
   await bumpMailboxCounters(db, sent.mailboxId, { totalDelta: 1, unreadDelta: 0 })
 
-  const inserted = await getEmail(db, { accountId: args.accountId, emailId })
+  const inserted = await getMail(db, { accountId: args.accountId, mailId })
   if (!inserted) throw new Error('insert succeeded but row not found')
   return inserted
 }
@@ -340,8 +340,8 @@ async function bumpMailboxCounters(
   await db
     .update(mailbox)
     .set({
-      totalEmails: sql`total_emails + ${delta.totalDelta}`,
-      unreadEmails: sql`unread_emails + ${delta.unreadDelta}`,
+      totalMails: sql`total_mails + ${delta.totalDelta}`,
+      unreadMails: sql`unread_mails + ${delta.unreadDelta}`,
     })
     .where(eq(mailbox.mailboxId, mailboxId))
 }

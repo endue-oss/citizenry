@@ -8,8 +8,8 @@ export const createHumanRepo = (db: Db) => ({
   findById: (principalId: string) =>
     db.select().from(human).where(eq(human.principalId, principalId)).limit(1),
 
-  findByEmail: (email: string) =>
-    db.select().from(human).where(eq(human.email, email)).limit(1),
+  findByMail: (mail: string) =>
+    db.select().from(human).where(eq(human.mail, mail)).limit(1),
 
   create: (input: typeof human.$inferInsert) =>
     db.insert(human).values(input).returning(),

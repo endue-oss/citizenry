@@ -6,22 +6,22 @@
 //
 // Docs: https://developers.cloudflare.com/email-service/api/send-emails/workers-api/
 
-import type { EmailSender, OutboundMessage } from '@citizenry/email'
+import type { MailSender, OutboundMessage } from '@citizenry/mail'
 import type { SendEmail } from '@cloudflare/workers-types'
 
-export class CloudflareEmailSender implements EmailSender {
+export class CloudflareMailSender implements MailSender {
   readonly name = 'cloudflare'
 
   constructor(private readonly binding: SendEmail) {}
 
   async send(msg: OutboundMessage): Promise<{ providerMessageId: string | null }> {
     const res = await this.binding.send({
-      from: { name: msg.from.name ?? '', email: msg.from.email },
+      from: { name: msg.from.name ?? '', email: msg.from.mail },
       to: msg.to.map(formatAddress),
       cc: msg.cc?.map(formatAddress),
       bcc: msg.bcc?.map(formatAddress),
       replyTo: msg.replyTo?.[0]
-        ? { name: msg.replyTo[0].name ?? '', email: msg.replyTo[0].email }
+        ? { name: msg.replyTo[0].name ?? '', email: msg.replyTo[0].mail }
         : undefined,
       subject: msg.subject,
       text: msg.text,
@@ -31,6 +31,6 @@ export class CloudflareEmailSender implements EmailSender {
   }
 }
 
-function formatAddress(a: { name?: string; email: string }): string {
-  return a.name ? `${a.name} <${a.email}>` : a.email
+function formatAddress(a: { name?: string; mail: string }): string {
+  return a.name ? `${a.name} <${a.mail}>` : a.mail
 }

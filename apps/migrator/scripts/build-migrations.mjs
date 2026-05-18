@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Generate src/migrations.generated.ts by scanning the workspace
-// `packages/{identity,vault,email}/migrations/*.sql` directories. The output
+// `packages/{identity,vault,mail}/migrations/*.sql` directories. The output
 // contains every SQL file inlined as a JS string literal plus its SHA-256
 // checksum, so the Worker bundle is fully self-contained at runtime.
 //
@@ -18,7 +18,7 @@ const REPO_ROOT = join(APP_DIR, '..', '..')
 const SOURCES = [
   { name: 'identityMigrations', dir: join(REPO_ROOT, 'packages/identity/migrations') },
   { name: 'vaultMigrations', dir: join(REPO_ROOT, 'packages/vault/migrations') },
-  { name: 'emailMigrations', dir: join(REPO_ROOT, 'packages/email/migrations') },
+  { name: 'mailMigrations', dir: join(REPO_ROOT, 'packages/mail/migrations') },
 ]
 
 function loadDir(dir) {

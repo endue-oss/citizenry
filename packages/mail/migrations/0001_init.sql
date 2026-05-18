@@ -1,7 +1,7 @@
 -- mail / citizenry — D1 (SQLite) initial schema.
 --
 -- Conventions:
---   - TEXT identifiers with ULID prefix (mb_, eml_, att_, thr_)
+--   - TEXT identifiers with ULID prefix (mb_, mai_, att_, thr_)
 --   - INTEGER timestamps (unixepoch() * 1000) — ms since epoch
 --   - JSON-encoded address lists and keyword sets, stored as TEXT
 --   - BLOB column for attachment bytes (D1 row-size bound; large
@@ -16,8 +16,8 @@ CREATE TABLE IF NOT EXISTS mailbox (
     account_id      TEXT    NOT NULL,
     name            TEXT    NOT NULL,
     role            TEXT,
-    total_emails    INTEGER NOT NULL DEFAULT 0,
-    unread_emails   INTEGER NOT NULL DEFAULT 0,
+    total_mails     INTEGER NOT NULL DEFAULT 0,
+    unread_mails    INTEGER NOT NULL DEFAULT 0,
     created_at      INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
 
     CONSTRAINT mailbox_pkey      PRIMARY KEY (mailbox_id),
@@ -31,10 +31,10 @@ CREATE INDEX IF NOT EXISTS mailbox_account_idx
     ON mailbox (account_id);
 
 
--- ── email ──────────────────────────────────────────────────
+-- ── mail ───────────────────────────────────────────────────
 -- One row per message (inbound or outbound).
-CREATE TABLE IF NOT EXISTS email (
-    email_id              TEXT    NOT NULL,
+CREATE TABLE IF NOT EXISTS mail (
+    mail_id               TEXT    NOT NULL,
     account_id            TEXT    NOT NULL,
     mailbox_id            TEXT    NOT NULL,
 
@@ -68,28 +68,28 @@ CREATE TABLE IF NOT EXISTS email (
 
     created_at            INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
 
-    CONSTRAINT email_pkey                  PRIMARY KEY (email_id),
-    CONSTRAINT email_mailbox_fk            FOREIGN KEY (mailbox_id)
+    CONSTRAINT mail_pkey                  PRIMARY KEY (mail_id),
+    CONSTRAINT mail_mailbox_fk            FOREIGN KEY (mailbox_id)
         REFERENCES mailbox (mailbox_id) ON DELETE CASCADE,
-    CONSTRAINT email_direction_check       CHECK (direction IN ('inbound','outbound')),
-    CONSTRAINT email_delivery_status_check
+    CONSTRAINT mail_direction_check       CHECK (direction IN ('inbound','outbound')),
+    CONSTRAINT mail_delivery_status_check
         CHECK (delivery_status IN ('received','queued','sent','failed'))
 );
 
-CREATE INDEX IF NOT EXISTS email_account_idx
-    ON email (account_id);
-CREATE INDEX IF NOT EXISTS email_mailbox_received_idx
-    ON email (mailbox_id, received_at);
-CREATE INDEX IF NOT EXISTS email_thread_idx
-    ON email (account_id, thread_id);
-CREATE INDEX IF NOT EXISTS email_message_id_idx
-    ON email (message_id);
+CREATE INDEX IF NOT EXISTS mail_account_idx
+    ON mail (account_id);
+CREATE INDEX IF NOT EXISTS mail_mailbox_received_idx
+    ON mail (mailbox_id, received_at);
+CREATE INDEX IF NOT EXISTS mail_thread_idx
+    ON mail (account_id, thread_id);
+CREATE INDEX IF NOT EXISTS mail_message_id_idx
+    ON mail (message_id);
 
 
--- ── email_attachment ───────────────────────────────────────
-CREATE TABLE IF NOT EXISTS email_attachment (
+-- ── mail_attachment ────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS mail_attachment (
     attachment_id    TEXT    NOT NULL,
-    email_id         TEXT    NOT NULL,
+    mail_id          TEXT    NOT NULL,
     filename         TEXT,
     content_type     TEXT    NOT NULL,
     size             INTEGER NOT NULL,
@@ -97,10 +97,10 @@ CREATE TABLE IF NOT EXISTS email_attachment (
     inline           INTEGER NOT NULL DEFAULT 0,
     blob             BLOB    NOT NULL,
 
-    CONSTRAINT email_attachment_pkey     PRIMARY KEY (attachment_id),
-    CONSTRAINT email_attachment_email_fk FOREIGN KEY (email_id)
-        REFERENCES email (email_id) ON DELETE CASCADE
+    CONSTRAINT mail_attachment_pkey     PRIMARY KEY (attachment_id),
+    CONSTRAINT mail_attachment_mail_fk  FOREIGN KEY (mail_id)
+        REFERENCES mail (mail_id) ON DELETE CASCADE
 );
 
-CREATE INDEX IF NOT EXISTS email_attachment_email_idx
-    ON email_attachment (email_id);
+CREATE INDEX IF NOT EXISTS mail_attachment_mail_idx
+    ON mail_attachment (mail_id);

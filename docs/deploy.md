@@ -159,7 +159,7 @@ must be idempotent (`CREATE ... IF NOT EXISTS`).
 The next deploy applies them via `wrangler d1 migrations apply`, which
 uses its tracking table to skip files that are already present.
 
-## Enabling email (optional)
+## Enabling mail (optional)
 
 `apps/mail` is deployed unconditionally, but inbound mail delivery and
 outbound sending each need a one-time setup. Skip this section and the
@@ -191,7 +191,7 @@ Cloudflare's configuration and survives redeploys.
 2. Add a GitHub repository **secret** named `RESEND_API_KEY` with that
    value.
 3. Re-run the workflow. `scripts/ci/bootstrap-secrets.sh` pushes the
-   secret to `citizenry-mail`; subsequent `POST /emails` calls deliver
+   secret to `citizenry-mail`; subsequent `POST /mails` calls deliver
    via Resend instead of falling back to the log-only sender.
 
 To rotate the key, update the GitHub secret and redeploy. To remove it,

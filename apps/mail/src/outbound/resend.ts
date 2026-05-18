@@ -3,9 +3,9 @@
 // Used when the higher-priority Cloudflare binding is unavailable.
 // Selection priority lives in ./index.ts (pickSender).
 
-import type { EmailSender, OutboundMessage } from '@citizenry/email'
+import type { MailSender, OutboundMessage } from '@citizenry/mail'
 
-export class ResendSender implements EmailSender {
+export class ResendSender implements MailSender {
   readonly name = 'resend'
 
   constructor(private readonly apiKey: string) {}
@@ -44,7 +44,7 @@ export class ResendSender implements EmailSender {
   }
 }
 
-export class LogOnlySender implements EmailSender {
+export class LogOnlySender implements MailSender {
   readonly name = 'log-only'
 
   async send(msg: OutboundMessage): Promise<{ providerMessageId: string | null }> {
@@ -53,8 +53,8 @@ export class LogOnlySender implements EmailSender {
     console.log(
       JSON.stringify({
         sender: 'log-only',
-        to: msg.to.map((a) => a.email),
-        from: msg.from.email,
+        to: msg.to.map((a) => a.mail),
+        from: msg.from.mail,
         subject: msg.subject,
         text_len: msg.text?.length ?? 0,
         html_len: msg.html?.length ?? 0,
@@ -64,6 +64,6 @@ export class LogOnlySender implements EmailSender {
   }
 }
 
-function formatAddress(a: { name?: string; email: string }): string {
-  return a.name ? `${a.name} <${a.email}>` : a.email
+function formatAddress(a: { name?: string; mail: string }): string {
+  return a.name ? `${a.name} <${a.mail}>` : a.mail
 }

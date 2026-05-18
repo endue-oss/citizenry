@@ -1,9 +1,9 @@
-export { emailRouter, type EmailRouterVars } from './router'
+export { mailRouter, type MailRouterVars } from './router'
 export { schema, type Schema, type Db } from './db'
 export type {
   MailboxRow,
-  EmailRow,
-  EmailAttachmentRow,
+  MailRow,
+  MailAttachmentRow,
   AddressEntry,
   WellKnownRole,
 } from './db/schema'
@@ -12,12 +12,12 @@ export { ID_PREFIX, type IdKind } from './ids'
 export {
   ensureDefaultMailboxes,
   listMailboxes,
-  listEmails,
-  getEmail,
+  listMails,
+  getMail,
   storeInbound,
-  sendEmail,
-  type EmailSender,
+  sendMail,
+  type MailSender,
   type OutboundMessage,
-  type InboundEmail,
+  type InboundMail,
   type IdMinter,
 } from './service'

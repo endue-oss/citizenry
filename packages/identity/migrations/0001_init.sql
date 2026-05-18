@@ -93,14 +93,14 @@ CREATE INDEX IF NOT EXISTS tenant_principal_membership_principal_id_idx
 -- ── human ──────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS human (
     principal_id  TEXT    NOT NULL,
-    email         TEXT    NOT NULL,
+    mail          TEXT    NOT NULL,
     display_name  TEXT,
     status        TEXT    NOT NULL DEFAULT 'active',
     created_at    INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
     updated_at    INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
 
     CONSTRAINT human_pkey PRIMARY KEY (principal_id),
-    CONSTRAINT human_email_uniq UNIQUE (email),
+    CONSTRAINT human_mail_uniq UNIQUE (mail),
     CONSTRAINT human_principal_fk
         FOREIGN KEY (principal_id) REFERENCES principal(principal_id) ON DELETE CASCADE
 );

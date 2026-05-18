@@ -2,7 +2,7 @@ name: Render wrangler.toml
 description: |
   Patch every committed wrangler.toml with the live D1 IDs and the
   resolved api URL. Static per-fork vars (SERVICE_PREFIX, ISSUER_HOST,
-  JWT_AUDIENCE, EMAIL_DOMAIN) are inherited from the workflow env, so
+  JWT_AUDIENCE, MAIL_DOMAIN) are inherited from the workflow env, so
   callers only have to supply the values that come out of provision.
 
 inputs:
@@ -12,8 +12,8 @@ inputs:
   d1_vault_id:
     description: D1 UUID for citizenry-vault-db
     required: true
-  d1_email_id:
-    description: D1 UUID for citizenry-email-db
+  d1_mail_id:
+    description: D1 UUID for citizenry-mail-db
     required: true
   api_base_url:
     description: URL that admin-api proxies to (workers.dev or custom domain)
@@ -28,6 +28,6 @@ runs:
       env:
         D1_IDENTITY_ID: ${{ inputs.d1_identity_id }}
         D1_VAULT_ID: ${{ inputs.d1_vault_id }}
-        D1_EMAIL_ID: ${{ inputs.d1_email_id }}
+        D1_MAIL_ID: ${{ inputs.d1_mail_id }}
         API_BASE_URL: ${{ inputs.api_base_url }}
       run: node scripts/ci/render-wrangler.mjs

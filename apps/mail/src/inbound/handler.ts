@@ -1,12 +1,12 @@
-// Inbound email handler — invoked by Cloudflare Email Workers when a message
-// arrives at one of the routed addresses for EMAIL_DOMAIN. The recipient's
-// local-part identifies the account (we resolve `local@EMAIL_DOMAIN` →
+// Inbound mail handler — invoked by Cloudflare Email Workers when a message
+// arrives at one of the routed addresses for MAIL_DOMAIN. The recipient's
+// local-part identifies the account (we resolve `local@MAIL_DOMAIN` →
 // `account_id`).
 //
 // The handler:
 //   1. Reads the raw RFC 5322 message stream into memory.
 //   2. Parses it with postal-mime.
-//   3. For each `to` whose host matches EMAIL_DOMAIN, resolves the local-part
+//   3. For each `to` whose host matches MAIL_DOMAIN, resolves the local-part
 //      to an account_id and persists one row per account.
 //   4. Unknown recipients are dropped silently (we don't reject — accepting
 //      and then dropping is the conservative default for v0).
@@ -15,8 +15,8 @@ import { drizzle } from 'drizzle-orm/d1'
 import { eq } from 'drizzle-orm'
 import PostalMime from 'postal-mime'
 import { schema as identitySchema } from '@citizenry/identity/schema'
-import { schema as emailSchema } from '@citizenry/email/schema'
-import { storeInbound, type InboundEmail, type AddressEntry } from '@citizenry/email'
+import { schema as mailSchema } from '@citizenry/mail/schema'
+import { storeInbound, type InboundMail, type AddressEntry } from '@citizenry/mail'
 import { mintId } from '../ids'
 import type { Bindings } from '../env'
 
@@ -32,7 +32,7 @@ type ForwardableLike = {
   setReject?: (reason: string) => void
 }
 
-export async function handleInboundEmail(
+export async function handleInboundMail(
   message: ForwardableLike,
   env: Bindings,
   _ctx: { waitUntil: (p: Promise<unknown>) => void },
@@ -46,7 +46,7 @@ export async function handleInboundEmail(
 
   // Hard reject anything addressed to a host we don't own. CF's Email
   // Routing should not give us such a message, but defense in depth.
-  if (host !== env.EMAIL_DOMAIN.toLowerCase()) return
+  if (host !== env.MAIL_DOMAIN.toLowerCase()) return
 
   const accountId = await resolveLocalPart(env, local)
   if (!accountId) {
@@ -63,7 +63,7 @@ export async function handleInboundEmail(
 
   const refs = parseRefHeader(parsed.references ?? null)
 
-  const inbound: InboundEmail = {
+  const inbound: InboundMail = {
     accountId,
     messageId: parsed.messageId ?? null,
     inReplyTo: parsed.inReplyTo ?? null,
@@ -88,7 +88,7 @@ export async function handleInboundEmail(
     })),
   }
 
-  const db = drizzle(env.DB_EMAIL, { schema: emailSchema })
+  const db = drizzle(env.DB_MAIL, { schema: mailSchema })
   await storeInbound(db, inbound, mintId)
 }
 
@@ -98,7 +98,7 @@ export async function handleInboundEmail(
  * Resolve a local-part to an agent's principal_id.
  *
  * v1 convention: `agent.slug` is the local-part. This means
- * `<slug>@<EMAIL_DOMAIN>` routes to the matching agent. Customizing the
+ * `<slug>@<MAIL_DOMAIN>` routes to the matching agent. Customizing the
  * mapping (e.g. allow aliases) is a future PR.
  */
 async function resolveLocalPart(env: Bindings, local: string): Promise<string | null> {
@@ -123,7 +123,7 @@ function parseRefHeader(refs: string | null): string[] {
 function toAddressEntry(a: { name?: string; address?: string }): AddressEntry {
   return {
     name: a.name && a.name.length > 0 ? a.name : undefined,
-    email: (a.address ?? '').toLowerCase(),
+    mail: (a.address ?? '').toLowerCase(),
   }
 }
 

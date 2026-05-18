@@ -1,32 +1,32 @@
-// HTTP router for the email Worker. Pure surface — no Worker globals;
-// apps/email wires it into a Hono app with a Db middleware and a EmailSender.
+// HTTP router for the mail Worker. Pure surface — no Worker globals;
+// apps/mail wires it into a Hono app with a Db middleware and a MailSender.
 
-import { Hono, type MiddlewareHandler } from 'hono'
+import { Hono } from 'hono'
 import { z } from 'zod'
 import type { Db } from '../db'
 import {
-  getEmail,
-  listEmails,
+  getMail,
+  listMails,
   listMailboxes,
-  sendEmail,
+  sendMail,
   ensureDefaultMailboxes,
   type IdMinter,
-  type EmailSender,
+  type MailSender,
 } from '../service'
 
-export type EmailRouterVars = {
+export type MailRouterVars = {
   db: Db
-  /** agent.principal_id resolved by Bearer auth in apps/email. */
+  /** agent.principal_id resolved by Bearer auth in apps/mail. */
   accountId: string
-  /** Mint a prefixed ULID. Provided by apps/email (which owns the runtime). */
+  /** Mint a prefixed ULID. Provided by apps/mail (which owns the runtime). */
   mintId: IdMinter
-  /** Outbound provider. Provided by apps/email. */
-  sender: EmailSender
+  /** Outbound provider. Provided by apps/mail. */
+  sender: MailSender
 }
 
 const addressSchema = z.object({
   name: z.string().max(255).optional(),
-  email: z.string().email(),
+  mail: z.string().email(),
 })
 
 const sendBody = z.object({
@@ -40,7 +40,7 @@ const sendBody = z.object({
   html: z.string().optional(),
 })
 
-export const emailRouter = new Hono<{ Variables: EmailRouterVars }>()
+export const mailRouter = new Hono<{ Variables: MailRouterVars }>()
   // GET /mailboxes — list all mailboxes for the authenticated account.
   // Creates the default set (inbox/sent/drafts/archive/trash) on first call.
   .get('/mailboxes', async (c) => {
@@ -50,8 +50,8 @@ export const emailRouter = new Hono<{ Variables: EmailRouterVars }>()
     return c.json({ mailboxes: rows })
   })
 
-  // GET /emails?mailboxId=...&before=<ms>&limit=...
-  .get('/emails', async (c) => {
+  // GET /mails?mailboxId=...&before=<ms>&limit=...
+  .get('/mails', async (c) => {
     const { db, accountId } = c.var
     const mailboxId = c.req.query('mailboxId')
     const beforeMs = c.req.query('before')
@@ -59,22 +59,22 @@ export const emailRouter = new Hono<{ Variables: EmailRouterVars }>()
     const limit = limitStr ? Math.max(1, Math.min(parseInt(limitStr, 10) || 50, 200)) : 50
     const before = beforeMs ? new Date(parseInt(beforeMs, 10)) : undefined
 
-    const rows = await listEmails(db, { accountId, mailboxId, before, limit })
-    return c.json({ emails: rows, nextBefore: rows.at(-1)?.receivedAt.getTime() ?? null })
+    const rows = await listMails(db, { accountId, mailboxId, before, limit })
+    return c.json({ mails: rows, nextBefore: rows.at(-1)?.receivedAt.getTime() ?? null })
   })
 
-  // GET /emails/:id — full message including body.
-  .get('/emails/:id', async (c) => {
+  // GET /mails/:id — full message including body.
+  .get('/mails/:id', async (c) => {
     const { db, accountId } = c.var
-    const row = await getEmail(db, { accountId, emailId: c.req.param('id') })
+    const row = await getMail(db, { accountId, mailId: c.req.param('id') })
     if (!row) return c.json({ error: 'not_found' }, 404)
-    return c.json({ email: row })
+    return c.json({ mail: row })
   })
 
-  // POST /emails — outbound send. Body schema documented above.
-  // From address defaults to `${accountId}@<EMAIL_DOMAIN>` — apps/email
+  // POST /mails — outbound send. Body schema documented above.
+  // From address defaults to `${accountId}@<MAIL_DOMAIN>` — apps/mail
   // injects a default via `c.set('defaultFromAddr', ...)` when needed.
-  .post('/emails', async (c) => {
+  .post('/mails', async (c) => {
     const { db, accountId, sender, mintId } = c.var
     const parsed = sendBody.safeParse(await c.req.json().catch(() => ({})))
     if (!parsed.success) {
@@ -84,13 +84,13 @@ export const emailRouter = new Hono<{ Variables: EmailRouterVars }>()
 
     const from =
       body.from ??
-      ({ email: c.get('defaultFromAddr' as never) as unknown as string } as { email: string })
-    if (!from?.email) {
+      ({ mail: c.get('defaultFromAddr' as never) as unknown as string } as { mail: string })
+    if (!from?.mail) {
       return c.json({ error: 'from_required' }, 400)
     }
 
     try {
-      const row = await sendEmail(
+      const row = await sendMail(
         db,
         {
           accountId,
@@ -108,9 +108,9 @@ export const emailRouter = new Hono<{ Variables: EmailRouterVars }>()
         },
         mintId,
       )
-      return c.json({ email: row }, 202)
+      return c.json({ mail: row }, 202)
     } catch (err) {
-      // sendEmail already persisted the row with deliveryStatus='failed';
+      // sendMail already persisted the row with deliveryStatus='failed';
       // surface a 502 so the client can retry.
       return c.json(
         { error: 'send_failed', message: err instanceof Error ? err.message : String(err) },

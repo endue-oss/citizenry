@@ -7,8 +7,8 @@ export type Bindings = {
   /** D1 binding — vault domain (encrypted entries) */
   DB_VAULT: D1Database
 
-  /** D1 binding — email domain (mailbox, email, attachment) */
-  DB_EMAIL: D1Database
+  /** D1 binding — mail domain (mailbox, mail, attachment) */
+  DB_MAIL: D1Database
 
   /** Bearer token required on every authenticated request. */
   MIGRATOR_TOKEN: string

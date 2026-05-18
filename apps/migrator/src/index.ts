@@ -1,4 +1,4 @@
-// citizenry-migrator — worker that runs D1 (identity + vault + email) migrations.
+// citizenry-migrator — worker that runs D1 (identity + vault + mail) migrations.
 //
 // Operational flow:
 //   CI (deploy.yml) deploys this worker first, then calls POST /apply
@@ -9,13 +9,13 @@
 //
 // Routes:
 //   GET  /_health   — unauthenticated, version & migration count
-//   GET  /status    — authenticated, applied | pending | drifted per file (identity/vault/email)
-//   POST /apply     — authenticated, applies pending files in identity → vault → email order
+//   GET  /status    — authenticated, applied | pending | drifted per file (identity/vault/mail)
+//   POST /apply     — authenticated, applies pending files in identity → vault → mail order
 
 import { Hono, type MiddlewareHandler } from 'hono'
 import type { Bindings } from './env'
 import { applyD1, statusD1 } from './runner'
-import { emailMigrations, identityMigrations, vaultMigrations } from './migrations.generated'
+import { mailMigrations, identityMigrations, vaultMigrations } from './migrations.generated'
 
 const app = new Hono<{ Bindings: Bindings }>()
 
@@ -45,7 +45,7 @@ app.get('/_health', (c) =>
     status: 'ok',
     identity_migrations: identityMigrations.length,
     vault_migrations: vaultMigrations.length,
-    email_migrations: emailMigrations.length,
+    mail_migrations: mailMigrations.length,
   }),
 )
 
@@ -54,23 +54,23 @@ app.use('/status', bearerAuth)
 app.use('/apply', bearerAuth)
 
 app.get('/status', async (c) => {
-  const [identity, vault, email] = await Promise.all([
+  const [identity, vault, mail] = await Promise.all([
     statusD1(c.env.DB_IDENTITY, identityMigrations),
     statusD1(c.env.DB_VAULT, vaultMigrations),
-    statusD1(c.env.DB_EMAIL, emailMigrations),
+    statusD1(c.env.DB_MAIL, mailMigrations),
   ])
-  return c.json({ identity, vault, email })
+  return c.json({ identity, vault, mail })
 })
 
 app.post('/apply', async (c) => {
-  // identity first — vault and email both look up agent rows from identity,
+  // identity first — vault and mail both look up agent rows from identity,
   // so the dependency order is pinned.
   const identity = await applyD1(c.env.DB_IDENTITY, identityMigrations)
   const vault = await applyD1(c.env.DB_VAULT, vaultMigrations)
-  const email = await applyD1(c.env.DB_EMAIL, emailMigrations)
+  const mail = await applyD1(c.env.DB_MAIL, mailMigrations)
 
-  const failed = [...identity, ...vault, ...email].some((r) => r.status === 'failed')
-  return c.json({ ok: !failed, identity, vault, email }, failed ? 500 : 200)
+  const failed = [...identity, ...vault, ...mail].some((r) => r.status === 'failed')
+  return c.json({ ok: !failed, identity, vault, mail }, failed ? 500 : 200)
 })
 
 export default app

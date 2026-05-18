@@ -1,9 +1,9 @@
-// email / citizenry — D1 (SQLite) schema.
+// mail / citizenry — D1 (SQLite) schema.
 //
 // Conventions:
-//   - account_id == agent.principal_id (the JWT 'sub'). One email account per agent.
+//   - account_id == agent.principal_id (the JWT 'sub'). One mail account per agent.
 //   - All timestamps stored as INTEGER ms (unixepoch() * 1000).
-//   - Address lists serialized as JSON arrays of `{ name?, email }`.
+//   - Address lists serialized as JSON arrays of `{ name?, mail }`.
 //   - mailbox.role uses JMAP-style well-known roles (RFC 8621 §2). Custom
 //     mailboxes have role=NULL.
 
@@ -37,8 +37,8 @@ export const mailbox = sqliteTable(
     name: text('name').notNull(),
     /** JMAP well-known role: 'inbox' | 'sent' | 'drafts' | 'archive' | 'trash' | 'junk' | null */
     role: text('role'),
-    totalEmails: integer('total_emails').notNull().default(0),
-    unreadEmails: integer('unread_emails').notNull().default(0),
+    totalMails: integer('total_mails').notNull().default(0),
+    unreadMails: integer('unread_mails').notNull().default(0),
     createdAt: integer('created_at', { mode: 'timestamp_ms' })
       .notNull()
       .default(sql`(unixepoch() * 1000)`),
@@ -53,14 +53,14 @@ export const mailbox = sqliteTable(
   }),
 )
 
-// ── email ──────────────────────────────────────────────────
+// ── mail ───────────────────────────────────────────────────
 // One row per message. `direction` distinguishes inbound (received via the
-// Email Worker pipeline) from outbound (sent via POST /emails). Both share
+// Mail Worker pipeline) from outbound (sent via POST /mails). Both share
 // the same shape so list/get endpoints don't branch.
-export const email = sqliteTable(
-  'email',
+export const mail = sqliteTable(
+  'mail',
   {
-    emailId: text('email_id').primaryKey(),
+    mailId: text('mail_id').primaryKey(),
     accountId: text('account_id').notNull(),
     mailboxId: text('mailbox_id')
       .notNull()
@@ -68,7 +68,7 @@ export const email = sqliteTable(
 
     /** thr_<ULID> — bucketed by Message-ID hash or References chain. */
     threadId: text('thread_id').notNull(),
-    /** RFC 5322 Message-ID — may be absent on malformed inbound email. */
+    /** RFC 5322 Message-ID — may be absent on malformed inbound mail. */
     messageId: text('message_id'),
     inReplyTo: text('in_reply_to'),
     /** JSON array of Message-IDs from References + In-Reply-To headers. */
@@ -81,7 +81,7 @@ export const email = sqliteTable(
     bodyHtml: text('body_html'),
 
     fromAddr: text('from_addr'),
-    /** Each is a JSON array of `{ name?: string; email: string }`. */
+    /** Each is a JSON array of `{ name?: string; mail: string }`. */
     toAddrs: text('to_addrs').notNull().default('[]'),
     ccAddrs: text('cc_addrs').notNull().default('[]'),
     bccAddrs: text('bcc_addrs').notNull().default('[]'),
@@ -110,28 +110,28 @@ export const email = sqliteTable(
       .default(sql`(unixepoch() * 1000)`),
   },
   (t) => ({
-    accountIdx: index('email_account_idx').on(t.accountId),
-    mailboxReceivedIdx: index('email_mailbox_received_idx').on(t.mailboxId, t.receivedAt),
-    threadIdx: index('email_thread_idx').on(t.accountId, t.threadId),
-    messageIdIdx: index('email_message_id_idx').on(t.messageId),
-    directionCheck: check('email_direction_check', sql`direction IN ('inbound','outbound')`),
+    accountIdx: index('mail_account_idx').on(t.accountId),
+    mailboxReceivedIdx: index('mail_mailbox_received_idx').on(t.mailboxId, t.receivedAt),
+    threadIdx: index('mail_thread_idx').on(t.accountId, t.threadId),
+    messageIdIdx: index('mail_message_id_idx').on(t.messageId),
+    directionCheck: check('mail_direction_check', sql`direction IN ('inbound','outbound')`),
     deliveryStatusCheck: check(
-      'email_delivery_status_check',
+      'mail_delivery_status_check',
       sql`delivery_status IN ('received','queued','sent','failed')`,
     ),
   }),
 )
 
-// ── email_attachment ───────────────────────────────────────
+// ── mail_attachment ────────────────────────────────────────
 // Per-message attachment metadata + raw bytes. D1 BLOB is bounded by row
 // size; large attachments are out of scope for v1 (move to R2 later).
-export const emailAttachment = sqliteTable(
-  'email_attachment',
+export const mailAttachment = sqliteTable(
+  'mail_attachment',
   {
     attachmentId: text('attachment_id').primaryKey(),
-    emailId: text('email_id')
+    mailId: text('mail_id')
       .notNull()
-      .references(() => email.emailId, { onDelete: 'cascade' }),
+      .references(() => mail.mailId, { onDelete: 'cascade' }),
     filename: text('filename'),
     contentType: text('content_type').notNull(),
     size: integer('size').notNull(),
@@ -141,20 +141,20 @@ export const emailAttachment = sqliteTable(
     blob: bytes('blob').notNull(),
   },
   (t) => ({
-    emailIdx: index('email_attachment_email_idx').on(t.emailId),
+    mailIdx: index('mail_attachment_mail_idx').on(t.mailId),
   }),
 )
 
-export const schema = { mailbox, email, emailAttachment }
+export const schema = { mailbox, mail, mailAttachment }
 export type Schema = typeof schema
 
 export type MailboxRow = typeof mailbox.$inferSelect
-export type EmailRow = typeof email.$inferSelect
-export type EmailAttachmentRow = typeof emailAttachment.$inferSelect
+export type MailRow = typeof mail.$inferSelect
+export type MailAttachmentRow = typeof mailAttachment.$inferSelect
 
 /** JMAP well-known mailbox roles, in display order. */
 export const WELL_KNOWN_ROLES = ['inbox', 'sent', 'drafts', 'archive', 'trash', 'junk'] as const
 export type WellKnownRole = (typeof WELL_KNOWN_ROLES)[number]
 
 /** Parsed address pair used inside JSON-encoded address columns. */
-export type AddressEntry = { name?: string; email: string }
+export type AddressEntry = { name?: string; mail: string }

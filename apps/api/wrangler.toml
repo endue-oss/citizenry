@@ -20,6 +20,14 @@ database_name = "citizenry-vault-db"
 database_id = "local-dev-placeholder"
 migrations_dir = "../../packages/vault/migrations"
 
+# config domain — D1. Runtime control plane: written through admin-api,
+# read by data-plane code with a colo-local TTL cache.
+[[d1_databases]]
+binding = "DB_CONFIG"
+database_name = "citizenry-config-db"
+database_id = "local-dev-placeholder"
+migrations_dir = "../../packages/config/migrations"
+
 [vars]
 JWT_AUDIENCE = "api.citizenry.id,citizenry-id"
 ISSUER_HOST = "citizenry.id"

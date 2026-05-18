@@ -1,8 +1,16 @@
 import { Hono } from 'hono'
 import { identityRouter, adminIdentityRouter } from '@citizenry/identity'
 import { vaultRouter, adminVaultRouter } from '@citizenry/vault'
+import { adminConfigRouter } from '@citizenry/config'
 import type { Bindings } from './env'
-import { identityDb, vaultDb, type IdentityVars, type VaultVars } from './db'
+import {
+  identityDb,
+  vaultDb,
+  configDb,
+  type IdentityVars,
+  type VaultVars,
+  type ConfigVars,
+} from './db'
 import { auth, serviceKeyAuth } from './middleware/auth'
 import { cors } from './middleware/cors'
 import { errorHandler } from './middleware/error'
@@ -45,6 +53,11 @@ const adminVaultApp = new Hono<{ Bindings: Bindings; Variables: VaultVars }>()
   .use('*', vaultDb)
   .route('/', adminVaultRouter)
 adminApp.route('/', adminVaultApp)
+
+const adminConfigApp = new Hono<{ Bindings: Bindings; Variables: ConfigVars }>()
+  .use('*', configDb)
+  .route('/', adminConfigRouter)
+adminApp.route('/', adminConfigApp)
 
 app.route('/_admin', adminApp)
 

@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // Generate src/migrations.generated.ts by scanning the workspace
-// `packages/{identity,vault,mail}/migrations/*.sql` directories. The output
-// contains every SQL file inlined as a JS string literal plus its SHA-256
-// checksum, so the Worker bundle is fully self-contained at runtime.
+// `packages/{identity,vault,mail,config}/migrations/*.sql` directories. The
+// output contains every SQL file inlined as a JS string literal plus its
+// SHA-256 checksum, so the Worker bundle is fully self-contained at runtime.
 //
 // Re-run on every typecheck/build/deploy via package.json prescripts.
 
@@ -19,6 +19,7 @@ const SOURCES = [
   { name: 'identityMigrations', dir: join(REPO_ROOT, 'packages/identity/migrations') },
   { name: 'vaultMigrations', dir: join(REPO_ROOT, 'packages/vault/migrations') },
   { name: 'mailMigrations', dir: join(REPO_ROOT, 'packages/mail/migrations') },
+  { name: 'configMigrations', dir: join(REPO_ROOT, 'packages/config/migrations') },
 ]
 
 function loadDir(dir) {

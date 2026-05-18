@@ -7,6 +7,9 @@ export type Bindings = {
   /** D1 binding — vault domain */
   DB_VAULT: D1Database
 
+  /** D1 binding — config domain (runtime control plane) */
+  DB_CONFIG: D1Database
+
   /** JWT verification audience (e.g. "api.citizenry.id,citizenry-id") */
   JWT_AUDIENCE: string
 

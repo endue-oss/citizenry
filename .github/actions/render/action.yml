@@ -15,6 +15,9 @@ inputs:
   d1_mail_id:
     description: D1 UUID for citizenry-mail-db
     required: true
+  d1_config_id:
+    description: D1 UUID for citizenry-config-db
+    required: true
   api_base_url:
     description: URL that admin-api proxies to (workers.dev or custom domain)
     required: false
@@ -29,5 +32,6 @@ runs:
         D1_IDENTITY_ID: ${{ inputs.d1_identity_id }}
         D1_VAULT_ID: ${{ inputs.d1_vault_id }}
         D1_MAIL_ID: ${{ inputs.d1_mail_id }}
+        D1_CONFIG_ID: ${{ inputs.d1_config_id }}
         API_BASE_URL: ${{ inputs.api_base_url }}
       run: node scripts/ci/render-wrangler.mjs

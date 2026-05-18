@@ -15,7 +15,12 @@
 import { Hono, type MiddlewareHandler } from 'hono'
 import type { Bindings } from './env'
 import { applyD1, statusD1 } from './runner'
-import { mailMigrations, identityMigrations, vaultMigrations } from './migrations.generated'
+import {
+  configMigrations,
+  mailMigrations,
+  identityMigrations,
+  vaultMigrations,
+} from './migrations.generated'
 
 const app = new Hono<{ Bindings: Bindings }>()
 
@@ -46,6 +51,7 @@ app.get('/_health', (c) =>
     identity_migrations: identityMigrations.length,
     vault_migrations: vaultMigrations.length,
     mail_migrations: mailMigrations.length,
+    config_migrations: configMigrations.length,
   }),
 )
 
@@ -54,23 +60,29 @@ app.use('/status', bearerAuth)
 app.use('/apply', bearerAuth)
 
 app.get('/status', async (c) => {
-  const [identity, vault, mail] = await Promise.all([
+  const [identity, vault, mail, config] = await Promise.all([
     statusD1(c.env.DB_IDENTITY, identityMigrations),
     statusD1(c.env.DB_VAULT, vaultMigrations),
     statusD1(c.env.DB_MAIL, mailMigrations),
+    statusD1(c.env.DB_CONFIG, configMigrations),
   ])
-  return c.json({ identity, vault, mail })
+  return c.json({ identity, vault, mail, config })
 })
 
 app.post('/apply', async (c) => {
   // identity first — vault and mail both look up agent rows from identity,
-  // so the dependency order is pinned.
+  // so the dependency order is pinned. config has no FK on identity, but
+  // we keep it last so a config-only failure does not block the agent
+  // surface from coming up.
   const identity = await applyD1(c.env.DB_IDENTITY, identityMigrations)
   const vault = await applyD1(c.env.DB_VAULT, vaultMigrations)
   const mail = await applyD1(c.env.DB_MAIL, mailMigrations)
+  const config = await applyD1(c.env.DB_CONFIG, configMigrations)
 
-  const failed = [...identity, ...vault, ...mail].some((r) => r.status === 'failed')
-  return c.json({ ok: !failed, identity, vault, mail }, failed ? 500 : 200)
+  const failed = [...identity, ...vault, ...mail, ...config].some(
+    (r) => r.status === 'failed',
+  )
+  return c.json({ ok: !failed, identity, vault, mail, config }, failed ? 500 : 200)
 })
 
 export default app

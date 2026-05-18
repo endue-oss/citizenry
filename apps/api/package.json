@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@citizenry/config": "workspace:*",
     "@citizenry/identity": "workspace:*",
     "@citizenry/spec": "workspace:*",
     "@citizenry/vault": "workspace:*",

@@ -10,17 +10,23 @@ no Postgres, no Hyperdrive.
 
 ## Architecture being deployed
 
-| Service              | Type    | Storage / Bindings                               |
-| -------------------- | ------- | ------------------------------------------------ |
-| `citizenry-api`       | Workers | `DB_IDENTITY` (D1), `DB_VAULT` (D1)              |
-| `citizenry-admin-api` | Workers | none — proxies to api `/_admin/*` via SERVICE_KEY |
-| `citizenry-mcp`       | Workers | —                                                |
-| `citizenry-admin-web` | Pages   | static SvelteKit admin console (ops-only)        |
+| Service              | Type    | Storage / Bindings                                                 |
+| -------------------- | ------- | ------------------------------------------------------------------ |
+| `citizenry-api`       | Workers | `DB_IDENTITY` (D1), `DB_VAULT` (D1), `DB_CONFIG` (D1)              |
+| `citizenry-admin-api` | Workers | none — proxies to api `/_admin/*` via SERVICE_KEY                  |
+| `citizenry-mcp`       | Workers | —                                                                  |
+| `citizenry-mail`      | Workers | `DB_IDENTITY` (D1), `DB_MAIL` (D1), `DB_CONFIG` (D1), MAIL binding |
+| `citizenry-admin-web` | Pages   | static SvelteKit admin console (ops-only)                          |
 
 Storage:
 
 - **D1** `citizenry-vault` — vault domain. Migrations: `packages/vault/migrations/*.sql`.
 - **D1** `citizenry-identity` — identity domain. Migrations: `packages/identity/migrations/*.sql`.
+- **D1** `citizenry-mail` — mail domain. Migrations: `packages/mail/migrations/*.sql`.
+- **D1** `citizenry-config` — runtime control-plane key/value store.
+  Written through admin-api (api `/_admin/api/v1/admin/config/*`), read
+  by data-plane code via `packages/config` with a colo-local TTL cache
+  (default 5 minutes). Migrations: `packages/config/migrations/*.sql`.
 
 Admin model:
 

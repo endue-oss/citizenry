@@ -6,6 +6,7 @@
 //   D1_VAULT_ID     UUID returned by provision.mjs
 //   D1_IDENTITY_ID  UUID returned by provision.mjs
 //   D1_MAIL_ID      UUID returned by provision.mjs
+//   D1_CONFIG_ID    UUID returned by provision.mjs
 //
 // Optional env:
 //   SERVICE_PREFIX  Override the default "citizenry" prefix used in worker
@@ -25,11 +26,11 @@
 //                   worker's workers.dev subdomain or a custom domain.
 //
 // Targets:
-//   apps/api/wrangler.toml         — DB_VAULT, DB_IDENTITY
+//   apps/api/wrangler.toml         — DB_VAULT, DB_IDENTITY, DB_CONFIG
 //   apps/admin-api/wrangler.toml   — vars only (no direct DB access)
 //   apps/mcp/wrangler.toml         — no DB bindings
-//   apps/mail/wrangler.toml        — DB_IDENTITY, DB_MAIL
-//   apps/migrator/wrangler.toml    — DB_IDENTITY, DB_VAULT, DB_MAIL (migration runner)
+//   apps/mail/wrangler.toml        — DB_IDENTITY, DB_MAIL, DB_CONFIG
+//   apps/migrator/wrangler.toml    — DB_IDENTITY, DB_VAULT, DB_MAIL, DB_CONFIG (migration runner)
 //
 // The replacement is anchored on `binding = "..."`, so only the intended binding is touched.
 
@@ -39,6 +40,7 @@ const {
   D1_VAULT_ID,
   D1_IDENTITY_ID,
   D1_MAIL_ID,
+  D1_CONFIG_ID,
   ISSUER_HOST,
   JWT_AUDIENCE,
   MAIL_DOMAIN,
@@ -47,8 +49,10 @@ const {
 
 const SERVICE_PREFIX = process.env.SERVICE_PREFIX || 'citizenry'
 
-if (!D1_VAULT_ID || !D1_IDENTITY_ID || !D1_MAIL_ID) {
-  console.error('::error::render-wrangler.mjs: D1_VAULT_ID, D1_IDENTITY_ID, and D1_MAIL_ID required')
+if (!D1_VAULT_ID || !D1_IDENTITY_ID || !D1_MAIL_ID || !D1_CONFIG_ID) {
+  console.error(
+    '::error::render-wrangler.mjs: D1_VAULT_ID, D1_IDENTITY_ID, D1_MAIL_ID, and D1_CONFIG_ID required',
+  )
   process.exit(1)
 }
 
@@ -95,6 +99,7 @@ for (const path of TARGETS) {
   after = patchD1(after, 'DB_VAULT', D1_VAULT_ID)
   after = patchD1(after, 'DB_IDENTITY', D1_IDENTITY_ID)
   after = patchD1(after, 'DB_MAIL', D1_MAIL_ID)
+  after = patchD1(after, 'DB_CONFIG', D1_CONFIG_ID)
   after = patchPrefix(after, SERVICE_PREFIX)
   after = patchVar(after, 'ISSUER_HOST', ISSUER_HOST)
   after = patchVar(after, 'JWT_AUDIENCE', JWT_AUDIENCE)

@@ -5,6 +5,8 @@ export type Bindings = {
   DB_IDENTITY: D1Database
   /** D1 — mail domain. */
   DB_MAIL: D1Database
+  /** D1 — config domain. Read-only; writes go through api `/_admin/*`. */
+  DB_CONFIG: D1Database
 
   /** Comma-separated JWT `aud` values this Worker accepts. */
   JWT_AUDIENCE: string

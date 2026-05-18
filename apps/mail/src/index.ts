@@ -16,7 +16,7 @@
 import { Hono } from 'hono'
 import { mailRouter, type MailRouterVars } from '@citizenry/mail'
 import type { Bindings } from './env'
-import { mailDb, type MailVars } from './db'
+import { mailDb, configReader, type MailVars, type ConfigVars } from './db'
 import { bearerAuth, type AuthVars } from './middleware/auth'
 import { handleInboundMail } from './inbound/handler'
 import { pickSender } from './outbound'
@@ -58,9 +58,10 @@ app.use('*', bearerAuth)
 // Mount the package router with the db + sender + minter injected.
 const mountedRouter = new Hono<{
   Bindings: Bindings
-  Variables: AuthVars & MailVars & MailRouterVars
+  Variables: AuthVars & MailVars & ConfigVars & MailRouterVars
 }>()
   .use('*', mailDb)
+  .use('*', configReader)
   .use('*', async (c, next) => {
     c.set('sender', pickSender(c.env))
     c.set('mintId', mintId)

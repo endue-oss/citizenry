@@ -10,6 +10,9 @@ export type Bindings = {
   /** D1 binding — mail domain (mailbox, mail, attachment) */
   DB_MAIL: D1Database
 
+  /** D1 binding — config domain (runtime control plane key/value) */
+  DB_CONFIG: D1Database
+
   /** Bearer token required on every authenticated request. */
   MIGRATOR_TOKEN: string
 }

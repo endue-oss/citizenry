@@ -28,5 +28,12 @@ database_name = "citizenry-mail-db"
 database_id = "local-dev-placeholder"
 migrations_dir = "../../packages/mail/migrations"
 
+# config domain — D1
+[[d1_databases]]
+binding = "DB_CONFIG"
+database_name = "citizenry-config-db"
+database_id = "local-dev-placeholder"
+migrations_dir = "../../packages/config/migrations"
+
 # secrets — `wrangler secret put`
 #   MIGRATOR_TOKEN   Bearer token required on every request to /apply, /status

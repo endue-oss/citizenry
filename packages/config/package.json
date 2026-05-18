@@ -1,0 +1,28 @@
+{
+  "name": "@citizenry/config",
+  "version": "0.0.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./admin": "./src/router/admin.ts",
+    "./reader": "./src/service/reader.ts",
+    "./writer": "./src/service/writer.ts",
+    "./cache": "./src/cache.ts",
+    "./schema": "./src/db/schema.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.36.4",
+    "hono": "^4.6.10"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260516.0",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.5"
+  }
+}

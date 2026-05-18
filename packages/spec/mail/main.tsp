@@ -58,6 +58,6 @@ using TypeSpec.OpenAPI;
     url: "https://www.apache.org/licenses/LICENSE-2.0",
   },
 })
-@server("https://mail.citizenry.id", "Production")
+@server("https://citizenry.id", "Production")
 @server("http://localhost:13004", "Local Development")
 namespace Citizenry.Mail;

@@ -24,6 +24,11 @@ const inputs = [
     hint: "run 'pnpm --filter @citizenry/spec run build' first",
   },
   {
+    from: resolve(repoRoot, 'packages/spec/generated/openapi/mail-api.yaml'),
+    to: resolve(dist, 'mail-api.yaml'),
+    hint: "run 'pnpm --filter @citizenry/spec run build' first",
+  },
+  {
     from: resolve(here, 'node_modules/@scalar/api-reference/dist/browser/standalone.js'),
     to: resolve(dist, 'scalar.standalone.js'),
     hint: "run 'pnpm install' first",

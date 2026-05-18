@@ -158,7 +158,7 @@ describe('withTtlCache', () => {
   })
 
   it('list is passed through verbatim', async () => {
-    const list = vi.fn(async () => [mockEntry('x', 1), mockEntry('y', 2)])
+    const list = vi.fn(async () => [mockEntry('a.x', 1), mockEntry('a.y', 2)])
     const upstream: ConfigReader = {
       get: async () => null,
       list: list as unknown as ConfigReader['list'],

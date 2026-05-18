@@ -6,9 +6,15 @@ export type Bindings = {
    *  sibling fetch via public URLs (returns CF 1042). */
   API: Fetcher
 
-  /** D1 binding — identity domain. Used for admin_account login lookups
-   *  and admin_refresh_token rotation bookkeeping. */
+  /** D1 binding — identity domain. Used for admin_refresh_token
+   *  rotation bookkeeping. The admin password itself lives in
+   *  DB_CONFIG. */
   DB_IDENTITY: D1Database
+
+  /** D1 binding — config domain. Source of truth for the admin
+   *  password (key `admin.password`) and any other runtime control-
+   *  plane values. Read via packages/config's colo-local TTL cache. */
+  DB_CONFIG: D1Database
 
   /** Optional path-builder hint. Production deploys leave it unset; the
    *  service binding ignores the URL host anyway, so only the path

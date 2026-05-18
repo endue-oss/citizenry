@@ -6,6 +6,7 @@
 // only.
 
 import type { Db } from '../db'
+import { assertConfigKey } from '../keys'
 import { createConfigRepo } from '../repo/config'
 import type { ConfigEntry } from './reader'
 
@@ -27,6 +28,7 @@ export const createConfigWriter = (db: Db): ConfigWriter => {
       value: T
       updatedBy: string | null
     }): Promise<ConfigEntry<T>> {
+      assertConfigKey(input.key)
       const row = await repo.upsert({
         key: input.key,
         value: JSON.stringify(input.value),

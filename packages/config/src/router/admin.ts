@@ -11,6 +11,7 @@
 
 import { Hono } from 'hono'
 import type { Db } from '../db'
+import { InvalidConfigKeyError } from '../keys'
 import { createConfigReader } from '../service/reader'
 import { createConfigWriter } from '../service/writer'
 
@@ -65,11 +66,19 @@ export const adminConfigRouter = new Hono<{ Variables: Vars }>()
       'updated_by' in body && typeof body.updated_by === 'string'
         ? body.updated_by
         : null
-    const entry = await writer.set({
-      key: c.req.param('key'),
-      value: (body as { value: unknown }).value,
-      updatedBy,
-    })
+    let entry
+    try {
+      entry = await writer.set({
+        key: c.req.param('key'),
+        value: (body as { value: unknown }).value,
+        updatedBy,
+      })
+    } catch (err) {
+      if (err instanceof InvalidConfigKeyError) {
+        return c.json({ error: 'invalid_config_key', key: err.key }, 400)
+      }
+      throw err
+    }
     return c.json(
       {
         id: entry.id,

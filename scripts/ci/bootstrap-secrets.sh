@@ -18,9 +18,11 @@
 #   admin_jwt_secret       → apps/admin-api   ADMIN_JWT_SECRET
 #   admin_refresh_pepper   → apps/admin-api   ADMIN_REFRESH_PEPPER
 #
-# Operator-supplied (no auto-gen):
-#   ADMIN_PASSWORD     → seed-admin.mjs upserts admin_account row
-#                        (skipped when unset, leaving an existing row untouched)
+# Operator-supplied or auto-generated:
+#   ADMIN_PASSWORD     → upserts citizenry-config-db.config(admin.password).
+#                        When unset and no existing row, seed-admin.mjs
+#                        generates a fresh passphrase. Operator reads it
+#                        via `wrangler d1 execute citizenry-config-db ...`.
 #   RESEND_API_KEY     → apps/mail        RESEND_API_KEY (outbound stays
 #                        log-only when unset)
 #
@@ -135,22 +137,20 @@ echo "::add-mask::$admin_refresh_pepper"
 push_secret apps/admin-api ADMIN_REFRESH_PEPPER "$admin_refresh_pepper"
 echo "::endgroup::"
 
-# ── Seed / rotate admin_account row ────────────────────────────────
-# Only runs when ADMIN_PASSWORD is provided. On a fresh deploy the
-# operator MUST set this once; subsequent deploys without the env var
-# leave the stored hash alone. With the env var set, the password is
-# rotated atomically (new salt + new PBKDF2 hash).
+# ── Seed admin.password into the config D1 ─────────────────────────
+# When ADMIN_PASSWORD is set, the script rotates the existing value
+# (or inserts it on first run). When unset, the script auto-generates a
+# fresh passphrase on the very first deploy and is a no-op afterwards.
+# Either way the plaintext stays out of CI logs — operators retrieve it
+# via `wrangler d1 execute ${PREFIX}-config-db ...`.
+echo "::group::seed-admin"
 if [[ -n "${ADMIN_PASSWORD:-}" ]]; then
-  echo "::group::seed-admin"
   echo "::add-mask::$ADMIN_PASSWORD"
-  ADMIN_ID="${ADMIN_ID:-admin}" \
-    ADMIN_PASSWORD="$ADMIN_PASSWORD" \
-    SERVICE_PREFIX="$PREFIX" \
-    node scripts/ci/seed-admin.mjs
-  echo "::endgroup::"
-else
-  echo "ADMIN_PASSWORD not set — leaving existing admin_account row (if any) untouched."
 fi
+ADMIN_PASSWORD="${ADMIN_PASSWORD:-}" \
+  SERVICE_PREFIX="$PREFIX" \
+  node scripts/ci/seed-admin.mjs
+echo "::endgroup::"
 
 # ── RESEND_API_KEY (apps/mail, operator-supplied only) ─────────────
 # Resend is an external provider credential, so there's no auto-gen
@@ -166,5 +166,6 @@ else
 fi
 
 echo
-echo "✓ Bootstrap complete. Values persist in D1 \`$D1_NAME._config\`."
-echo "  Inspect: wrangler d1 execute $D1_NAME --remote --command=\"SELECT key, value FROM _config;\""
+echo "✓ Bootstrap complete."
+echo "  Inspect identity secrets: wrangler d1 execute $D1_NAME --remote --command=\"SELECT key, value FROM _config;\""
+echo "  Inspect runtime config  : wrangler d1 execute ${PREFIX}-config-db --remote --command=\"SELECT config_key, config_value FROM config;\""

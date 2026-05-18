@@ -28,7 +28,7 @@
 //
 // Targets:
 //   apps/api/wrangler.toml         — DB_VAULT, DB_IDENTITY, DB_CONFIG
-//   apps/admin-api/wrangler.toml   — vars only (no direct DB access)
+//   apps/admin-api/wrangler.toml   — DB_IDENTITY, DB_CONFIG
 //   apps/mcp/wrangler.toml         — no DB bindings
 //   apps/mail/wrangler.toml        — DB_IDENTITY, DB_MAIL, DB_CONFIG
 //   apps/migrator/wrangler.toml    — DB_IDENTITY, DB_VAULT, DB_MAIL, DB_CONFIG (migration runner)

@@ -1,14 +1,19 @@
 // Admin authentication primitives.
 //
-// Shape: pure functions over a Db + the supplied secrets. JWT signing
-// itself happens in apps/admin-api where the signing secret lives —
-// this service is responsible only for the credential checks and the
-// refresh-token registry.
+// Shape: pure functions over the supplied refresh-token repo and a
+// `getAdminPassword` callback that returns the current plaintext
+// password. The actual storage of the password lives in packages/config
+// (D1 key `admin.password`) — this service does not know or care where
+// the string comes from, so the identity package stays decoupled from
+// the config package.
 //
-// Password storage: PBKDF2-SHA-256, 32B salt, 32B output. Iterations
-// are recorded per row so a future bump (e.g. 200k → 400k) can be
-// transparent — verification reads the row's `iterations`, derivation
-// of a new password (set or change) writes the current default.
+// Why plaintext (not PBKDF2): the operator already holds Cloudflare
+// credentials with read access to the same D1 instance the worker uses,
+// so any breach that reads a hash can equally re-deploy the worker.
+// In exchange we get a much simpler delivery story for public-fork
+// adopters: the auto-generated password lands in the config DB, the
+// operator reads it via `wrangler d1 execute`, and nothing crosses CI
+// logs.
 //
 // Refresh token shape:
 //   - Raw token presented to clients: 48 random bytes, base64url-encoded.
@@ -20,18 +25,11 @@
 
 import type { Db } from '../db'
 import {
-  createAdminAccountRepo,
-  type AdminAccountRepo,
-} from '../repo/admin_account'
-import {
   createAdminRefreshTokenRepo,
   type AdminRefreshTokenRepo,
 } from '../repo/admin_refresh_token'
-import type { AdminAccountRow, AdminRefreshTokenRow } from '../db/schema'
+import type { AdminRefreshTokenRow } from '../db/schema'
 
-export const DEFAULT_PBKDF2_ITERATIONS = 200_000
-const PBKDF2_HASH_BYTES = 32
-const PBKDF2_SALT_BYTES = 32
 const REFRESH_TOKEN_BYTES = 48
 
 export type AdminAuthError =
@@ -61,52 +59,11 @@ const toBase64Url = (b: Uint8Array): string => {
   return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 }
 
-const constantTimeEqual = (a: Uint8Array, b: Uint8Array): boolean => {
+const constantTimeEqualStrings = (a: string, b: string): boolean => {
   if (a.length !== b.length) return false
   let diff = 0
-  for (let i = 0; i < a.length; i++) diff |= (a[i] ?? 0) ^ (b[i] ?? 0)
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i)
   return diff === 0
-}
-
-// ── PBKDF2 ────────────────────────────────────────────────────
-
-async function pbkdf2(
-  password: string,
-  salt: Uint8Array,
-  iterations: number,
-): Promise<Uint8Array> {
-  const keyMaterial = await crypto.subtle.importKey(
-    'raw',
-    new TextEncoder().encode(password),
-    { name: 'PBKDF2' },
-    false,
-    ['deriveBits'],
-  )
-  const bits = await crypto.subtle.deriveBits(
-    { name: 'PBKDF2', salt, iterations, hash: 'SHA-256' },
-    keyMaterial,
-    PBKDF2_HASH_BYTES * 8,
-  )
-  return new Uint8Array(bits)
-}
-
-/**
- * Derive a fresh password hash + salt at the current default
- * iteration count. Used both by `setPassword` and by the CI bootstrap
- * script (re-exported via `service` index for that purpose).
- */
-export async function hashPassword(password: string): Promise<{
-  passwordHash: Uint8Array
-  passwordSalt: Uint8Array
-  iterations: number
-}> {
-  const passwordSalt = randomBytes(PBKDF2_SALT_BYTES)
-  const passwordHash = await pbkdf2(
-    password,
-    passwordSalt,
-    DEFAULT_PBKDF2_ITERATIONS,
-  )
-  return { passwordHash, passwordSalt, iterations: DEFAULT_PBKDF2_ITERATIONS }
 }
 
 // ── refresh token hashing ─────────────────────────────────────
@@ -165,10 +122,17 @@ const newRefreshTokenId = () => `art_${ulid()}`
 // ── service ───────────────────────────────────────────────────
 
 export type AdminAuthDeps = {
-  /** Either a Db (used to build repos) or pre-built repos for tests. */
+  /** Either a Db (used to build the refresh-token repo) or a pre-built
+   *  repo for tests. */
   db?: Db
-  accounts?: AdminAccountRepo
   tokens?: AdminRefreshTokenRepo
+  /** Admin id this service authenticates. Compared to the request's
+   *  admin_id field; mismatches return invalid_credentials. */
+  adminId: string
+  /** Returns the current admin password plaintext (or null if not yet
+   *  provisioned). Typically backed by packages/config's cached
+   *  reader. */
+  getAdminPassword: () => Promise<string | null>
   refreshPepper: Uint8Array
   /** Defaults to 30 days. */
   refreshTtlMs?: number
@@ -179,13 +143,13 @@ export type AdminAuthDeps = {
 }
 
 export type AdminLoginResult = {
-  admin: AdminAccountRow
+  adminId: string
   refreshToken: string
   refreshTokenRow: AdminRefreshTokenRow
 }
 
 export type AdminRefreshResult = {
-  admin: AdminAccountRow
+  adminId: string
   refreshToken: string
   refreshTokenRow: AdminRefreshTokenRow
   previousId: string
@@ -194,12 +158,6 @@ export type AdminRefreshResult = {
 export type AdminAuthService = ReturnType<typeof createAdminAuthService>
 
 export const createAdminAuthService = (deps: AdminAuthDeps) => {
-  const accounts =
-    deps.accounts ??
-    (() => {
-      if (!deps.db) throw new Error('createAdminAuthService: db or accounts required')
-      return createAdminAccountRepo(deps.db)
-    })()
   const tokens =
     deps.tokens ??
     (() => {
@@ -230,31 +188,32 @@ export const createAdminAuthService = (deps: AdminAuthDeps) => {
 
   return {
     /**
-     * Verify credentials. Returns the admin row + a fresh refresh
-     * token row. Caller mints the access token (JWT) on top — that
-     * keeps the JWT secret out of this package.
+     * Verify credentials against the config-backed password. Returns
+     * the admin id and a fresh refresh-token row. The caller mints the
+     * access token (JWT) on top — that keeps the JWT secret out of
+     * this package.
      */
     async login(input: {
       adminId: string
       password: string
     }): Promise<AdminLoginResult> {
-      const admin = await accounts.findById(input.adminId)
-      if (!admin) {
-        // Same error for "no such admin" and "bad password" to avoid
-        // an admin-id enumeration oracle.
+      // Mismatched admin_id collapses into the same "invalid_credentials"
+      // bucket as a wrong password — no admin-id enumeration oracle.
+      if (input.adminId !== deps.adminId) {
         throw new AdminAuthErrorResult('invalid_credentials')
       }
-      const presented = await pbkdf2(
-        input.password,
-        admin.passwordSalt,
-        admin.iterations,
-      )
-      if (!constantTimeEqual(presented, admin.passwordHash)) {
+      const stored = await deps.getAdminPassword()
+      if (stored === null) {
+        // No admin password provisioned — treat as bad credential
+        // rather than a different error so we don't leak setup state.
         throw new AdminAuthErrorResult('invalid_credentials')
       }
-      const issued = await issueRefreshToken(admin.adminId)
+      if (!constantTimeEqualStrings(input.password, stored)) {
+        throw new AdminAuthErrorResult('invalid_credentials')
+      }
+      const issued = await issueRefreshToken(deps.adminId)
       return {
-        admin,
+        adminId: deps.adminId,
         refreshToken: issued.raw,
         refreshTokenRow: issued.row,
       }
@@ -285,18 +244,14 @@ export const createAdminAuthService = (deps: AdminAuthDeps) => {
         await tokens.revokeAllForAdmin(existing.adminId, new Date(now()))
         throw new AdminAuthErrorResult('refresh_replay_detected')
       }
-      const admin = await accounts.findById(existing.adminId)
-      if (!admin) {
-        throw new AdminAuthErrorResult('invalid_refresh_token')
-      }
-      const issued = await issueRefreshToken(admin.adminId)
+      const issued = await issueRefreshToken(existing.adminId)
       await tokens.rotate({
         id: existing.adminRefreshTokenId,
         replacedBy: issued.row.adminRefreshTokenId,
         revokedAt: new Date(now()),
       })
       return {
-        admin,
+        adminId: existing.adminId,
         refreshToken: issued.raw,
         refreshTokenRow: issued.row,
         previousId: existing.adminRefreshTokenId,
@@ -312,29 +267,6 @@ export const createAdminAuthService = (deps: AdminAuthDeps) => {
       if (!row || row.revokedAt) return { revoked: false }
       await tokens.revoke(row.adminRefreshTokenId, new Date(now()))
       return { revoked: true }
-    },
-
-    /**
-     * Write/replace the admin credential. Used by the CI bootstrap
-     * path and by future "change password" flows.
-     */
-    async setPassword(input: {
-      adminId: string
-      password: string
-    }): Promise<AdminAccountRow> {
-      const hashed = await hashPassword(input.password)
-      const row = await accounts.upsert({
-        adminId: input.adminId,
-        ...hashed,
-      })
-      if (!row) throw new Error('admin upsert returned no row')
-      return row
-    },
-
-    /** Whether an admin account is provisioned (used by /_health). */
-    async exists(adminId: string): Promise<boolean> {
-      const row = await accounts.findById(adminId)
-      return Boolean(row)
     },
   }
 }

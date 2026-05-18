@@ -5,6 +5,11 @@
 // `@citizenry/identity`; this layer is responsible for HTTP shape,
 // JWT minting, and translating service errors into RFC 9457-shaped
 // responses.
+//
+// Password storage: plaintext in the config D1 under key
+// `admin.password`. The cached config reader (`c.var.config`) is
+// passed to admin_auth as `getAdminPassword` so reads piggyback on
+// the 5-minute colo-local TTL.
 
 import { Hono } from 'hono'
 import {
@@ -15,10 +20,11 @@ import {
 import type { Bindings } from '../env'
 import { signAccessToken } from '../tokens'
 import { adminJwtAuth, type AuthVars } from '../middleware/auth'
-import type { IdentityVars } from '../db'
-import { identityDb } from '../db'
+import { configReader, identityDb, type ConfigReaderVars, type IdentityVars } from '../db'
 
-type Vars = IdentityVars
+type Vars = IdentityVars & ConfigReaderVars
+
+const ADMIN_PASSWORD_KEY = 'admin.password'
 
 const hexToBytes = (hex: string): Uint8Array => {
   if (hex.length % 2 !== 0) throw new Error('hex length must be even')
@@ -58,8 +64,23 @@ const errResponse = (kind: AdminAuthError): { status: 401 | 400; body: object } 
   }
 }
 
+const makeService = (c: {
+  env: Bindings
+  var: Vars
+}) =>
+  createAdminAuthService({
+    db: c.var.db,
+    adminId: c.env.ADMIN_ID,
+    getAdminPassword: async () => {
+      const entry = await c.var.config.get<string>(ADMIN_PASSWORD_KEY)
+      return entry?.value ?? null
+    },
+    refreshPepper: hexToBytes(c.env.ADMIN_REFRESH_PEPPER),
+  })
+
 export const authRouter = new Hono<{ Bindings: Bindings; Variables: Vars }>()
   .use('*', identityDb)
+  .use('*', configReader)
 
   // ── POST /auth/login ─────────────────────────────────
   .post('/auth/login', async (c) => {
@@ -75,10 +96,7 @@ export const authRouter = new Hono<{ Bindings: Bindings; Variables: Vars }>()
         400,
       )
     }
-    const svc = createAdminAuthService({
-      db: c.var.db,
-      refreshPepper: hexToBytes(c.env.ADMIN_REFRESH_PEPPER),
-    })
+    const svc = makeService(c)
     try {
       const result = await svc.login({
         adminId: body.admin_id,
@@ -86,11 +104,11 @@ export const authRouter = new Hono<{ Bindings: Bindings; Variables: Vars }>()
       })
       const access = await signAccessToken({
         secret: c.env.ADMIN_JWT_SECRET,
-        adminId: result.admin.adminId,
+        adminId: result.adminId,
         ttlSecs: Number(c.env.ACCESS_TOKEN_TTL_SECS) || 900,
       })
       return c.json({
-        admin_id: result.admin.adminId,
+        admin_id: result.adminId,
         access_token: access.token,
         refresh_token: result.refreshToken,
         token_type: 'Bearer',
@@ -120,19 +138,16 @@ export const authRouter = new Hono<{ Bindings: Bindings; Variables: Vars }>()
         400,
       )
     }
-    const svc = createAdminAuthService({
-      db: c.var.db,
-      refreshPepper: hexToBytes(c.env.ADMIN_REFRESH_PEPPER),
-    })
+    const svc = makeService(c)
     try {
       const result = await svc.refresh(body.refresh_token)
       const access = await signAccessToken({
         secret: c.env.ADMIN_JWT_SECRET,
-        adminId: result.admin.adminId,
+        adminId: result.adminId,
         ttlSecs: Number(c.env.ACCESS_TOKEN_TTL_SECS) || 900,
       })
       return c.json({
-        admin_id: result.admin.adminId,
+        admin_id: result.adminId,
         access_token: access.token,
         refresh_token: result.refreshToken,
         token_type: 'Bearer',
@@ -157,10 +172,7 @@ export const authRouter = new Hono<{ Bindings: Bindings; Variables: Vars }>()
       // ignore — logout body is optional
     }
     if (typeof body.refresh_token === 'string') {
-      const svc = createAdminAuthService({
-        db: c.var.db,
-        refreshPepper: hexToBytes(c.env.ADMIN_REFRESH_PEPPER),
-      })
+      const svc = makeService(c)
       await svc.revoke(body.refresh_token)
     }
     return c.body(null, 204)

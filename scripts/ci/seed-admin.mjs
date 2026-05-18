@@ -1,77 +1,127 @@
 #!/usr/bin/env node
-// Idempotently seed (or rotate) the admin_account row used by
-// apps/admin-api for ID/PW login. Runs in the bootstrap-secrets job,
-// after migrations have applied the admin_account table.
+// Idempotently seed the admin password into the config D1 store. Runs
+// in the bootstrap-secrets job, after migrations have applied the
+// `config` table in citizenry-config-db.
+//
+// Key: `admin.password` (plaintext string, JSON-stringified by the
+// config storage convention — i.e. the literal cell value is
+// `"the-password"`, surrounding quotes included).
 //
 // Inputs (env):
-//   ADMIN_ID         (default "admin")
-//   ADMIN_PASSWORD   (required on first run; rotates on subsequent runs)
+//   ADMIN_PASSWORD   Optional. If set, the value is upserted, rotating
+//                    the existing password. If unset and no row exists
+//                    yet, a 32-character random passphrase is generated
+//                    and inserted. If unset and a row already exists,
+//                    the existing row is left untouched.
 //
-// What it does:
-//   1) Derive a fresh 32-byte salt + PBKDF2-SHA-256 hash (200k iters).
-//   2) Hex-encode both and upsert into admin_account via wrangler d1
-//      execute (against ${SERVICE_PREFIX}-identity-db).
+// Delivery to the operator: this script intentionally NEVER prints the
+// password to stdout/stderr — public-repo workflow logs are visible to
+// anyone. The operator retrieves the value via their Cloudflare
+// credential channel:
 //
-// Why not pure SQL: SQLite has no PBKDF2 primitive and the bootstrap
-// script runs in bash. Node has crypto.subtle, so we do it here.
+//   wrangler d1 execute citizenry-config-db --remote \
+//     --command="SELECT config_value FROM config WHERE config_key='admin.password';"
+//
+// The cell value is JSON-encoded; strip the surrounding quotes (or pipe
+// through `jq -r`) to get the raw password.
 
-import { createHash, pbkdf2Sync, randomBytes } from 'node:crypto'
+import { createHash, randomBytes } from 'node:crypto'
 import { execFileSync } from 'node:child_process'
 
-const ITER = 200_000
-const SALT_BYTES = 32
-const HASH_BYTES = 32
-
 const PREFIX = process.env.SERVICE_PREFIX || 'citizenry'
-const D1_NAME = `${PREFIX}-identity-db`
-const ADMIN_ID = (process.env.ADMIN_ID || 'admin').trim()
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD
+const D1_NAME = `${PREFIX}-config-db`
+const KEY = 'admin.password'
 
-if (!ADMIN_PASSWORD) {
-  console.log('seed-admin: ADMIN_PASSWORD not set — skipping (existing credential, if any, is left untouched)')
-  process.exit(0)
+// Crockford base32 — readable, no homoglyph confusion.
+const ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ'
+const generatePassword = (chars = 32) => {
+  const buf = randomBytes(chars)
+  let s = ''
+  for (let i = 0; i < chars; i++) s += ALPHABET[(buf[i] ?? 0) % ALPHABET.length]
+  return s
 }
 
-const salt = randomBytes(SALT_BYTES)
-const hash = pbkdf2Sync(ADMIN_PASSWORD, salt, ITER, HASH_BYTES, 'sha256')
+// Wrangler `d1 execute` accepts arbitrary SQL but interpolating strings
+// is dangerous. We hex-encode the password and decode in SQL.
+const sqlHex = (s) => Buffer.from(s, 'utf8').toString('hex')
+const sqlString = (hex) => `CAST(X'${hex}' AS TEXT)`
 
-const saltHex = salt.toString('hex')
-const hashHex = hash.toString('hex')
+const runD1 = (sql) =>
+  execFileSync(
+    'pnpm',
+    [
+      'exec',
+      'wrangler',
+      'd1',
+      'execute',
+      D1_NAME,
+      '--remote',
+      '--command',
+      sql,
+      '--json',
+    ],
+    {
+      cwd: 'apps/api',
+      stdio: ['ignore', 'pipe', 'inherit'],
+      encoding: 'utf8',
+    },
+  )
 
-// D1's `execute` accepts X'<hex>' for BLOB literals.
-const sql = `
-INSERT INTO admin_account (admin_id, password_hash, password_salt, iterations, updated_at)
-VALUES ('${ADMIN_ID.replace(/'/g, "''")}', X'${hashHex}', X'${saltHex}', ${ITER}, unixepoch() * 1000)
-ON CONFLICT(admin_id) DO UPDATE SET
-  password_hash = excluded.password_hash,
-  password_salt = excluded.password_salt,
-  iterations    = excluded.iterations,
-  updated_at    = unixepoch() * 1000;
+const hasExistingRow = () => {
+  const out = runD1(
+    `SELECT 1 AS hit FROM config WHERE config_key='${KEY}' LIMIT 1;`,
+  )
+  try {
+    const parsed = JSON.parse(out)
+    const rows = parsed?.[0]?.results ?? []
+    return rows.length > 0
+  } catch {
+    return false
+  }
+}
+
+const upsert = (password) => {
+  // Stored value follows the packages/config convention: JSON-stringified.
+  // For a string that's `"the-password"`.
+  const jsonValue = JSON.stringify(password)
+  // Crockford base32 ULID-style id, generated in JS (SQLite has no
+  // native ULID). 26 chars of [0-9A-HJKMNP-TV-Z].
+  const id = `cfg_${generatePassword(26)}`
+  const valHex = sqlHex(jsonValue)
+  const idHex = sqlHex(id)
+  const keyHex = sqlHex(KEY)
+
+  const sql = `
+INSERT INTO config (config_id, config_key, config_value, updated_at, updated_by)
+VALUES (${sqlString(idHex)}, ${sqlString(keyHex)}, ${sqlString(valHex)}, unixepoch() * 1000, 'seed-admin')
+ON CONFLICT(config_key) DO UPDATE SET
+  config_value = excluded.config_value,
+  updated_at   = unixepoch() * 1000,
+  updated_by   = 'seed-admin';
 `.trim()
 
-console.log(`seed-admin: upserting admin_account row for admin_id="${ADMIN_ID}" (iter=${ITER}, salt=${SALT_BYTES}B)`)
+  runD1(sql)
+}
 
-execFileSync(
-  'pnpm',
-  [
-    'exec',
-    'wrangler',
-    'd1',
-    'execute',
-    D1_NAME,
-    '--remote',
-    '--command',
-    sql,
-    '--json',
-  ],
-  {
-    cwd: 'apps/admin-api',
-    stdio: ['ignore', 'inherit', 'inherit'],
-  },
-)
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD
 
-// Mask the password hash from any later workflow log line that
-// might accidentally echo it (defense in depth — the workflow
-// already maskes ADMIN_PASSWORD).
-const fingerprint = createHash('sha256').update(hashHex).digest('hex').slice(0, 12)
-console.log(`seed-admin: admin_account upserted (hash fingerprint: ${fingerprint})`)
+if (ADMIN_PASSWORD && ADMIN_PASSWORD.length > 0) {
+  console.log('seed-admin: ADMIN_PASSWORD provided — rotating admin.password row')
+  upsert(ADMIN_PASSWORD)
+  const fingerprint = createHash('sha256').update(ADMIN_PASSWORD).digest('hex').slice(0, 12)
+  console.log(`seed-admin: admin.password upserted (fingerprint: ${fingerprint})`)
+} else if (hasExistingRow()) {
+  console.log('seed-admin: existing admin.password row found — leaving it untouched')
+} else {
+  // No env override and no existing row → generate a fresh password
+  // and insert it. The operator retrieves it via wrangler.
+  console.log('seed-admin: no admin.password row found — generating one')
+  const generated = generatePassword(32)
+  upsert(generated)
+  const fingerprint = createHash('sha256').update(generated).digest('hex').slice(0, 12)
+  console.log(`seed-admin: admin.password inserted (fingerprint: ${fingerprint})`)
+  console.log(
+    `seed-admin: retrieve with — wrangler d1 execute ${D1_NAME} --remote \\\n` +
+      `  --command="SELECT config_value FROM config WHERE config_key='${KEY}';"`,
+  )
+}

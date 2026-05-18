@@ -6,23 +6,34 @@ compatibility_flags = ["nodejs_compat"]
 [dev]
 port = 13001
 
-# admin-api accesses identity D1 directly to read admin credentials
-# and manage refresh-token rotation. Every other admin action is still
-# forwarded to api's /_admin/* routes via the service binding below
-# (X-Service-Key PSK). The service binding is required because
-# workers.dev disallows Worker→Worker fetch via public URL (CF 1042).
+# admin-api accesses identity D1 directly to rotate admin refresh
+# tokens. It also reads the admin password from the config D1 (key
+# `admin.password`) via packages/config's colo-local cached reader.
+# Every other admin action is forwarded to api's /_admin/* routes via
+# the service binding below (X-Service-Key PSK). The service binding
+# is required because workers.dev disallows Worker→Worker fetch via
+# the public URL (CF 1042).
 
 [[services]]
 binding = "API"
 service = "citizenry-api"
 
-# identity domain — D1. Read admin_account rows for login, write
-# admin_refresh_token rows on issue/rotate/revoke.
+# identity domain — D1. Holds the admin_refresh_token registry only.
+# The admin password itself lives in the config DB.
 [[d1_databases]]
 binding = "DB_IDENTITY"
 database_name = "citizenry-identity-db"
 database_id = "local-dev-placeholder"
 migrations_dir = "../../packages/identity/migrations"
+
+# config domain — D1. Single source of truth for the admin password
+# (key `admin.password`). Reads go through the colo-local TTL cache
+# from `@citizenry/config`.
+[[d1_databases]]
+binding = "DB_CONFIG"
+database_name = "citizenry-config-db"
+database_id = "local-dev-placeholder"
+migrations_dir = "../../packages/config/migrations"
 
 [vars]
 # Retained as a path/origin hint for local dev only. The service binding

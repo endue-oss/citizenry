@@ -1,44 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import type {
-  AdminAccountRepo,
-} from '../repo/admin_account'
-import type {
   AdminRefreshTokenRepo,
 } from '../repo/admin_refresh_token'
-import type {
-  AdminAccountRow,
-  AdminRefreshTokenRow,
-} from '../db/schema'
+import type { AdminRefreshTokenRow } from '../db/schema'
 import {
   AdminAuthErrorResult,
   createAdminAuthService,
-  hashPassword,
 } from './admin_auth'
 
 // ── fakes ─────────────────────────────────────────────
-// In-memory repos that satisfy the same shapes as the drizzle-backed
-// ones. Plenty for the tests below, which exercise login/refresh/
-// rotation/replay/expiry — none of which touches D1-specific SQL.
-
-function fakeAccountRepo(seed: AdminAccountRow[] = []): AdminAccountRepo {
-  const rows = new Map(seed.map((r) => [r.adminId, r]))
-  return {
-    findById: async (id) => rows.get(id),
-    upsert: async (input) => {
-      const existing = rows.get(input.adminId)
-      const row: AdminAccountRow = {
-        adminId: input.adminId,
-        passwordHash: input.passwordHash,
-        passwordSalt: input.passwordSalt,
-        iterations: input.iterations,
-        createdAt: existing?.createdAt ?? new Date(),
-        updatedAt: new Date(),
-      }
-      rows.set(row.adminId, row)
-      return row
-    },
-  }
-}
+// In-memory refresh-token repo. The password side is just a closure
+// over a single string (or null), so no fake repo for that.
 
 function fakeRefreshRepo(): AdminRefreshTokenRepo & {
   rows: Map<string, AdminRefreshTokenRow>
@@ -98,24 +70,15 @@ function fakeRefreshRepo(): AdminRefreshTokenRepo & {
 }
 
 const PEPPER = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8])
+const ADMIN_ID = 'admin'
 
-async function bootstrapAdmin(password: string): Promise<AdminAccountRow> {
-  const hashed = await hashPassword(password)
-  return {
-    adminId: 'admin',
-    passwordHash: hashed.passwordHash,
-    passwordSalt: hashed.passwordSalt,
-    iterations: hashed.iterations,
-    createdAt: new Date(0),
-    updatedAt: new Date(0),
-  }
-}
+const fixedPassword = (pw: string | null) => async () => pw
 
-describe('admin auth — password', () => {
-  it('PBKDF2 round-trip authenticates the same password', async () => {
-    const seed = await bootstrapAdmin('correct horse battery staple')
+describe('admin auth — login', () => {
+  it('accepts the matching password and issues a refresh token', async () => {
     const svc = createAdminAuthService({
-      accounts: fakeAccountRepo([seed]),
+      adminId: ADMIN_ID,
+      getAdminPassword: fixedPassword('correct horse battery staple'),
       tokens: fakeRefreshRepo(),
       refreshPepper: PEPPER,
     })
@@ -123,15 +86,15 @@ describe('admin auth — password', () => {
       adminId: 'admin',
       password: 'correct horse battery staple',
     })
-    expect(result.admin.adminId).toBe('admin')
+    expect(result.adminId).toBe('admin')
     expect(result.refreshToken.startsWith('rfsh_')).toBe(true)
     expect(result.refreshTokenRow.adminId).toBe('admin')
   })
 
   it('rejects the wrong password with invalid_credentials', async () => {
-    const seed = await bootstrapAdmin('right one')
     const svc = createAdminAuthService({
-      accounts: fakeAccountRepo([seed]),
+      adminId: ADMIN_ID,
+      getAdminPassword: fixedPassword('right one'),
       tokens: fakeRefreshRepo(),
       refreshPepper: PEPPER,
     })
@@ -142,22 +105,35 @@ describe('admin auth — password', () => {
 
   it('rejects an unknown admin id with invalid_credentials (no enumeration)', async () => {
     const svc = createAdminAuthService({
-      accounts: fakeAccountRepo([]),
+      adminId: ADMIN_ID,
+      getAdminPassword: fixedPassword('any'),
       tokens: fakeRefreshRepo(),
       refreshPepper: PEPPER,
     })
     await expect(
-      svc.login({ adminId: 'someone-else', password: 'x' }),
+      svc.login({ adminId: 'someone-else', password: 'any' }),
+    ).rejects.toMatchObject({ kind: 'invalid_credentials' })
+  })
+
+  it('rejects login when no admin password is provisioned', async () => {
+    const svc = createAdminAuthService({
+      adminId: ADMIN_ID,
+      getAdminPassword: fixedPassword(null),
+      tokens: fakeRefreshRepo(),
+      refreshPepper: PEPPER,
+    })
+    await expect(
+      svc.login({ adminId: 'admin', password: 'whatever' }),
     ).rejects.toMatchObject({ kind: 'invalid_credentials' })
   })
 })
 
 describe('admin auth — refresh', () => {
   it('rotates: old row gets replacedBy + revokedAt, new row is fresh', async () => {
-    const seed = await bootstrapAdmin('hunter2')
     const repo = fakeRefreshRepo()
     const svc = createAdminAuthService({
-      accounts: fakeAccountRepo([seed]),
+      adminId: ADMIN_ID,
+      getAdminPassword: fixedPassword('hunter2'),
       tokens: repo,
       refreshPepper: PEPPER,
     })
@@ -173,10 +149,10 @@ describe('admin auth — refresh', () => {
   })
 
   it('detects replay: revokes the whole chain for that admin', async () => {
-    const seed = await bootstrapAdmin('hunter2')
     const repo = fakeRefreshRepo()
     const svc = createAdminAuthService({
-      accounts: fakeAccountRepo([seed]),
+      adminId: ADMIN_ID,
+      getAdminPassword: fixedPassword('hunter2'),
       tokens: repo,
       refreshPepper: PEPPER,
     })
@@ -194,7 +170,8 @@ describe('admin auth — refresh', () => {
 
   it('refuses an unknown refresh token', async () => {
     const svc = createAdminAuthService({
-      accounts: fakeAccountRepo([]),
+      adminId: ADMIN_ID,
+      getAdminPassword: fixedPassword('p'),
       tokens: fakeRefreshRepo(),
       refreshPepper: PEPPER,
     })
@@ -205,7 +182,8 @@ describe('admin auth — refresh', () => {
 
   it('refuses a refresh token without the rfsh_ prefix', async () => {
     const svc = createAdminAuthService({
-      accounts: fakeAccountRepo([]),
+      adminId: ADMIN_ID,
+      getAdminPassword: fixedPassword('p'),
       tokens: fakeRefreshRepo(),
       refreshPepper: PEPPER,
     })
@@ -215,10 +193,10 @@ describe('admin auth — refresh', () => {
   })
 
   it('rejects an expired refresh token', async () => {
-    const seed = await bootstrapAdmin('p')
     let t = 1_000_000_000
     const svc = createAdminAuthService({
-      accounts: fakeAccountRepo([seed]),
+      adminId: ADMIN_ID,
+      getAdminPassword: fixedPassword('p'),
       tokens: fakeRefreshRepo(),
       refreshPepper: PEPPER,
       refreshTtlMs: 1_000,
@@ -234,10 +212,10 @@ describe('admin auth — refresh', () => {
 
 describe('admin auth — revoke (logout)', () => {
   it('revoke() flips revokedAt for the matched row', async () => {
-    const seed = await bootstrapAdmin('p')
     const repo = fakeRefreshRepo()
     const svc = createAdminAuthService({
-      accounts: fakeAccountRepo([seed]),
+      adminId: ADMIN_ID,
+      getAdminPassword: fixedPassword('p'),
       tokens: repo,
       refreshPepper: PEPPER,
     })
@@ -250,10 +228,10 @@ describe('admin auth — revoke (logout)', () => {
   })
 
   it('revoke() is idempotent — second call reports revoked=false', async () => {
-    const seed = await bootstrapAdmin('p')
     const repo = fakeRefreshRepo()
     const svc = createAdminAuthService({
-      accounts: fakeAccountRepo([seed]),
+      adminId: ADMIN_ID,
+      getAdminPassword: fixedPassword('p'),
       tokens: repo,
       refreshPepper: PEPPER,
     })
@@ -267,7 +245,8 @@ describe('admin auth — revoke (logout)', () => {
 describe('admin auth — error type', () => {
   it('uses AdminAuthErrorResult so callers can switch on .kind', async () => {
     const svc = createAdminAuthService({
-      accounts: fakeAccountRepo([]),
+      adminId: ADMIN_ID,
+      getAdminPassword: fixedPassword('p'),
       tokens: fakeRefreshRepo(),
       refreshPepper: PEPPER,
     })

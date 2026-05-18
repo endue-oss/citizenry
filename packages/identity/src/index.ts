@@ -10,14 +10,11 @@ export type {
   EnrollmentTokenRow,
   AuditLogRow,
   FederationPeerRow,
-  AdminAccountRow,
   AdminRefreshTokenRow,
 } from './db/schema'
 export {
   createAdminAuthService,
-  hashPassword,
   AdminAuthErrorResult,
-  DEFAULT_PBKDF2_ITERATIONS,
   type AdminAuthService,
   type AdminAuthError,
   type AdminLoginResult,

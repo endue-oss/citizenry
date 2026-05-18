@@ -252,37 +252,16 @@ export const jtiReplay = sqliteTable(
   }),
 )
 
-// ── admin_account ────────────────────────────────────────────
-// Operator login credentials for `apps/admin-api`. Distinct from the
-// agent/human "citizen" identity model — admins do not interact with
-// the protocol surface, only the ops console.
-export const adminAccount = sqliteTable(
-  'admin_account',
-  {
-    adminId: text('admin_id').primaryKey(),
-    passwordHash: bytes('password_hash').notNull(),
-    passwordSalt: bytes('password_salt').notNull(),
-    iterations: integer('iterations').notNull().default(200000),
-    createdAt: integer('created_at', { mode: 'timestamp_ms' })
-      .notNull()
-      .default(sql`(unixepoch() * 1000)`),
-    updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
-      .notNull()
-      .default(sql`(unixepoch() * 1000)`),
-  },
-  (t) => ({
-    iterChk: check(
-      'admin_account_iterations_check',
-      sql`${t.iterations} >= 100000`,
-    ),
-  }),
-)
-
 // ── admin_refresh_token ──────────────────────────────────────
 // Opaque refresh tokens for admin sessions. The server only stores a
 // peppered SHA-256 hash. Rotation invalidates the previous row via
 // `replaced_by` + `revoked_at`. Presentation of an already-replaced
 // token is a replay signal.
+//
+// `admin_id` is a free-form string label — no FK. The credential
+// itself lives in the config DB under key `admin.password` (see
+// packages/config). Keeping admin_id as a plain TEXT column means
+// adding more admin identities later is purely a config-shape change.
 export const adminRefreshToken = sqliteTable(
   'admin_refresh_token',
   {
@@ -290,9 +269,7 @@ export const adminRefreshToken = sqliteTable(
     tokenHash: bytes('token_hash')
       .notNull()
       .unique('admin_refresh_token_hash_uniq'),
-    adminId: text('admin_id')
-      .notNull()
-      .references(() => adminAccount.adminId, { onDelete: 'cascade' }),
+    adminId: text('admin_id').notNull(),
     expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull(),
     revokedAt: integer('revoked_at', { mode: 'timestamp_ms' }),
     replacedBy: text('replaced_by'),
@@ -343,7 +320,6 @@ export const schema = {
   jtiReplay,
   auditLog,
   federationPeer,
-  adminAccount,
   adminRefreshToken,
 }
 export type Schema = typeof schema
@@ -357,5 +333,4 @@ export type AgentKeyRow = typeof agentKey.$inferSelect
 export type EnrollmentTokenRow = typeof enrollmentToken.$inferSelect
 export type AuditLogRow = typeof auditLog.$inferSelect
 export type FederationPeerRow = typeof federationPeer.$inferSelect
-export type AdminAccountRow = typeof adminAccount.$inferSelect
 export type AdminRefreshTokenRow = typeof adminRefreshToken.$inferSelect

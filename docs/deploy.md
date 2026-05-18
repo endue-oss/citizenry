@@ -13,7 +13,7 @@ no Postgres, no Hyperdrive.
 | Service              | Type    | Storage / Bindings                                                 |
 | -------------------- | ------- | ------------------------------------------------------------------ |
 | `citizenry-api`       | Workers | `DB_IDENTITY` (D1), `DB_VAULT` (D1), `DB_CONFIG` (D1)              |
-| `citizenry-admin-api` | Workers | `DB_IDENTITY` (D1, admin auth), API service binding (X-Service-Key) |
+| `citizenry-admin-api` | Workers | `DB_IDENTITY` (D1, refresh tokens), `DB_CONFIG` (D1, admin password), API service binding (X-Service-Key) |
 | `citizenry-mcp`       | Workers | —                                                                  |
 | `citizenry-mail`      | Workers | `DB_IDENTITY` (D1), `DB_MAIL` (D1), `DB_CONFIG` (D1), MAIL binding |
 | `citizenry-admin-web` | Pages   | static SvelteKit admin console (ops-only)                          |
@@ -26,7 +26,9 @@ Storage:
 - **D1** `citizenry-config` — runtime control-plane key/value store.
   Written through admin-api (api `/_admin/api/v1/admin/config/*`), read
   by data-plane code via `packages/config` with a colo-local TTL cache
-  (default 5 minutes). Migrations: `packages/config/migrations/*.sql`.
+  (default 5 minutes). Every key follows `{namespace}.{keyname}` —
+  e.g. `admin.password`, `mail.resend_api_key`. Migrations:
+  `packages/config/migrations/*.sql`.
 
 Admin model:
 
@@ -37,14 +39,35 @@ Admin model:
   stores in identity D1 `_config`:
   - `admin_jwt_secret`  → admin-api `ADMIN_JWT_SECRET`
   - `admin_refresh_pepper` → admin-api `ADMIN_REFRESH_PEPPER`
-- Admin credentials live in identity D1 (`admin_account` table,
-  PBKDF2-SHA-256 200k iterations). The CI bootstrap step seeds /
-  rotates the row whenever the GitHub secret `ADMIN_PASSWORD` is set.
+- The admin password itself lives in the **config D1** under key
+  `admin.password` (plaintext, JSON-encoded by the config storage
+  convention). `admin-api` reads it through `packages/config`'s
+  cached reader (5-minute colo-local TTL).
+- On first deploy, if `ADMIN_PASSWORD` is unset and no `admin.password`
+  row exists, the CI bootstrap step generates a 32-character random
+  passphrase and inserts it. The plaintext **never appears in workflow
+  logs** — operators retrieve it through their own Cloudflare
+  credential channel (see "Retrieving the admin password" below).
+  Setting `ADMIN_PASSWORD` rotates the value; leaving it unset on
+  subsequent deploys is a no-op.
 - Every `/api/v1/admin/*` route on `admin-api` requires the access
   token. After verification, `admin-api` proxies the request to api
   `/_admin/*` with the existing `SERVICE_KEY` PSK plus an `X-Admin-Id`
   breadcrumb. The two layers of auth keep operator credentials
   separate from inter-worker PSKs.
+
+### Retrieving the admin password
+
+```bash
+wrangler d1 execute citizenry-config-db --remote \
+  --command="SELECT config_value FROM config WHERE config_key='admin.password';"
+```
+
+The cell value is JSON-encoded (the literal contents are
+`"the-password"`, surrounding quotes included). Pipe through `jq -r`
+or strip the quotes manually to get the raw password. Rotating: set
+the `ADMIN_PASSWORD` GitHub secret and redeploy, or write directly
+via `wrangler d1 execute`/the admin config API.
 
 ## What you need (one time)
 
@@ -100,11 +123,11 @@ value from the repository — the override is written into `_config`
 | `ADMIN_JWT_SECRET`    | D1 `_config(key='admin_jwt_secret')`      | `admin-api` (HS256 sign + verify)    |
 | `ADMIN_REFRESH_PEPPER`| D1 `_config(key='admin_refresh_pepper')`  | `admin-api` (refresh-token hash pepper) |
 
-### Admin credential (operator-supplied)
+### Admin credential
 
 | Name             | Effect                                                                |
 | ---------------- | --------------------------------------------------------------------- |
-| `ADMIN_PASSWORD` | When set, the CI bootstrap upserts the `admin_account` row (PBKDF2 hash + salt). Leave unset on subsequent deploys to keep the existing password. |
+| `ADMIN_PASSWORD` | When set, CI bootstrap upserts `config(admin.password)` in `citizenry-config-db`. When unset on the first deploy, a random 32-char passphrase is generated; subsequent deploys leave the row untouched. |
 | `ADMIN_ID` (var) | Admin login id baked into `apps/admin-api`. Defaults to `admin`.       |
 
 #### Inspecting values

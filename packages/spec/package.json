@@ -7,15 +7,18 @@
   "exports": {
     ".": "./src/index.ts",
     "./openapi/identity": "./generated/openapi/identity-api.yaml",
+    "./openapi/mail": "./generated/openapi/mail-api.yaml",
     "./openapi/vault": "./generated/openapi/vault-api.yaml"
   },
   "scripts": {
-    "build": "pnpm run build:identity && pnpm run build:vault",
+    "build": "pnpm run build:identity && pnpm run build:mail && pnpm run build:vault",
     "build:identity": "tsp compile identity/main.tsp --config identity/tspconfig.yaml",
+    "build:mail": "tsp compile mail/main.tsp --config mail/tspconfig.yaml",
     "build:vault": "tsp compile vault/main.tsp --config vault/tspconfig.yaml",
     "lint:identity": "tsp compile identity/main.tsp --config identity/tspconfig.yaml --no-emit",
+    "lint:mail": "tsp compile mail/main.tsp --config mail/tspconfig.yaml --no-emit",
     "lint:vault": "tsp compile vault/main.tsp --config vault/tspconfig.yaml --no-emit",
-    "lint": "pnpm run lint:identity && pnpm run lint:vault",
+    "lint": "pnpm run lint:identity && pnpm run lint:mail && pnpm run lint:vault",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf generated"
   },

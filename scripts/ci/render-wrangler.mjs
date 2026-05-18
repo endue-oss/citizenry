@@ -75,7 +75,10 @@ function patchD1(content, binding, id) {
 }
 
 function patchVar(content, key, value) {
-  if (value === undefined) return content
+  // GitHub Actions expands `${{ vars.X }}` to the empty string when the
+  // variable is unset — so we treat undefined AND empty as "leave the
+  // committed default in place" rather than wiping the wrangler.toml.
+  if (value === undefined || value === '') return content
   return content.replace(new RegExp(`(${key}\\s*=\\s*)"[^"]*"`, 'g'), `$1"${value}"`)
 }
 

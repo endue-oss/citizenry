@@ -38,7 +38,7 @@ export type HumanRouterVars = {
   /** Public origin of this api Worker — used to build verify magic-links. */
   apiBaseUrl: string
   /** Set by `apiKeyAuth` middleware on /api-key/* subroutes. */
-  actor?: { humanPrincipalId: string; apiKeyId: string }
+  actor?: { humanPrincipalId: string; apiKeyId: string; realmId: string | null }
 }
 
 type Env = { Variables: HumanRouterVars }

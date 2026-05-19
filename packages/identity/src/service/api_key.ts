@@ -14,11 +14,22 @@
 import { and, eq } from 'drizzle-orm'
 import type { Db } from '../db'
 import {
+  agent,
   human,
   humanApiKey,
+  tenant,
+  tenantPrincipalMembership,
   type HumanRow,
   type HumanApiKeyRow,
 } from '../db/schema'
+
+// RFC-0002 phase 1 default. Phase 2 will replace this with the
+// resolved realm of the owner's home tenant — when humans gain their
+// own membership rows the lookup gets one less join. For now, an
+// owner with no agents (and therefore no derivable realm) defaults to
+// the seeded `primary` realm so cross-realm checks have a value to
+// match against once they exist.
+const DEFAULT_REALM_ID = 'rlm_0000000000000000000PR1MARY'
 
 export type ApiKeyErrorCode =
   | 'api_key_invalid'
@@ -67,6 +78,13 @@ export type ResolvedApiKey = {
   apiKeyId: string
   owner: HumanRow
   expiresAt: Date | null
+  /**
+   * Realm the owner currently lives in, looked up via the owner's
+   * tenant membership (RFC-0002 phase 1). `null` if the owner has no
+   * membership yet (e.g. fresh human with no agent registered) — the
+   * caller decides whether to allow such requests.
+   */
+  realmId: string | null
 }
 
 export type ApiKeyService = ReturnType<typeof createApiKeyService>
@@ -181,10 +199,26 @@ export function createApiKeyService(deps: ApiKeyServiceDeps) {
         .set({ lastUsedAt: tNow })
         .where(eq(humanApiKey.apiKeyId, row.apiKeyId))
 
+      // Resolve the owner's realm via any agent they own. Multi-agent
+      // owners with agents spanning realms get the first row D1
+      // returns — phase 2 will define a deterministic policy.
+      const realmRows = await deps.db
+        .select({ realmId: tenant.realmId })
+        .from(agent)
+        .innerJoin(
+          tenantPrincipalMembership,
+          eq(tenantPrincipalMembership.principalId, agent.principalId),
+        )
+        .innerJoin(tenant, eq(tenant.tenantId, tenantPrincipalMembership.tenantId))
+        .where(eq(agent.ownerHumanPrincipalId, row.ownerHumanPrincipalId))
+        .limit(1)
+      const realmId = realmRows[0]?.realmId ?? DEFAULT_REALM_ID
+
       return {
         apiKeyId: row.apiKeyId,
         owner,
         expiresAt: row.expiresAt,
+        realmId,
       }
     },
 

@@ -6,6 +6,7 @@ import {
   customType,
   index,
   primaryKey,
+  uniqueIndex,
   check,
 } from 'drizzle-orm/sqlite-core'
 
@@ -38,9 +39,35 @@ export const principal = sqliteTable(
   }),
 )
 
+// ── realm (RFC-0002 phase 1) ────────────────────────────────
+// Hard-isolation envelope above tenant. Each tenant attaches to exactly
+// one realm via `tenant.realm_id`. Phase 1 ships the row; per-realm
+// pepper / signing-key / cross-realm enforcement land in phase 2.
+export const realm = sqliteTable(
+  'realm',
+  {
+    realmId: text('realm_id').primaryKey(),
+    slug: text('slug').notNull().unique('realm_slug_uniq'),
+    displayName: text('display_name'),
+    status: text('status').default('active').notNull(),
+    createdAt: integer('created_at', { mode: 'timestamp_ms' })
+      .notNull()
+      .default(sql`(unixepoch() * 1000)`),
+    updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+      .notNull()
+      .default(sql`(unixepoch() * 1000)`),
+  },
+  (t) => ({
+    statusIdx: index('realm_status_idx').on(t.status),
+    statusChk: check('realm_status_check', sql`${t.status} IN ('active', 'suspended', 'archived')`),
+  }),
+)
+
 // ── tenant ───────────────────────────────────────────────────
 // Domain entity that citizens belong to. 4-state lifecycle: pending → active ⇄ suspended → archived.
 // kind: 'local' (default) | 'federated' (RFC-0001).
+// realm_id is nullable on the column (phase 1) — every existing row is
+// backfilled to `primary` by migration 0010 and new rows MUST set it.
 export const tenant = sqliteTable(
   'tenant',
   {
@@ -50,6 +77,7 @@ export const tenant = sqliteTable(
     status: text('status').default('pending').notNull(),
     kind: text('kind').default('local').notNull(),
     federationPeerId: text('federation_peer_id'),
+    realmId: text('realm_id').references(() => realm.realmId, { onDelete: 'restrict' }),
     createdAt: integer('created_at', { mode: 'timestamp_ms' })
       .notNull()
       .default(sql`(unixepoch() * 1000)`),
@@ -60,6 +88,7 @@ export const tenant = sqliteTable(
   (t) => ({
     statusIdx: index('tenant_status_idx').on(t.status),
     kindIdx: index('tenant_kind_idx').on(t.kind),
+    realmIdx: index('tenant_realm_id_idx').on(t.realmId),
     kindChk: check('tenant_kind_check', sql`${t.kind} IN ('local', 'federated')`),
   }),
 )
@@ -125,6 +154,8 @@ export const tenantPrincipalMembership = sqliteTable(
   (t) => ({
     pk: primaryKey({ name: 'tenant_principal_membership_pkey', columns: [t.tenantId, t.principalId] }),
     principalIdx: index('tenant_principal_membership_principal_id_idx').on(t.principalId),
+    // One tenant per principal — see migrations/0009 for rationale.
+    principalUniq: uniqueIndex('tenant_principal_membership_principal_uniq').on(t.principalId),
   }),
 )
 
@@ -373,6 +404,7 @@ export const auditLog = sqliteTable(
 
 export const schema = {
   principal,
+  realm,
   tenant,
   tenantPrincipalMembership,
   human,
@@ -390,6 +422,7 @@ export type Schema = typeof schema
 
 // Row types (insert / select)
 export type PrincipalRow = typeof principal.$inferSelect
+export type RealmRow = typeof realm.$inferSelect
 export type TenantRow = typeof tenant.$inferSelect
 export type HumanRow = typeof human.$inferSelect
 export type HumanEmailVerificationRow = typeof humanEmailVerification.$inferSelect

@@ -32,6 +32,17 @@ scalar humanId extends string;
 scalar tenantId extends string;
 
 /**
+ * Realm ID — `rlm_` + 26-character ULID. Identifies a hard-isolation
+ * envelope (RFC-0002) that owns one or more tenants. Most operator
+ * tools surface the realm slug instead; this scalar is reserved for
+ * the rare case where an opaque id needs to traverse the wire.
+ *
+ * @status draft
+ */
+@pattern("^rlm_[0-9A-HJKMNP-TV-Z]{26}$")
+scalar realmId extends string;
+
+/**
  * Tenant slug — operator-visible identifier for a tenant row. Lowercase
  * letters / digits / `.` / `-`. Well-known seeded values:
  * `endue.ai`, `endue.space`, `public`.

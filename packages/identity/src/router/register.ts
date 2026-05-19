@@ -17,7 +17,7 @@ export type RegisterRouterVars = {
   /** `did:web:{issuer}` builder uses this host. */
   issuerHost: string
   /** Set by apiKeyAuth middleware. */
-  actor?: { humanPrincipalId: string; apiKeyId: string }
+  actor?: { humanPrincipalId: string; apiKeyId: string; realmId: string | null }
 }
 
 type Env = { Variables: RegisterRouterVars }

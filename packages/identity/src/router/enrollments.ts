@@ -21,7 +21,7 @@ export type EnrollmentRouterVars = {
   mintEnrollmentId: () => string
   mintEnrollmentToken: () => string
   /** Set by apiKeyAuth middleware. */
-  actor?: { humanPrincipalId: string; apiKeyId: string }
+  actor?: { humanPrincipalId: string; apiKeyId: string; realmId: string | null }
 }
 
 type Env = { Variables: EnrollmentRouterVars }

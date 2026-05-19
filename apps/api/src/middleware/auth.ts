@@ -13,6 +13,12 @@ import { hexToBytes, newApiKeyToken, newHumanApiKeyId } from '../ids'
 export type ApiKeyActor = {
   humanPrincipalId: string
   apiKeyId: string
+  /**
+   * Realm the API-Key owner belongs to (RFC-0002 phase 1). Phase 2
+   * adds cross-realm enforcement on writes — for now this is set so
+   * downstream routes can read it but no check fires.
+   */
+  realmId: string | null
 }
 
 type AuthVars = {
@@ -171,7 +177,11 @@ export const apiKeyAuth: MiddlewareHandler<{
   })
   try {
     const resolved = await svc.verify(bearer)
-    c.set('actor', { humanPrincipalId: resolved.owner.principalId, apiKeyId: resolved.apiKeyId })
+    c.set('actor', {
+      humanPrincipalId: resolved.owner.principalId,
+      apiKeyId: resolved.apiKeyId,
+      realmId: resolved.realmId,
+    })
   } catch (err) {
     if (err instanceof ApiKeyError) return apiKeyUnauthorized(c, err)
     throw err

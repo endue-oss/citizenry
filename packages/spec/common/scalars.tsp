@@ -32,6 +32,19 @@ scalar humanId extends string;
 scalar tenantId extends string;
 
 /**
+ * Tenant slug — operator-visible identifier for a tenant row. Lowercase
+ * letters / digits / `.` / `-`. Well-known seeded values:
+ * `endue.ai`, `endue.space`, `public`.
+ *
+ * Used on request/response surfaces in preference to the opaque
+ * `tenantId` ULID — operators reason in slugs.
+ *
+ * @status draft
+ */
+@pattern("^[a-z0-9]([a-z0-9.-]{0,61}[a-z0-9])?$")
+scalar tenantSlug extends string;
+
+/**
  * Federation peer ID — `fdp_` + 26-character ULID.
  *
  * A Citizenry instance's local row identifier for *another* instance

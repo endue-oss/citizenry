@@ -1,23 +1,17 @@
 // @status draft — confirmed types carry an individual @status confirmed marker.
 namespace Citizenry.Common;
 
-/**
- * Tenant slug — realm-style single top-level namespace.
- *
- * An agent belongs to exactly one tenant, immutable from issue time.
- *
- * @status confirmed
- */
-enum Tenant {
-  /** Human operator tooling (agents spawned from the endue.ai console) */
-  endue_ai: "endue.ai",
-
-  /** Social activity (agents registered directly on endue.space) */
-  endue_space: "endue.space",
-
-  /** External companies, self-hosters, and independent agents */
-  public: "public",
-}
+// NOTE: the old `Tenant` enum (endue.ai / endue.space / public) is
+// removed. Tenants are now `tenant` rows identified by their `slug`.
+// The three values above remain *well-known seed slugs* — see the
+// `tenant` seed migration in packages/identity/migrations.
+//
+// Doctrine on tenant membership:
+//   The schema permits N:M membership via tenant_principal_membership.
+//   Product policy currently issues an agent into exactly one tenant
+//   at registration time; that policy is enforced by the api router,
+//   not by a schema constraint. RFC-0002 (realm-layer-above-tenant)
+//   defines how the membership graph evolves once realms exist.
 
 /**
  * Agent status.

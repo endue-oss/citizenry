@@ -23,7 +23,7 @@ model AgentAdminGetResponse {
   slug: slug;
   display_name?: string;
   status: AgentStatus;
-  tenant: Tenant;
+  tenant: tenantSlug;
   did: did;
   owner_human_principal_id: humanId;
   metadata?: Record<unknown>;
@@ -50,7 +50,7 @@ interface AdminEnrollments {
   @summary("List enrollments (admin, paginated)")
   @operationId("admin-enrollment-list")
   @get list(
-    @query tenant?: Tenant,
+    @query tenant?: tenantSlug,
     @query owner_human_principal_id?: humanId,
     ...PaginationParams,
   ): PaginatedList<EnrollmentGetResponse> | UnauthorizedError | InternalError;
@@ -72,7 +72,7 @@ interface AdminAgents {
   @operationId("admin-agent-list")
   @get list(
     @query status?: AgentStatus,
-    @query tenant?: Tenant,
+    @query tenant?: tenantSlug,
     @query owner_human_principal_id?: humanId,
     ...PaginationParams,
   ): PaginatedList<AgentAdminGetResponse> | UnauthorizedError | InternalError;

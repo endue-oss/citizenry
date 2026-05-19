@@ -27,8 +27,8 @@ namespace Citizenry.Identity;
  * @status draft
  */
 model EnrollmentCreateRequest {
-  /** Tenant to grant — immutable from issue time. Defaults to `public`. */
-  tenant?: Tenant = Tenant.public;
+  /** Tenant slug to grant — immutable from issue time. Defaults to `public`. */
+  tenant?: tenantSlug = "public";
 
   /**
    * Number of allowed uses (≥ 1). Usually 1; can be raised for parallel bootstraps.
@@ -70,7 +70,7 @@ model EnrollmentCreateResponse {
   token: enrollmentToken;
 
   /** Issued tenant (from the request or the default) */
-  tenant: Tenant;
+  tenant: tenantSlug;
 
   uses_total: int32;
   uses_left: int32;
@@ -91,7 +91,7 @@ model EnrollmentCreateResponse {
  */
 model EnrollmentGetResponse {
   id: enrollmentId;
-  tenant: Tenant;
+  tenant: tenantSlug;
   uses_total: int32;
   uses_left: int32;
   allow_keygen: boolean;

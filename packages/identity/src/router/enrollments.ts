@@ -9,6 +9,7 @@
 
 import { Hono, type Context } from 'hono'
 import type { Db } from '../db'
+import { createTenantRepo } from '../repo/tenant'
 import {
   createEnrollmentService,
   EnrollmentError,
@@ -83,9 +84,19 @@ export const enrollmentsRouter = new Hono<Env>()
       return err(c, 400, 'ERR-P01-S01-0400', 'Bad Request', 'ttl_secs must be 60..86400')
     }
 
+    // Resolve operator-visible slug → opaque tenant_id (FK target).
+    // Unknown slugs are 400 — operators should not silently land on
+    // `public` if they typo a slug.
+    const slug = body.tenant ?? TENANT_DEFAULT
+    const tenantRows = await createTenantRepo(c.var.db).findBySlug(slug)
+    const tenantRow = tenantRows[0]
+    if (!tenantRow) {
+      return err(c, 400, 'ERR-P01-S01-2003', 'Bad Request', `unknown tenant: ${slug}`)
+    }
+
     const issued = await svc(c).create({
       ownerHumanPrincipalId: c.var.actor.humanPrincipalId,
-      tenantId: body.tenant ?? TENANT_DEFAULT,
+      tenantId: tenantRow.tenantId,
       usesTotal: uses,
       ttlSecs,
       allowKeygen: body.allow_keygen,
@@ -96,7 +107,7 @@ export const enrollmentsRouter = new Hono<Env>()
       {
         id: issued.id,
         token: issued.token,
-        tenant: issued.tenantId,
+        tenant: tenantRow.slug,
         uses_total: issued.usesTotal,
         uses_left: issued.usesLeft,
         allow_keygen: issued.allowKeygen,

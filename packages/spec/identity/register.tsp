@@ -62,8 +62,8 @@ model AgentRegisterRequest {
    */
   generate_keypair?: boolean = false;
 
-  /** Tenant to grant. Defaults to `public`. */
-  tenant?: Tenant = Tenant.public;
+  /** Tenant slug to grant. Defaults to `public`. */
+  tenant?: tenantSlug = "public";
 
   /** Free-form metadata (optional) */
   metadata?: Record<unknown>;
@@ -88,7 +88,7 @@ model AgentRegisterResponse {
   kid: kid;
 
   /** Tenant the agent is a member of */
-  tenant: Tenant;
+  tenant: tenantSlug;
 
   /** End of the responsibility chain — owner human */
   owner_human_principal_id: humanId;

@@ -26,7 +26,7 @@ model AgentMeGetResponse {
   public_key_b64: base64url;
 
   status: AgentStatus;
-  tenant: Tenant;
+  tenant: tenantSlug;
 
   did: did;
 

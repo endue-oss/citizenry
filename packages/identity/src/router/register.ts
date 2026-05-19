@@ -132,7 +132,7 @@ export const registerRouter = new Hono<Env>().post('/v1/agent/register', async (
       displayName: body.display_name,
       publicKeyJwk: body.public_key_jwk,
       generateKeypair: body.generate_keypair,
-      tenant: body.tenant,
+      tenantSlug: body.tenant,
       metadata: body.metadata,
     })
 
@@ -143,7 +143,7 @@ export const registerRouter = new Hono<Env>().post('/v1/agent/register', async (
         display_name: result.agent.displayName ?? undefined,
         did: `did:web:${c.var.issuerHost}:agent:${result.agent.principalId}`,
         kid: result.agentKey.kid,
-        tenant: result.tenant,
+        tenant: result.tenantSlug,
         owner_human_principal_id: result.agent.ownerHumanPrincipalId,
         private_key_jwk: result.privateKeyJwk,
         metadata: body.metadata,

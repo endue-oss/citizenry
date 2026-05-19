@@ -17,6 +17,8 @@ import {
   principal,
   agent,
   agentKey,
+  tenant,
+  tenantPrincipalMembership,
   type AgentRow,
   type AgentKeyRow,
 } from '../db/schema'
@@ -54,7 +56,8 @@ export type RegisterInput = {
   displayName?: string
   publicKeyJwk?: Ed25519Jwk
   generateKeypair?: boolean
-  tenant?: string
+  /** Slug of the tenant to grant. Resolved to a tenant row inside the service. */
+  tenantSlug?: string
   metadata?: Record<string, unknown>
 }
 
@@ -63,7 +66,8 @@ export type RegisterResult = {
   agentKey: AgentKeyRow
   /** Present when `generateKeypair` was true. Surfaced once. */
   privateKeyJwk?: Ed25519JwkPrivate
-  tenant: string
+  /** Slug of the tenant the agent was granted. */
+  tenantSlug: string
 }
 
 export type RegisterServiceDeps = {
@@ -169,6 +173,19 @@ export const createRegisterService = (deps: RegisterServiceDeps) => {
         throw new RegisterError('slug_taken', 'slug already in use', { slug: input.slug })
       }
 
+      // Resolve tenant slug → row. Unknown slug is a 422 (matches the
+      // tenant_invalid error code; route maps to HTTP).
+      const tenantSlug = input.tenantSlug ?? 'public'
+      const tenantRows = await deps.db
+        .select()
+        .from(tenant)
+        .where(eq(tenant.slug, tenantSlug))
+        .limit(1)
+      const tenantRow = tenantRows[0]
+      if (!tenantRow) {
+        throw new RegisterError('tenant_invalid', `unknown tenant: ${tenantSlug}`)
+      }
+
       const tNow = new Date(now())
       const agentId = deps.mintAgentId()
 
@@ -204,11 +221,21 @@ export const createRegisterService = (deps: RegisterServiceDeps) => {
         .returning()
       if (!keyRow) throw new Error('agent_key insert returned no row')
 
+      // Grant tenant membership. Product policy is "one tenant per
+      // agent at registration time"; we enforce that by writing
+      // exactly one row here and never offering an "add membership"
+      // surface on /v1/agent/me.
+      await deps.db.insert(tenantPrincipalMembership).values({
+        tenantId: tenantRow.tenantId,
+        principalId: agentId,
+        createdAt: tNow,
+      })
+
       return {
         agent: agentRow,
         agentKey: keyRow,
         privateKeyJwk: privateJwk,
-        tenant: input.tenant ?? 'public',
+        tenantSlug: tenantRow.slug,
       }
     },
   }

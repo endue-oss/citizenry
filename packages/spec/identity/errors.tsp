@@ -67,6 +67,8 @@ enum IdentityErrorCode {
   slug_invalid: "ERR-P01-S01-2002",
   /** tenant value outside the enum */
   tenant_invalid: "ERR-P01-S01-2003",
+  /** Submitted email's domain is outside the operator-configured allow-list (400) */
+  email_domain_not_allowed: "ERR-P01-S01-2004",
 
   // ── 3xxx Business rules ──────────────────────────────
   /** rotate-key signed by a key that is not active */
@@ -74,9 +76,9 @@ enum IdentityErrorCode {
   /** revoked agent called a self-service route */
   agent_revoked: "ERR-P01-S01-3002",
   /** A verified human already owns the supplied email (409) */
-  human_mail_already_active: "ERR-P01-S01-3100",
+  human_email_already_active: "ERR-P01-S01-3100",
   /** A pending registration for the supplied email is still alive (409) */
-  human_mail_already_pending: "ERR-P01-S01-3101",
+  human_email_already_pending: "ERR-P01-S01-3101",
   /** Attempt to verify a human that is already verified (409) */
   human_already_verified: "ERR-P01-S01-3102",
 

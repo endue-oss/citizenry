@@ -25,17 +25,17 @@ namespace Citizenry.Identity;
 /**
  * Human registration request (1).
  *
- * The server normalises `mail` to lowercase and trims whitespace.
- * Duplicate-mail handling:
- *   - active human exists → 409 (human_mail_already_active)
- *   - pending verification alive → 409 (human_mail_already_pending)
+ * The server normalises `email` to lowercase and trims whitespace.
+ * Duplicate-email handling:
+ *   - active human exists → 409 (human_email_already_active)
+ *   - pending verification alive → 409 (human_email_already_pending)
  *   - pending but expired → silently reaped and a fresh code is sent
  *
  * @status draft
  */
 model HumanCreateRequest {
   /** RFC 5322 addr-spec. Normalised to lowercase server-side. */
-  mail: string;
+  email: string;
 
   /** Optional display name. */
   display_name?: string;
@@ -50,7 +50,7 @@ model HumanCreateRequest {
  */
 model HumanCreateResponse {
   id: humanId;
-  mail: string;
+  email: string;
   status: "pending_verification";
 
   /** Absolute deadline (created_at + 30 min). */
@@ -82,7 +82,7 @@ model HumanVerifyRequest {
  */
 model HumanVerifyResponse {
   id: humanId;
-  mail: string;
+  email: string;
   status: "active";
   verified_at: iso8601;
 }
@@ -93,7 +93,7 @@ model HumanVerifyResponse {
  */
 model HumanResendResponse {
   id: humanId;
-  mail: string;
+  email: string;
 
   /** How many times the code has been re-sent (excludes the initial). */
   resend_count: int32;
@@ -117,12 +117,12 @@ model HumanResendResponse {
 @useAuth(NoAuth)
 interface Humans {
   /**
-   * Start a human registration. Dispatches a 6-digit code to `mail`
+   * Start a human registration. Dispatches a 6-digit code to `email`
    * via the mail Worker (`/_internal/notify` template
    * `human_verification`). Always returns 202 — the response's
    * `notify_status` carries the outcome of the dispatch.
    *
-   * Possible errors: 400, 409 (mail conflict), 500.
+   * Possible errors: 400, 409 (email conflict), 500.
    */
   @summary("Start human registration with email verification")
   @operationId("human-create")

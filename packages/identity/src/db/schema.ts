@@ -135,7 +135,7 @@ export const human = sqliteTable(
     principalId: text('principal_id')
       .primaryKey()
       .references(() => principal.principalId, { onDelete: 'cascade' }),
-    mail: text('mail').notNull().unique('human_email_uniq'),
+    email: text('email').notNull().unique('human_email_uniq'),
     displayName: text('display_name'),
     status: text('status').default('active').notNull(),
     createdAt: integer('created_at', { mode: 'timestamp_ms' })

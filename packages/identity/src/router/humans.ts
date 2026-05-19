@@ -10,6 +10,7 @@
 // minters via middleware before this router runs.
 
 import { Hono, type Context } from 'hono'
+import type { ConfigReader } from '@citizenry/config'
 import type { Db } from '../db'
 import { createHumanService, HumanError, type Notifier } from '../service/human'
 
@@ -21,14 +22,16 @@ export type HumanRouterVars = {
   pepper: Uint8Array
   mintHumanId: () => string
   mintVerificationId: () => string
+  config: ConfigReader
 }
 
 type Env = { Variables: HumanRouterVars }
 
 const STATUS_BY_CODE: Record<string, number> = {
-  mail_invalid: 400,
-  mail_already_active: 409,
-  mail_already_pending: 409,
+  email_invalid: 400,
+  email_domain_not_allowed: 400,
+  email_already_active: 409,
+  email_already_pending: 409,
   human_not_found: 404,
   human_already_verified: 409,
   verification_expired: 410,
@@ -37,9 +40,10 @@ const STATUS_BY_CODE: Record<string, number> = {
 }
 
 const ERR_CODE_BY_CODE: Record<string, string> = {
-  mail_invalid: 'ERR-P01-S01-0400',
-  mail_already_active: 'ERR-P01-S01-3100',
-  mail_already_pending: 'ERR-P01-S01-3101',
+  email_invalid: 'ERR-P01-S01-0400',
+  email_domain_not_allowed: 'ERR-P01-S01-2004',
+  email_already_active: 'ERR-P01-S01-3100',
+  email_already_pending: 'ERR-P01-S01-3101',
   human_not_found: 'ERR-P01-S01-0404',
   human_already_verified: 'ERR-P01-S01-3102',
   verification_expired: 'ERR-P01-S01-7200',
@@ -48,9 +52,10 @@ const ERR_CODE_BY_CODE: Record<string, string> = {
 }
 
 const TITLE_BY_CODE: Record<string, string> = {
-  mail_invalid: 'Bad Request',
-  mail_already_active: 'Conflict',
-  mail_already_pending: 'Conflict',
+  email_invalid: 'Bad Request',
+  email_domain_not_allowed: 'Bad Request',
+  email_already_active: 'Conflict',
+  email_already_pending: 'Conflict',
   human_not_found: 'Not Found',
   human_already_verified: 'Conflict',
   verification_expired: 'Gone',
@@ -79,25 +84,26 @@ function service(c: Context<Env>) {
     pepper: c.var.pepper,
     mintHumanId: c.var.mintHumanId,
     mintVerificationId: c.var.mintVerificationId,
+    config: c.var.config,
   })
 }
 
 export const humansRouter = new Hono<Env>()
   // ── 1: start ───────────────────────────────────────────
   .post('/v1/humans', async (c) => {
-    let body: { mail?: string; display_name?: string }
+    let body: { email?: string; display_name?: string }
     try {
-      body = (await c.req.json()) as { mail?: string; display_name?: string }
+      body = (await c.req.json()) as { email?: string; display_name?: string }
     } catch {
-      return envelope(c, new HumanError('mail_invalid', 'request body must be valid JSON'))
+      return envelope(c, new HumanError('email_invalid', 'request body must be valid JSON'))
     }
-    if (typeof body.mail !== 'string') {
-      return envelope(c, new HumanError('mail_invalid', 'mail is required'))
+    if (typeof body.email !== 'string') {
+      return envelope(c, new HumanError('email_invalid', 'email is required'))
     }
 
     try {
       const result = await service(c).start({
-        mail: body.mail,
+        email: body.email,
         displayName: body.display_name,
       })
 
@@ -106,7 +112,7 @@ export const humansRouter = new Hono<Env>()
       // can request a resend.
       const notifyResult = await c.var.notifier.send({
         template: 'human_verification',
-        to: [{ mail: result.human.mail }],
+        to: [{ mail: result.human.email }],
         context: {
           code: result.code,
           expiresInMinutes: VERIFICATION_TTL_MINUTES,
@@ -116,7 +122,7 @@ export const humansRouter = new Hono<Env>()
       return c.json(
         {
           id: result.human.principalId,
-          mail: result.human.mail,
+          email: result.human.email,
           status: result.human.status,
           expires_at: result.verification.expiresAt.toISOString(),
           can_resend_at: result.verification.nextResendAt.toISOString(),
@@ -149,7 +155,7 @@ export const humansRouter = new Hono<Env>()
       const updated = await service(c).verify(c.req.param('id'), body.code)
       return c.json({
         id: updated.principalId,
-        mail: updated.mail,
+        email: updated.email,
         status: updated.status,
         verified_at: updated.updatedAt.toISOString(),
       })
@@ -170,7 +176,7 @@ export const humansRouter = new Hono<Env>()
       const result = await service(c).requestResend(id)
       const notifyResult = await c.var.notifier.send({
         template: 'human_verification',
-        to: [{ mail: humanRow.mail }],
+        to: [{ mail: humanRow.email }],
         context: {
           code: result.code,
           expiresInMinutes: VERIFICATION_TTL_MINUTES,
@@ -179,7 +185,7 @@ export const humansRouter = new Hono<Env>()
 
       return c.json({
         id,
-        mail: humanRow.mail,
+        email: humanRow.email,
         resend_count: result.verification.resendCount,
         can_resend_at: result.verification.nextResendAt.toISOString(),
         expires_at: result.verification.expiresAt.toISOString(),

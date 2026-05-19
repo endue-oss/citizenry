@@ -214,6 +214,9 @@ importers:
 
   packages/identity:
     dependencies:
+      '@citizenry/config':
+        specifier: workspace:*
+        version: link:../config
       '@citizenry/spec':
         specifier: workspace:*
         version: link:../spec

@@ -12,6 +12,7 @@ import {
   identityDb,
   vaultDb,
   configDb,
+  configReader,
   type IdentityVars,
   type VaultVars,
   type ConfigVars,
@@ -48,6 +49,7 @@ app.route('/', identityApp)
 // ADR-2026-0005 for the outbound-mail-via-mail-Worker design.
 const humansApp = new Hono<{ Bindings: Bindings; Variables: HumanRouterVars }>()
   .use('*', identityDb)
+  .use('*', configReader)
   .use('*', async (c, next) => {
     c.set('notifier', createNotifier(c.env))
     c.set('pepper', hexToBytes(c.env.ENROLLMENT_PEPPER))

@@ -2,7 +2,7 @@
 //
 // Flow (see ADR-2026-0005 + the /v1/humans spec):
 //
-//   1. POST /v1/humans { mail }
+//   1. POST /v1/humans { email }
 //        → mint principal + human (status='pending_verification')
 //        → mint verification row with code_hash + 30-min expiry
 //        → return code to the caller (Notifier sends it via mail Worker)
@@ -18,6 +18,7 @@
 // `now` for tests.
 
 import { and, eq } from 'drizzle-orm'
+import type { ConfigReader } from '@citizenry/config'
 import type { Db } from '../db'
 import {
   humanEmailVerification,
@@ -43,9 +44,10 @@ export type Notifier = {
 // ── domain errors ──────────────────────────────────────────────────
 
 export type HumanErrorCode =
-  | 'mail_invalid'
-  | 'mail_already_active'
-  | 'mail_already_pending'
+  | 'email_invalid'
+  | 'email_domain_not_allowed'
+  | 'email_already_active'
+  | 'email_already_pending'
   | 'human_not_found'
   | 'human_already_verified'
   | 'verification_expired'
@@ -72,6 +74,27 @@ const RESEND_STEP_CAP = 60
 const HUMAN_STATUS_PENDING = 'pending_verification'
 const HUMAN_STATUS_ACTIVE = 'active'
 
+// Domain allow-list — operator-tunable via `_config` key
+// `identity.allowed_email_domains` (JSON array of lowercase host strings).
+// When the key is unset, the in-code default below is used; this keeps
+// fresh deploys functional and lets operators narrow or widen the set
+// at runtime via admin-api without redeploy. The list targets major
+// portals with established account-hygiene practices.
+export const ALLOWED_EMAIL_DOMAINS_CONFIG_KEY = 'identity.allowed_email_domains'
+
+export const DEFAULT_ALLOWED_EMAIL_DOMAINS: readonly string[] = [
+  // Google
+  'gmail.com', 'googlemail.com',
+  // Microsoft
+  'outlook.com', 'hotmail.com', 'live.com', 'msn.com', 'microsoft.com',
+  // Apple
+  'icloud.com', 'me.com', 'mac.com',
+  // Yahoo
+  'yahoo.com', 'yahoo.co.kr',
+  // Korean portals
+  'naver.com', 'kakao.com', 'daum.net', 'hanmail.net', 'nate.com',
+]
+
 // ── deps ───────────────────────────────────────────────────────────
 
 export type HumanService = ReturnType<typeof createHumanService>
@@ -84,6 +107,8 @@ export type HumanServiceDeps = {
   mintHumanId: () => string
   /** Mint a `hev_<26-char ULID>`. */
   mintVerificationId: () => string
+  /** Runtime config — used to read the email-domain allow-list. */
+  config: ConfigReader
   /** Inject for tests; defaults to `Date.now`. */
   now?: () => number
   /** Inject for tests; defaults to `crypto.getRandomValues`-backed 6-digit string. */
@@ -92,11 +117,26 @@ export type HumanServiceDeps = {
 
 // ── helpers ────────────────────────────────────────────────────────
 
-const MAIL_RE = /^[^@\s]+@[^@\s.]+\.[^@\s]+$/
+const EMAIL_RE = /^[^@\s]+@[^@\s.]+\.[^@\s]+$/
 
-function isValidMail(s: string): boolean {
+function isValidEmail(s: string): boolean {
   if (s.length > 254) return false
-  return MAIL_RE.test(s)
+  return EMAIL_RE.test(s)
+}
+
+function extractDomain(email: string): string {
+  const at = email.lastIndexOf('@')
+  return at === -1 ? '' : email.slice(at + 1).toLowerCase()
+}
+
+async function loadAllowedDomains(config: ConfigReader): Promise<string[]> {
+  const entry = await config.get<unknown>(ALLOWED_EMAIL_DOMAINS_CONFIG_KEY)
+  if (!entry || !Array.isArray(entry.value)) {
+    return [...DEFAULT_ALLOWED_EMAIL_DOMAINS]
+  }
+  return entry.value
+    .map((d) => (typeof d === 'string' ? d.trim().toLowerCase() : ''))
+    .filter((d) => d.length > 0)
 }
 
 async function hashCode(code: string, pepper: Uint8Array): Promise<Uint8Array> {
@@ -154,14 +194,24 @@ export function createHumanService(deps: HumanServiceDeps) {
     /**
      * Start a registration. Creates the principal + human (pending) +
      * verification row in one transactional flow. When a previous
-     * pending row for the same mail has expired, it is reaped and the
-     * new registration proceeds. An active human for the same mail is
+     * pending row for the same email has expired, it is reaped and the
+     * new registration proceeds. An active human for the same email is
      * a hard conflict.
      */
-    async start(input: { mail: string; displayName?: string }): Promise<StartResult> {
-      const mail = input.mail.trim().toLowerCase()
-      if (!isValidMail(mail)) {
-        throw new HumanError('mail_invalid', 'mail is not a valid email address')
+    async start(input: { email: string; displayName?: string }): Promise<StartResult> {
+      const email = input.email.trim().toLowerCase()
+      if (!isValidEmail(email)) {
+        throw new HumanError('email_invalid', 'email is not a valid address')
+      }
+
+      const allowedDomains = await loadAllowedDomains(deps.config)
+      const domain = extractDomain(email)
+      if (!allowedDomains.includes(domain)) {
+        throw new HumanError(
+          'email_domain_not_allowed',
+          'email domain is not in the allow-list',
+          { domain, allowed: allowedDomains },
+        )
       }
 
       const tNow = new Date(now())
@@ -169,14 +219,14 @@ export function createHumanService(deps: HumanServiceDeps) {
       const existingHuman = await deps.db
         .select()
         .from(human)
-        .where(eq(human.mail, mail))
+        .where(eq(human.email, email))
         .limit(1)
 
       if (existingHuman[0]) {
         const h = existingHuman[0]
         if (h.status === HUMAN_STATUS_ACTIVE) {
           throw new HumanError(
-            'mail_already_active',
+            'email_already_active',
             'a verified human already owns this email',
           )
         }
@@ -184,7 +234,7 @@ export function createHumanService(deps: HumanServiceDeps) {
         const v = await verifications.findByPrincipal(h.principalId)
         if (v && v.expiresAt.getTime() > tNow.getTime()) {
           throw new HumanError(
-            'mail_already_pending',
+            'email_already_pending',
             'a pending registration exists for this email',
             { id: h.principalId, expires_at: v.expiresAt.toISOString() },
           )
@@ -204,7 +254,7 @@ export function createHumanService(deps: HumanServiceDeps) {
         .insert(human)
         .values({
           principalId: humanId,
-          mail,
+          email,
           displayName: input.displayName ?? null,
           status: HUMAN_STATUS_PENDING,
         })

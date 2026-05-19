@@ -18,6 +18,7 @@
     "db:migrate": "echo 'apply migrations/*.sql against D1 via wrangler d1 migrations apply'"
   },
   "dependencies": {
+    "@citizenry/config": "workspace:*",
     "@citizenry/spec": "workspace:*",
     "drizzle-orm": "^0.36.4",
     "hono": "^4.6.10",

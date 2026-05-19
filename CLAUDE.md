@@ -88,6 +88,7 @@ Runtime config (operator-managed, set via admin-api `PUT
 | `mail.outbound.aws_ses.secret_access_key` | `apps/mail`  | — |
 | `mail.outbound.aws_ses.region`            | `apps/mail`  | Optional, defaults to `us-east-1`. |
 | `mail.outbound.aws_ses.session_token`     | `apps/mail`  | Optional, for STS assumed-role / temporary credentials. |
+| `identity.allowed_email_domains`          | `apps/api` (humans flow) | JSON array of lowercase hosts permitted on `POST /v1/humans`. Defaults baked into `packages/identity/src/service/human.ts` (`DEFAULT_ALLOWED_EMAIL_DOMAINS`) if the key is unset. |
 
 Reads are wrapped by `packages/config`'s `withTtlCache` (5-min
 colo-local). Changes propagate after the TTL elapses; no redeploy.

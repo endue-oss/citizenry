@@ -18,6 +18,9 @@
         theme: 'deepSpace',
         layout: 'modern',
         darkMode: true,
+        hideClientButton: true,
+        hideTestRequestButton: true,
+        hideDownloadButton: true,
         sources: [
           { url: './identity-api.yaml', title: 'Identity', slug: 'identity', default: true },
           { url: './vault-api.yaml', title: 'Vault', slug: 'vault' },
@@ -25,7 +28,16 @@
         ],
         metaData: {
           title: 'Citizenry API Reference'
-        }
+        },
+        // Selectors track Scalar's internal markup and may need a touch-up
+        // when @scalar/api-reference is bumped. The `a[href*="scalar.com"]`
+        // rule is the safety net — if the brand link survives, this catches it.
+        customCss: `
+          .scalar-api-reference [data-testid="scalar-brand"],
+          .scalar-api-reference .references-footer,
+          .scalar-api-reference .scalar-api-client__footer,
+          .scalar-api-reference a[href*="scalar.com"] { display: none !important; }
+        `
       });
     </script>
   </body>

@@ -17,11 +17,17 @@ import {
   type VaultVars,
   type ConfigVars,
 } from './db'
-import { auth, serviceKeyAuth } from './middleware/auth'
+import { auth, serviceKeyAuth, apiKeyAuth } from './middleware/auth'
 import { cors } from './middleware/cors'
 import { errorHandler } from './middleware/error'
 import { createNotifier } from './notifier'
-import { newHumanId, newHumanVerificationId, hexToBytes } from './ids'
+import {
+  newHumanId,
+  newHumanVerificationId,
+  newHumanApiKeyId,
+  newApiKeyToken,
+  hexToBytes,
+} from './ids'
 
 const app = new Hono<{ Bindings: Bindings }>()
 
@@ -55,8 +61,13 @@ const humansApp = new Hono<{ Bindings: Bindings; Variables: HumanRouterVars }>()
     c.set('pepper', hexToBytes(c.env.ENROLLMENT_PEPPER))
     c.set('mintHumanId', newHumanId)
     c.set('mintVerificationId', newHumanVerificationId)
+    c.set('mintApiKeyId', newHumanApiKeyId)
+    c.set('mintApiKeyToken', newApiKeyToken)
     await next()
   })
+  // Bearer chk_ guard for /api-key/* subroutes. Other /v1/humans/*
+  // routes (create, verify, resend, find) stay unauthenticated.
+  .use('/v1/humans/:id/api-key/*', apiKeyAuth)
   .route('/', humansRouter)
 app.route('/', humansApp)
 

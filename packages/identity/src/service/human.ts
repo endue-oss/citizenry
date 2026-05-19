@@ -33,11 +33,19 @@ import { createHumanEmailVerificationRepo } from '../repo/human_email_verificati
 // Injected by the api Worker; the package itself is delivery-agnostic.
 // See ADR-2026-0005 and apps/api/src/notifier.ts.
 
+export type NotifyPayload =
+  | {
+      template: 'human_verification'
+      context: { code: string; expiresInMinutes: number }
+    }
+  | {
+      template: 'human_api_key'
+      context: { token: string; displayName?: string | null; expiresAt?: string | null }
+    }
+
 export type Notifier = {
-  send(args: {
-    template: 'human_verification'
+  send(args: NotifyPayload & {
     to: Array<{ name?: string; mail: string }>
-    context: { code: string; expiresInMinutes: number }
   }): Promise<{ delivered: boolean; outbound_log_id: string; status: string }>
 }
 

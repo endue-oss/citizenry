@@ -1,18 +1,28 @@
-// Public, unauth human-registration routes.
+// Human registration + API-Key surface.
 //
-//   POST /v1/humans                  → start verification flow
-//   POST /v1/humans/:id/verify       → submit code
-//   POST /v1/humans/:id/verify/resend → request another code
+//   POST /v1/humans                       → start verification flow (public)
+//   GET  /v1/humans?email=…               → public lookup by email
+//   POST /v1/humans/:id/verify            → submit code, receive first API-Key
+//   POST /v1/humans/:id/verify/resend     → request another code
+//   POST /v1/humans/:id/api-key/issue     → Bearer chk_ → mint another API-Key
+//   POST /v1/humans/:id/api-key/revoke    → Bearer chk_ → revoke a key
 //
 // All BaseError-shaped (packages/spec/common/errors.tsp BaseError). The
 // HumanError catalog maps to specific HTTP status + ERR-P01-S01-{NNNN}
 // codes. The api Worker injects `db`, `notifier`, `pepper`, and the
 // minters via middleware before this router runs.
 
+import { eq } from 'drizzle-orm'
 import { Hono, type Context } from 'hono'
 import type { ConfigReader } from '@citizenry/config'
 import type { Db } from '../db'
+import { human } from '../db/schema'
 import { createHumanService, HumanError, type Notifier } from '../service/human'
+import {
+  createApiKeyService,
+  ApiKeyError,
+  type IssuedApiKey,
+} from '../service/api_key'
 
 const VERIFICATION_TTL_MINUTES = 30
 
@@ -22,7 +32,11 @@ export type HumanRouterVars = {
   pepper: Uint8Array
   mintHumanId: () => string
   mintVerificationId: () => string
+  mintApiKeyId: () => string
+  mintApiKeyToken: () => string
   config: ConfigReader
+  /** Set by `apiKeyAuth` middleware on /api-key/* subroutes. */
+  actor?: { humanPrincipalId: string; apiKeyId: string }
 }
 
 type Env = { Variables: HumanRouterVars }
@@ -88,6 +102,45 @@ function service(c: Context<Env>) {
   })
 }
 
+function apiKeySvc(c: Context<Env>) {
+  return createApiKeyService({
+    db: c.var.db,
+    pepper: c.var.pepper,
+    mintApiKeyId: c.var.mintApiKeyId,
+    mintToken: c.var.mintApiKeyToken,
+  })
+}
+
+async function issueAndDeliverApiKey(
+  c: Context<Env>,
+  humanPrincipalId: string,
+  recipientEmail: string,
+  displayName: string | null = null,
+  expiresAt: Date | null = null,
+): Promise<{ issued: IssuedApiKey; notify: { outbound_log_id: string; status: string } }> {
+  const issued = await apiKeySvc(c).issue({
+    humanPrincipalId,
+    displayName,
+    expiresAt,
+  })
+  const notify = await c.var.notifier.send({
+    template: 'human_api_key',
+    to: [{ mail: recipientEmail }],
+    context: {
+      token: issued.token,
+      displayName: issued.displayName,
+      expiresAt: issued.expiresAt ? issued.expiresAt.toISOString() : null,
+    },
+  })
+  return { issued, notify: { outbound_log_id: notify.outbound_log_id, status: notify.status } }
+}
+
+const FORBIDDEN_OWNER_MISMATCH = {
+  code: 'ERR-P01-S01-0403',
+  title: 'Forbidden',
+  message: 'api-key owner does not match path id',
+}
+
 export const humansRouter = new Hono<Env>()
   // ── 1: start ───────────────────────────────────────────
   .post('/v1/humans', async (c) => {
@@ -137,7 +190,24 @@ export const humansRouter = new Hono<Env>()
     }
   })
 
-  // ── 3: verify ──────────────────────────────────────────
+  // ── GET ?email=… : public lookup ───────────────────────
+  .get('/v1/humans', async (c) => {
+    const raw = c.req.query('email')
+    if (typeof raw !== 'string' || raw.length === 0) {
+      return envelope(c, new HumanError('email_invalid', 'email query parameter is required'))
+    }
+    const email = raw.trim().toLowerCase()
+    const rows = await c.var.db
+      .select({ id: human.principalId, status: human.status })
+      .from(human)
+      .where(eq(human.email, email))
+      .limit(1)
+    const row = rows[0]
+    if (!row) return envelope(c, new HumanError('human_not_found', 'no human for this email'))
+    return c.json({ id: row.id, status: row.status })
+  })
+
+  // ── 3: verify (and emit the first API-Key) ─────────────
   .post('/v1/humans/:id/verify', async (c) => {
     let body: { code?: string }
     try {
@@ -153,14 +223,49 @@ export const humansRouter = new Hono<Env>()
     }
     try {
       const updated = await service(c).verify(c.req.param('id'), body.code)
+
+      // Bootstrap the first API-Key inline. Surfaced once in the
+      // response and emailed in parallel so the human can recover it
+      // out-of-band.
+      const { issued, notify } = await issueAndDeliverApiKey(
+        c,
+        updated.principalId,
+        updated.email,
+        'initial',
+        null,
+      )
+
       return c.json({
         id: updated.principalId,
         email: updated.email,
         status: updated.status,
         verified_at: updated.updatedAt.toISOString(),
+        api_key: {
+          api_key_id: issued.apiKeyId,
+          token: issued.token,
+          display_name: issued.displayName ?? undefined,
+          expires_at: issued.expiresAt ? issued.expiresAt.toISOString() : undefined,
+          created_at: issued.createdAt.toISOString(),
+          notify_outbound_log_id: notify.outbound_log_id,
+          notify_status: notify.status,
+        },
       })
     } catch (err) {
       if (err instanceof HumanError) return envelope(c, err)
+      if (err instanceof ApiKeyError) {
+        return c.json(
+          {
+            title: 'Internal Server Error',
+            message: `verify succeeded but first api-key issue failed: ${err.message}`,
+            code: 'ERR-P01-S01-0500',
+            method: c.req.method,
+            instance: c.req.path,
+            request_url: c.req.url,
+            timestamp: new Date().toISOString(),
+          },
+          500,
+        )
+      }
       throw err
     }
   })
@@ -202,6 +307,155 @@ export const humansRouter = new Hono<Env>()
           )
         }
         return envelope(c, err)
+      }
+      throw err
+    }
+  })
+
+  // ── 5: api-key/issue (Bearer chk_) ─────────────────────
+  // The apiKeyAuth middleware (apps/api/src/middleware/auth.ts) is
+  // mounted in front of this route; c.var.actor carries the resolved
+  // owner principal id.
+  .post('/v1/humans/:id/api-key/issue', async (c) => {
+    const id = c.req.param('id')
+    if (!c.var.actor) {
+      return c.json(
+        {
+          title: 'Unauthorized',
+          message: 'api-key required',
+          code: 'ERR-P01-S01-1040',
+          method: c.req.method,
+          instance: c.req.path,
+          request_url: c.req.url,
+          timestamp: new Date().toISOString(),
+        },
+        401,
+      )
+    }
+    if (c.var.actor.humanPrincipalId !== id) {
+      return c.json({ ...FORBIDDEN_OWNER_MISMATCH, method: c.req.method, instance: c.req.path, request_url: c.req.url, timestamp: new Date().toISOString() }, 403)
+    }
+
+    let body: { display_name?: string; expires_at?: string } = {}
+    if (c.req.header('Content-Length')) {
+      try {
+        body = (await c.req.json()) as typeof body
+      } catch {
+        return envelope(c, new HumanError('email_invalid', 'request body must be valid JSON'))
+      }
+    }
+
+    const humanRow = await service(c).findById(id)
+    if (!humanRow) {
+      return envelope(c, new HumanError('human_not_found', 'no human with this id'))
+    }
+    if (humanRow.status !== 'active') {
+      return envelope(c, new HumanError('human_already_verified', 'human is not active'))
+    }
+
+    const expiresAt = body.expires_at ? new Date(body.expires_at) : null
+    try {
+      const { issued, notify } = await issueAndDeliverApiKey(
+        c,
+        id,
+        humanRow.email,
+        body.display_name ?? null,
+        expiresAt,
+      )
+      return c.json(
+        {
+          api_key_id: issued.apiKeyId,
+          token: issued.token,
+          display_name: issued.displayName ?? undefined,
+          expires_at: issued.expiresAt ? issued.expiresAt.toISOString() : undefined,
+          created_at: issued.createdAt.toISOString(),
+          notify_outbound_log_id: notify.outbound_log_id,
+          notify_status: notify.status,
+        },
+        201,
+      )
+    } catch (err) {
+      if (err instanceof ApiKeyError) {
+        return c.json(
+          {
+            title: 'Internal Server Error',
+            message: err.message,
+            detail: err.detail,
+            code: 'ERR-P01-S01-0500',
+            method: c.req.method,
+            instance: c.req.path,
+            request_url: c.req.url,
+            timestamp: new Date().toISOString(),
+          },
+          500,
+        )
+      }
+      throw err
+    }
+  })
+
+  // ── 6: api-key/revoke (Bearer chk_) ────────────────────
+  .post('/v1/humans/:id/api-key/revoke', async (c) => {
+    const id = c.req.param('id')
+    if (!c.var.actor) {
+      return c.json(
+        {
+          title: 'Unauthorized',
+          message: 'api-key required',
+          code: 'ERR-P01-S01-1040',
+          method: c.req.method,
+          instance: c.req.path,
+          request_url: c.req.url,
+          timestamp: new Date().toISOString(),
+        },
+        401,
+      )
+    }
+    if (c.var.actor.humanPrincipalId !== id) {
+      return c.json({ ...FORBIDDEN_OWNER_MISMATCH, method: c.req.method, instance: c.req.path, request_url: c.req.url, timestamp: new Date().toISOString() }, 403)
+    }
+
+    let body: { api_key_id?: string }
+    try {
+      body = (await c.req.json()) as { api_key_id?: string }
+    } catch {
+      return envelope(c, new HumanError('email_invalid', 'request body must be valid JSON'))
+    }
+    if (typeof body.api_key_id !== 'string') {
+      return envelope(c, new HumanError('email_invalid', 'api_key_id is required'))
+    }
+
+    try {
+      await apiKeySvc(c).revoke(body.api_key_id, id)
+      return c.body(null, 204)
+    } catch (err) {
+      if (err instanceof ApiKeyError) {
+        if (err.code === 'api_key_not_found') {
+          return c.json(
+            {
+              title: 'Not Found',
+              message: err.message,
+              code: 'ERR-P01-S01-0404',
+              method: c.req.method,
+              instance: c.req.path,
+              request_url: c.req.url,
+              timestamp: new Date().toISOString(),
+            },
+            404,
+          )
+        }
+        return c.json(
+          {
+            title: 'Internal Server Error',
+            message: err.message,
+            code: 'ERR-P01-S01-0500',
+            method: c.req.method,
+            instance: c.req.path,
+            request_url: c.req.url,
+            timestamp: new Date().toISOString(),
+          },
+          500,
+        )
       }
       throw err
     }

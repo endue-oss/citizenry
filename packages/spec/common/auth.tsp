@@ -31,3 +31,15 @@ model EnrollmentBearerAuth is BearerAuth;
  * @status confirmed
  */
 model AgentJwtAuth is BearerAuth;
+
+/**
+ * Human API-Key Bearer — long-lived credential a verified human uses
+ * to authenticate writes against the identity surface (enrollments,
+ * agent register, key rotation, api-key/revoke).
+ *
+ * `Authorization: Bearer chk_…`. Verified against the peppered SHA-256
+ * stored on `human_api_key.token_hash`.
+ *
+ * @status draft
+ */
+model ApiKeyBearerAuth is BearerAuth;

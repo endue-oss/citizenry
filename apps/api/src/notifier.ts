@@ -5,7 +5,7 @@
 import type { Bindings } from './env'
 
 export type NotifyArgs = {
-  template: 'human_verification'
+  template: 'human_verification' | 'human_api_key'
   to: Array<{ name?: string; mail: string }>
   context: Record<string, unknown>
   /** Optional From envelope override. */

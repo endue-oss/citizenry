@@ -2,6 +2,7 @@ import "@typespec/http";
 import "@typespec/openapi";
 import "../common/main.tsp";
 
+import "./errors.tsp";
 import "./operations.tsp";
 
 using TypeSpec.Http;

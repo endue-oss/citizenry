@@ -1,4 +1,5 @@
 export { mailRouter, type MailRouterVars } from './router'
+export { MAIL, MailError } from './errors'
 export { schema, type Schema, type Db } from './db'
 export type {
   MailboxRow,

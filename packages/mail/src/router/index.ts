@@ -1,9 +1,14 @@
 // HTTP router for the mail Worker. Pure surface — no Worker globals;
 // apps/mail wires it into a Hono app with a Db middleware and a MailSender.
+//
+// Error envelope matches packages/spec/common/errors.tsp BaseError.
+// MailError instances thrown by handlers are caught by app.onError and
+// rendered as JSON. Routes do not return ad-hoc `{ error: '...' }` bodies.
 
-import { Hono } from 'hono'
+import { Hono, type Context } from 'hono'
 import { z } from 'zod'
 import type { Db } from '../db'
+import { MAIL, MailError } from '../errors'
 import {
   getMail,
   listMails,
@@ -40,6 +45,18 @@ const sendBody = z.object({
   html: z.string().optional(),
 })
 
+/** MailError → BaseError envelope (packages/spec/common/errors.tsp). */
+const envelope = (c: Context, err: MailError) => ({
+  title: err.title,
+  message: err.message,
+  detail: err.detail,
+  code: err.code,
+  method: c.req.method,
+  instance: c.req.path,
+  request_url: c.req.url,
+  timestamp: new Date().toISOString(),
+})
+
 export const mailRouter = new Hono<{ Variables: MailRouterVars }>()
   // GET /mailboxes — list all mailboxes for the authenticated account.
   // Creates the default set (inbox/sent/drafts/archive/trash) on first call.
@@ -67,7 +84,7 @@ export const mailRouter = new Hono<{ Variables: MailRouterVars }>()
   .get('/mails/:id', async (c) => {
     const { db, accountId } = c.var
     const row = await getMail(db, { accountId, mailId: c.req.param('id') })
-    if (!row) return c.json({ error: 'not_found' }, 404)
+    if (!row) throw MAIL.notFound('mail not found')
     return c.json({ mail: row })
   })
 
@@ -78,7 +95,9 @@ export const mailRouter = new Hono<{ Variables: MailRouterVars }>()
     const { db, accountId, sender, mintId } = c.var
     const parsed = sendBody.safeParse(await c.req.json().catch(() => ({})))
     if (!parsed.success) {
-      return c.json({ error: 'invalid_body', issues: parsed.error.flatten() }, 400)
+      throw MAIL.invalidBody('request body failed validation', {
+        issues: parsed.error.flatten(),
+      })
     }
     const body = parsed.data
 
@@ -86,7 +105,7 @@ export const mailRouter = new Hono<{ Variables: MailRouterVars }>()
       body.from ??
       ({ mail: c.get('defaultFromAddr' as never) as unknown as string } as { mail: string })
     if (!from?.mail) {
-      return c.json({ error: 'from_required' }, 400)
+      throw MAIL.fromRequired('from address is required')
     }
 
     try {
@@ -112,9 +131,13 @@ export const mailRouter = new Hono<{ Variables: MailRouterVars }>()
     } catch (err) {
       // sendMail already persisted the row with deliveryStatus='failed';
       // surface a 502 so the client can retry.
-      return c.json(
-        { error: 'send_failed', message: err instanceof Error ? err.message : String(err) },
-        502,
-      )
+      throw MAIL.sendFailed(err instanceof Error ? err.message : String(err))
     }
+  })
+  .onError((err, c) => {
+    if (err instanceof MailError) {
+      return c.json(envelope(c, err), err.status as 400 | 401 | 404 | 429 | 500 | 502 | 503)
+    }
+    const internal = MAIL.internal('unexpected error')
+    return c.json(envelope(c, internal), 500)
   })

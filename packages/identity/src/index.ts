@@ -1,6 +1,7 @@
 export { identityRouter } from './router'
 export { adminIdentityRouter } from './router/admin'
 export { humansRouter, type HumanRouterVars } from './router/humans'
+export { enrollmentsRouter, type EnrollmentRouterVars } from './router/enrollments'
 export { createHumanService, HumanError, type Notifier } from './service/human'
 export {
   createApiKeyService,
@@ -10,6 +11,12 @@ export {
   type IssuedApiKey,
   type ResolvedApiKey,
 } from './service/api_key'
+export {
+  createEnrollmentService,
+  EnrollmentError,
+  type EnrollmentService,
+  type IssuedEnrollment,
+} from './service/enrollment'
 export { schema, type Schema, type Db } from './db'
 export type {
   PrincipalRow,

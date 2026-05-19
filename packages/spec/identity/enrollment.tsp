@@ -10,7 +10,12 @@ using Citizenry.Common;
 namespace Citizenry.Identity;
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// Enrollment Models — operator-issued one-shot bootstrap tokens
+// Enrollment Models — human-issued bootstrap tokens
+//
+// Authentication switched from the operator's X-Service-Key PSK to
+// the issuing human's API-Key (`Authorization: Bearer chk_…`). The
+// API-Key carries owner identity, so the request body no longer takes
+// `owner_human_principal_id`.
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 /**
@@ -19,12 +24,9 @@ namespace Citizenry.Identity;
  * The issued token (`eret_…`) is surfaced only once in the response;
  * the server stores a peppered SHA-256 and can only compare against it.
  *
- * @status confirmed
+ * @status draft
  */
 model EnrollmentCreateRequest {
-  /** Issuing owner — `hu_<ULID>` */
-  owner_human_principal_id: humanId;
-
   /** Tenant to grant — immutable from issue time. Defaults to `public`. */
   tenant?: Tenant = Tenant.public;
 
@@ -102,24 +104,25 @@ model EnrollmentGetResponse {
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// Enrollment Routes (admin — `X-Service-Key`)
+// Enrollment Routes — Bearer chk_ (human API-Key)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 /**
- * Called by an operator or admin BFF. Every request requires the `X-Service-Key` header.
+ * Called by a verified human authenticated with their API-Key. The
+ * owner of the issued enrollment is taken from the API-Key.
  *
- * @status confirmed
+ * @status draft
  */
 @tag("Enrollment")
 @route("/v1/enrollments")
-@useAuth(ServiceKeyAuth)
+@useAuth(ApiKeyBearerAuth)
 interface Enrollments {
   /**
    * Issue a new enrollment.
-   * Immediately after `token` is surfaced in the response, the caller (operator)
+   * Immediately after `token` is surfaced in the response, the caller
    * delivers it to the agent out of band.
    *
-   * Possible errors: 400 (BadRequest), 401 (PSK invalid), 429 (RateLimited), 500.
+   * Possible errors: 400 (BadRequest), 401 (api-key invalid), 429 (RateLimited), 500.
    */
   @summary("Issue a new enrollment bearer token (one-shot bootstrap)")
   @operationId("enrollment-create")
@@ -134,9 +137,10 @@ interface Enrollments {
     | InternalError;
 
   /**
-   * Revoke an enrollment — invalidate an unused token. Idempotent.
+   * Revoke an enrollment — invalidate an unused token. Idempotent. The
+   * caller's API-Key owner must match the enrollment's owner.
    *
-   * Possible errors: 401 (PSK invalid), 404 (NotFound), 500.
+   * Possible errors: 401 (api-key invalid), 403 (owner mismatch), 404, 500.
    */
   @summary("Revoke an outstanding enrollment (idempotent)")
   @operationId("enrollment-revoke")
@@ -145,6 +149,7 @@ interface Enrollments {
         @statusCode statusCode: 204;
       }
     | UnauthorizedError
+    | ForbiddenError
     | NotFoundError
     | InternalError;
 }

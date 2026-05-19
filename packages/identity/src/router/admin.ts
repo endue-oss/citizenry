@@ -11,20 +11,18 @@ type Vars = { db: Db } & Partial<FederationVars>
  * Admin identity router.
  *
  * Routes (mirror the reference spec — exposed as-is when mounted at root):
- *   POST   /v1/enrollments              (X-Service-Key)
- *   DELETE /v1/enrollments/:id          (X-Service-Key)
  *   GET    /v1/admin/enrollments        (X-Service-Key, paginated)
  *   GET    /v1/admin/agents             (X-Service-Key, paginated)
  *   GET    /v1/admin/agents/:id         (X-Service-Key)
  *   DELETE /v1/admin/agents/:id         (X-Service-Key)
  *
- * Auth is handled by apps/admin-api middleware (X-Service-Key PSK verification).
+ * Note: enrollment issue/revoke moved to the public surface in
+ * `enrollmentsRouter` (Bearer chk_ API-Key auth) — operators issue
+ * enrollments under their own human identity, not as a faceless PSK.
+ *
+ * Auth here is handled by apps/admin-api middleware (X-Service-Key).
  */
 export const adminIdentityRouter = new Hono<{ Variables: Vars }>()
-  // ── Enrollment issue / revoke ─────────────────────────
-  .post('/v1/enrollments', (c) => c.json({ todo: 'create enrollment' }, 201))
-  .delete('/v1/enrollments/:id', (c) => c.body(null, 204))
-
   // ── Admin enrollments list ────────────────────────────
   .get('/v1/admin/enrollments', (c) =>
     c.json({

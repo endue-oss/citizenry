@@ -22,7 +22,17 @@ type AuthVars = {
   actor?: ApiKeyActor
 }
 
-const PUBLIC_PATH_PREFIXES = ['/_health', '/.well-known/', '/agent/', '/v1/humans']
+// "Public" here means "global JWT/enrollment-bearer middleware does NOT
+// run" — these routes either need no auth or carry their own
+// per-route guard (e.g. apiKeyAuth on /v1/humans/:id/api-key/*,
+// /v1/enrollments).
+const PUBLIC_PATH_PREFIXES = [
+  '/_health',
+  '/.well-known/',
+  '/agent/',
+  '/v1/humans',
+  '/v1/enrollments',
+]
 
 const isPublic = (path: string): boolean =>
   PUBLIC_PATH_PREFIXES.some((p) => path.startsWith(p))

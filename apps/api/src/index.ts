@@ -4,6 +4,8 @@ import {
   adminIdentityRouter,
   humansRouter,
   type HumanRouterVars,
+  enrollmentsRouter,
+  type EnrollmentRouterVars,
 } from '@citizenry/identity'
 import { vaultRouter, adminVaultRouter } from '@citizenry/vault'
 import { adminConfigRouter } from '@citizenry/config'
@@ -26,6 +28,8 @@ import {
   newHumanVerificationId,
   newHumanApiKeyId,
   newApiKeyToken,
+  newEnrollmentId,
+  newEnrollmentToken,
   hexToBytes,
 } from './ids'
 
@@ -71,6 +75,20 @@ const humansApp = new Hono<{ Bindings: Bindings; Variables: HumanRouterVars }>()
   .use('/v1/humans/:id/api-key/*', apiKeyAuth)
   .route('/', humansRouter)
 app.route('/', humansApp)
+
+// enrollments — Bearer chk_ public surface. Owner is sourced from the
+// caller's API-Key, so the request body carries no owner field.
+const enrollmentsApp = new Hono<{ Bindings: Bindings; Variables: EnrollmentRouterVars }>()
+  .use('*', identityDb)
+  .use('*', async (c, next) => {
+    c.set('pepper', hexToBytes(c.env.ENROLLMENT_PEPPER))
+    c.set('mintEnrollmentId', newEnrollmentId)
+    c.set('mintEnrollmentToken', newEnrollmentToken)
+    await next()
+  })
+  .use('*', apiKeyAuth)
+  .route('/', enrollmentsRouter)
+app.route('/', enrollmentsApp)
 
 // /_admin/* — admin-only. Validate the SERVICE_KEY header (X-Service-Key), then mount admin routers.
 //   admin-api HTTP-proxies into this surface → api owns all admin logic.

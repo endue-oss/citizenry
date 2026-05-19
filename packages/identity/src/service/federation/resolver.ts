@@ -16,6 +16,7 @@
 
 import type { Fetcher } from './discovery'
 import { fetchPeerDiscovery, fetchPeerJwks } from './discovery'
+import type { PeerDiscoveryDocument } from './types'
 
 export type ResolvedPeerKeys = {
   /** Federation-signing JWKS (no per-agent keys). */
@@ -25,6 +26,10 @@ export type ResolvedPeerKeys = {
   expiresAt: Date
   /** Resolution mode that produced this set — observability hint. */
   mode: 'bilateral' | 'trust_chain'
+  /** Bilateral-mode peer discovery document (display_name, instance_id,
+   *  federation_handshake_url, …). `null` for trust_chain mode — the
+   *  trust-chain resolver surfaces equivalent metadata via `policy`. */
+  bilateralDiscovery: PeerDiscoveryDocument | null
   /** Metadata policy resolved from the chain. Always null for
    *  bilateral mode. */
   policy: Record<string, unknown> | null
@@ -52,6 +57,7 @@ export function createBilateralResolver(
         jwks,
         expiresAt: new Date(now() + ttlMs),
         mode: 'bilateral',
+        bilateralDiscovery: discovery,
         policy: null,
       }
     },

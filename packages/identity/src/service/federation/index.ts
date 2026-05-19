@@ -5,9 +5,13 @@
 
 import type { FederationPeerRow } from '../../db/schema'
 import type { FederationPeerRepo } from '../../repo/federation_peer'
-import { fetchPeerDiscovery, fetchPeerJwks, normalizeIssuer, type Fetcher } from './discovery'
+import { normalizeIssuer, type Fetcher } from './discovery'
 import { FED } from './errors'
 import { verifyHandshakeJws, type JwsVerifier } from './jws'
+import {
+  createBilateralResolver,
+  type PeerTrustResolver,
+} from './resolver'
 import { isTransitionAllowed } from './state'
 import type {
   FederationHandshakePayload,
@@ -30,6 +34,14 @@ export interface FederationServicePorts {
 
   /** outbound HTTP fetch — undici / global `fetch` / fake. */
   fetcher: Fetcher
+
+  /**
+   * Peer trust resolver. Default (when omitted) is the bilateral
+   * resolver built on `fetcher` — see [`./resolver.ts`](./resolver.ts)
+   * and RFC-0003. Production callers wire whichever resolver the
+   * `federation.trust_mode` config selects.
+   */
+  peerTrustResolver?: PeerTrustResolver
 
   /** compact JWS verifier (EdDSA over peer JWKS). */
   jwsVerifier: JwsVerifier
@@ -56,6 +68,9 @@ export const createFederationService = (
   repo: FederationPeerRepo,
   ports: FederationServicePorts,
 ) => {
+  const peerTrustResolver: PeerTrustResolver =
+    ports.peerTrustResolver ?? createBilateralResolver(ports.fetcher)
+
   /** Operator adds a new peer — external fetch + outbound handshake initiation. */
   const addPeer = async (input: {
     issuer_url: string
@@ -72,9 +87,24 @@ export const createFederationService = (
       })
     }
 
-    // 2) discovery + JWKS fetch
-    const discovery = await fetchPeerDiscovery(ports.fetcher, issuer)
-    const jwks = await fetchPeerJwks(ports.fetcher, discovery.federation_jwks_url)
+    // 2) discovery + JWKS via the trust resolver (RFC-0003). For
+    //    bilateral mode this fetches `/.well-known/citizenry-peer`
+    //    and the JWKS URL; for trust-chain mode it walks the entity
+    //    statement chain. The discovery doc is null when the chain
+    //    surfaces equivalent metadata via `policy`.
+    const resolved = await peerTrustResolver.resolve(issuer)
+    const discovery = resolved.bilateralDiscovery
+    if (!discovery) {
+      // Trust-chain mode does not yield a bilateral discovery doc;
+      // the consumer needs to read metadata from `resolved.policy`.
+      // This branch is unreachable today (only bilateral resolver
+      // exists) but is left explicit so the future code path is
+      // visible at the call site.
+      throw FED.remoteError('trust_chain mode not yet wired through addPeer', {
+        mode: resolved.mode,
+      })
+    }
+    const jwks = resolved.jwks
 
     // 3) row INSERT — state='invited', pending_nonce populated
     const nonce = ports.newNonce()
@@ -179,8 +209,9 @@ export const createFederationService = (
     if (row && Object.keys(row.jwks).length > 0) {
       jwks = row.jwks
     } else {
-      discovery = await fetchPeerDiscovery(ports.fetcher, fromIssuer)
-      jwks = await fetchPeerJwks(ports.fetcher, discovery.federation_jwks_url)
+      const resolved = await peerTrustResolver.resolve(fromIssuer)
+      discovery = resolved.bilateralDiscovery ?? undefined
+      jwks = resolved.jwks
     }
 
     const verified = await verifyHandshakeJws(
@@ -388,12 +419,15 @@ export const createFederationService = (
   const refreshJwks = async (id: string): Promise<FederationPeerView> => {
     const row = await repo.findById(id)
     if (!row) throw FED.peerNotFound(`fdp ${id}`)
-    const discovery = await fetchPeerDiscovery(ports.fetcher, row.issuer)
-    const jwks = await fetchPeerJwks(ports.fetcher, discovery.federation_jwks_url)
+    const resolved = await peerTrustResolver.resolve(row.issuer)
+    const peerMetadata =
+      (resolved.bilateralDiscovery as unknown as Record<string, unknown> | null) ??
+      resolved.policy ??
+      {}
     const [updated] = await repo.update(id, {
-      jwks,
+      jwks: resolved.jwks,
       jwksCachedAt: new Date(),
-      peerMetadata: discovery as unknown as Record<string, unknown>,
+      peerMetadata,
     })
     if (!updated) throw FED.peerNotFound(`fdp ${id}`)
     return toPeerView(updated)

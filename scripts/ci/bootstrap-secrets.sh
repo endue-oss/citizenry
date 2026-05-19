@@ -118,6 +118,9 @@ service_key=$(ensure_config 'service_key' "${SERVICE_KEY:-}")
 echo "::add-mask::$service_key"
 push_secret apps/api       SERVICE_KEY "$service_key"
 push_secret apps/admin-api SERVICE_KEY "$service_key"
+# mail uses the same PSK to authenticate inbound calls from api /
+# admin-api on its /_internal/notify route — see ADR-2026-0005.
+push_secret apps/mail      SERVICE_KEY "$service_key"
 echo "::endgroup::"
 
 # ── ADMIN_JWT_SECRET (admin-api only) ──────────────────────────────

@@ -20,6 +20,13 @@ export type Bindings = {
   ISSUER_HOST: string
 
   /**
+   * Public base URL of this API Worker (e.g. `https://api.citizenry.id`).
+   * Used to build the verification magic-link embedded in outbound
+   * emails. Defaults to `https://{ISSUER_HOST}` when unset.
+   */
+  API_BASE_URL?: string
+
+  /**
    * Service key — shared PSK. Used both as inbound X-Service-Key on
    * `/_admin/*` (from admin-api) and outbound on `MAIL_WORKER`'s
    * `/_internal/notify` route. See ADR-2026-0005.

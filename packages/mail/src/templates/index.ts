@@ -21,20 +21,35 @@ export type HumanVerificationContext = {
   code: string
   /** Minutes until the code expires from the moment it was minted. */
   expiresInMinutes: number
+  /**
+   * Clickable verification link — typically the api Worker's GET
+   * `/v1/humans/{id}/verify?code={code}` magic-link. Optional: when
+   * absent, the email only shows the code.
+   */
+  verifyUrl?: string
 }
 
 function renderHumanVerification(ctx: HumanVerificationContext): RenderedTemplate {
   const subject = `Your Citizenry verification code is ${ctx.code}`
+  const linkLine = ctx.verifyUrl
+    ? `Click to verify: ${ctx.verifyUrl}\nOr submit the code below manually.`
+    : 'Submit the code below at your CLI prompt.'
   const text = [
-    `Your Citizenry verification code is: ${ctx.code}`,
+    linkLine,
+    '',
+    `Code: ${ctx.code}`,
     '',
     `This code expires in ${ctx.expiresInMinutes} minutes.`,
     '',
     'If you did not start this registration, you can ignore this email.',
     '— Endue Citizenry',
   ].join('\n')
+  const linkHtml = ctx.verifyUrl
+    ? `<p><a href="${ctx.verifyUrl}" style="display:inline-block;padding:10px 18px;background:#0c66ff;color:#fff;border-radius:6px;text-decoration:none">Verify your email</a></p>` +
+      `<p style="color:#888;font-size:12px">Or paste the code below at your CLI prompt.</p>`
+    : `<p>Submit the code below at your CLI prompt.</p>`
   const html =
-    `<p>Your Citizenry verification code is:</p>` +
+    linkHtml +
     `<p style="font-size:24px;font-family:monospace;letter-spacing:4px"><strong>${ctx.code}</strong></p>` +
     `<p>This code expires in ${ctx.expiresInMinutes} minutes.</p>` +
     `<p style="color:#888;font-size:12px">If you did not start this registration, you can ignore this email.</p>`

@@ -36,7 +36,11 @@ import { createHumanEmailVerificationRepo } from '../repo/human_email_verificati
 export type NotifyPayload =
   | {
       template: 'human_verification'
-      context: { code: string; expiresInMinutes: number }
+      context: {
+        code: string
+        expiresInMinutes: number
+        verifyUrl?: string
+      }
     }
   | {
       template: 'human_api_key'

@@ -35,6 +35,8 @@ export type HumanRouterVars = {
   mintApiKeyId: () => string
   mintApiKeyToken: () => string
   config: ConfigReader
+  /** Public origin of this api Worker — used to build verify magic-links. */
+  apiBaseUrl: string
   /** Set by `apiKeyAuth` middleware on /api-key/* subroutes. */
   actor?: { humanPrincipalId: string; apiKeyId: string }
 }
@@ -141,6 +143,28 @@ const FORBIDDEN_OWNER_MISMATCH = {
   message: 'api-key owner does not match path id',
 }
 
+function verifyMagicLink(c: Context<Env>, humanId: string, code: string): string {
+  const base = c.var.apiBaseUrl.replace(/\/+$/, '')
+  return `${base}/v1/humans/${encodeURIComponent(humanId)}/verify?code=${encodeURIComponent(code)}`
+}
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+function htmlPage(title: string, bodyHtml: string): string {
+  return (
+    `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(title)}</title>` +
+    `<style>body{font-family:-apple-system,Segoe UI,sans-serif;max-width:560px;margin:48px auto;padding:24px;line-height:1.5}h1{font-size:20px}code{background:#f6f8fa;padding:2px 6px;border-radius:4px}</style>` +
+    `</head><body><h1>${escapeHtml(title)}</h1>${bodyHtml}<p style="color:#888;font-size:12px;margin-top:32px">— Endue Citizenry</p></body></html>`
+  )
+}
+
 export const humansRouter = new Hono<Env>()
   // ── 1: start ───────────────────────────────────────────
   .post('/v1/humans', async (c) => {
@@ -169,6 +193,7 @@ export const humansRouter = new Hono<Env>()
         context: {
           code: result.code,
           expiresInMinutes: VERIFICATION_TTL_MINUTES,
+          verifyUrl: verifyMagicLink(c, result.human.principalId, result.code),
         },
       })
 
@@ -205,6 +230,40 @@ export const humansRouter = new Hono<Env>()
     const row = rows[0]
     if (!row) return envelope(c, new HumanError('human_not_found', 'no human for this email'))
     return c.json({ id: row.id, status: row.status })
+  })
+
+  // ── GET magic-link variant of verify ───────────────────
+  // Same verify-and-issue logic as POST, but browser-clickable from
+  // the verification email. The API-Key is delivered only via email;
+  // the HTTP response is a plain HTML confirmation page (no token).
+  .get('/v1/humans/:id/verify', async (c) => {
+    const code = c.req.query('code')
+    if (typeof code !== 'string' || code.length === 0) {
+      return c.html(htmlPage('Missing code', '<p>The verification link is missing the <code>code</code> parameter.</p>'), 400)
+    }
+    try {
+      const updated = await service(c).verify(c.req.param('id'), code)
+      await issueAndDeliverApiKey(c, updated.principalId, updated.email, 'initial', null)
+      return c.html(
+        htmlPage(
+          'Email verified',
+          `<p>You're set, <strong>${escapeHtml(updated.email)}</strong>.</p>` +
+            `<p>Your initial API key has been sent to your inbox.</p>`,
+        ),
+      )
+    } catch (err) {
+      if (err instanceof HumanError) {
+        const status = STATUS_BY_CODE[err.code] ?? 500
+        return c.html(htmlPage('Verification failed', `<p>${escapeHtml(err.message)}</p>`), status as 400 | 401 | 404 | 409 | 410 | 500)
+      }
+      if (err instanceof ApiKeyError) {
+        return c.html(
+          htmlPage('Email verified — but key issue failed', `<p>${escapeHtml(err.message)}</p><p>Use the CLI <code>POST /v1/humans/${escapeHtml(c.req.param('id'))}/api-key/issue</code> with an existing key, or contact support.</p>`),
+          500,
+        )
+      }
+      throw err
+    }
   })
 
   // ── 3: verify (and emit the first API-Key) ─────────────
@@ -285,6 +344,7 @@ export const humansRouter = new Hono<Env>()
         context: {
           code: result.code,
           expiresInMinutes: VERIFICATION_TTL_MINUTES,
+          verifyUrl: verifyMagicLink(c, id, result.code),
         },
       })
 

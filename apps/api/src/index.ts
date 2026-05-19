@@ -63,6 +63,7 @@ const humansApp = new Hono<{ Bindings: Bindings; Variables: HumanRouterVars }>()
     c.set('mintVerificationId', newHumanVerificationId)
     c.set('mintApiKeyId', newHumanApiKeyId)
     c.set('mintApiKeyToken', newApiKeyToken)
+    c.set('apiBaseUrl', c.env.API_BASE_URL || `https://${c.env.ISSUER_HOST}`)
     await next()
   })
   // Bearer chk_ guard for /api-key/* subroutes. Other /v1/humans/*

@@ -17,7 +17,10 @@ name: Deploy to Cloudflare
 #   MIGRATOR_TOKEN     Pin a stable bearer for the migrator; auto-rotated when unset.
 #   ENROLLMENT_PEPPER  Override the auto-generated pepper stored in D1 `_config`.
 #   SERVICE_KEY        Override the auto-generated api ↔ admin-api PSK.
-#   RESEND_API_KEY     Resend key for outbound mail; log-only when unset.
+#
+# Outbound mail (Resend / AWS SES) credentials are not handled here.
+# Set them through admin api `PUT /api/v1/admin/config/:key` after deploy
+# — see apps/mail/wrangler.toml for the config key list.
 #
 # Optional GitHub variables (vars):
 #   SERVICE_PREFIX   Resource-name prefix for forks (default "citizenry").
@@ -252,7 +255,6 @@ jobs:
           ADMIN_REFRESH_PEPPER: ${{ secrets.ADMIN_REFRESH_PEPPER }}
           ADMIN_ID: ${{ vars.ADMIN_ID }}
           ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
-          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
         run: ./scripts/ci/bootstrap-secrets.sh
 
   # ── Deploy Pages (parallel within the matrix) ─────────────────────────

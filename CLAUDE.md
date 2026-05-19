@@ -77,6 +77,21 @@ wrangler d1 execute citizenry-identity --remote \
   --command="SELECT key, value FROM _config;"
 ```
 
+Runtime config (operator-managed, set via admin-api `PUT
+/api/v1/admin/config/:key`) lives in the **config D1**:
+
+| Key                                       | Used by      | Notes |
+| ----------------------------------------- | ------------ | ----- |
+| `admin.password`                          | `apps/admin-api` | Bootstrap-seeded; rotate via admin-api or by re-deploying with `ADMIN_PASSWORD`. |
+| `mail.outbound.resend.api_key`            | `apps/mail`  | Activates Resend (priority 2). |
+| `mail.outbound.aws_ses.access_key_id`     | `apps/mail`  | Activates SES (priority 3) when paired with `secret_access_key`. |
+| `mail.outbound.aws_ses.secret_access_key` | `apps/mail`  | — |
+| `mail.outbound.aws_ses.region`            | `apps/mail`  | Optional, defaults to `us-east-1`. |
+| `mail.outbound.aws_ses.session_token`     | `apps/mail`  | Optional, for STS assumed-role / temporary credentials. |
+
+Reads are wrapped by `packages/config`'s `withTtlCache` (5-min
+colo-local). Changes propagate after the TTL elapses; no redeploy.
+
 ## Where to look first
 
 | Task | Read first |

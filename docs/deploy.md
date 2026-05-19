@@ -27,7 +27,7 @@ Storage:
   Written through admin-api (api `/_admin/api/v1/admin/config/*`), read
   by data-plane code via `packages/config` with a colo-local TTL cache
   (default 5 minutes). Every key follows `{namespace}.{keyname}` —
-  e.g. `admin.password`, `mail.resend_api_key`. Migrations:
+  e.g. `admin.password`, `mail.outbound.resend.api_key`. Migrations:
   `packages/config/migrations/*.sql`.
 
 Admin model:
@@ -232,19 +232,46 @@ Cloudflare.
 No `wrangler.toml` block is needed — the routing rule lives only in
 Cloudflare's configuration and survives redeploys.
 
-### Outbound (Resend)
+### Outbound
 
-1. Sign up at [resend.com](https://resend.com), verify your sending
-   domain, and create an API key.
-2. Add a GitHub repository **secret** named `RESEND_API_KEY` with that
-   value.
-3. Re-run the workflow. `scripts/ci/bootstrap-secrets.sh` pushes the
-   secret to `citizenry-mail`; subsequent `POST /mails` calls deliver
-   via Resend instead of falling back to the log-only sender.
+`citizenry-mail` picks a sender in this priority order:
 
-To rotate the key, update the GitHub secret and redeploy. To remove it,
-delete the secret in GitHub and run `wrangler secret delete
-RESEND_API_KEY` against `citizenry-mail`.
+1. **Cloudflare Email Service** — when `[[send_email]]` is bound. No
+   credentials; requires `MAIL_DOMAIN` on Cloudflare DNS so CF auto-
+   configures SPF/DKIM/DMARC.
+2. **Resend** — when `mail.outbound.resend.api_key` is set in the
+   config D1.
+3. **AWS SES** — when both `mail.outbound.aws_ses.access_key_id` and
+   `mail.outbound.aws_ses.secret_access_key` are set.
+4. **Log-only** — fallback. Outbound rows persist with
+   `deliveryStatus='queued'`.
+
+Provider credentials live in the config D1 — set them through admin-api
+after deploy, no redeploy needed:
+
+```bash
+# Resend
+curl -X PUT https://<admin-api>/api/v1/admin/config/mail.outbound.resend.api_key \
+  -H "Authorization: Bearer <admin access token>" \
+  -H "Content-Type: application/json" \
+  -d '{"value":"re_xxx..."}'
+
+# AWS SES (both required to activate)
+curl -X PUT https://<admin-api>/api/v1/admin/config/mail.outbound.aws_ses.access_key_id \
+  -H "Authorization: Bearer <admin access token>" \
+  -H "Content-Type: application/json" \
+  -d '{"value":"AKIA..."}'
+curl -X PUT https://<admin-api>/api/v1/admin/config/mail.outbound.aws_ses.secret_access_key \
+  -H "Authorization: Bearer <admin access token>" \
+  -H "Content-Type: application/json" \
+  -d '{"value":"..."}'
+# optional:
+#   mail.outbound.aws_ses.region          (default us-east-1)
+#   mail.outbound.aws_ses.session_token   (STS temporary credentials)
+```
+
+Changes propagate after the 5-minute colo-local TTL elapses. To
+disable a provider, `DELETE` the same key.
 
 ## Custom domains
 

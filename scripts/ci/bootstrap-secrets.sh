@@ -23,8 +23,10 @@
 #                        When unset and no existing row, seed-admin.mjs
 #                        generates a fresh passphrase. Operator reads it
 #                        via `wrangler d1 execute citizenry-config-db ...`.
-#   RESEND_API_KEY     → apps/mail        RESEND_API_KEY (outbound stays
-#                        log-only when unset)
+#
+# Outbound provider credentials (Resend, AWS SES) are operator-managed
+# through the admin api `PUT /api/v1/admin/config/:key`. They are not
+# handled here. See apps/mail/wrangler.toml for the key list.
 #
 # Inspect values:
 #   wrangler d1 execute citizenry-identity-db --remote \
@@ -41,7 +43,6 @@
 #               that holds the `_config` table. Must match what
 #               provision.mjs / render-wrangler.mjs used.
 # Optional env (overrides):   ENROLLMENT_PEPPER, SERVICE_KEY
-# Optional env (pass-through): RESEND_API_KEY (pushed verbatim when present)
 # Prereq: D1 migrations applied — `_config` table must exist before this runs.
 
 set -euo pipefail
@@ -151,19 +152,6 @@ ADMIN_PASSWORD="${ADMIN_PASSWORD:-}" \
   SERVICE_PREFIX="$PREFIX" \
   node scripts/ci/seed-admin.mjs
 echo "::endgroup::"
-
-# ── RESEND_API_KEY (apps/mail, operator-supplied only) ─────────────
-# Resend is an external provider credential, so there's no auto-gen
-# fallback. When unset, apps/mail uses its LogOnlySender — outbound
-# mails are written to D1 with deliveryStatus='queued' and only logged.
-if [[ -n "${RESEND_API_KEY:-}" ]]; then
-  echo "::group::RESEND_API_KEY"
-  echo "::add-mask::$RESEND_API_KEY"
-  push_secret apps/mail RESEND_API_KEY "$RESEND_API_KEY"
-  echo "::endgroup::"
-else
-  echo "RESEND_API_KEY not set — apps/mail will use the log-only sender."
-fi
 
 echo
 echo "✓ Bootstrap complete."

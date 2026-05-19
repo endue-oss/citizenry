@@ -4,6 +4,10 @@ compatibility_date = "2025-01-01"
 compatibility_flags = ["nodejs_compat"]
 workers_dev = true
 
+[observability]
+enabled = true
+head_sampling_rate = 1
+
 [dev]
 port = 13003
 

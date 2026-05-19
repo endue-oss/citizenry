@@ -63,7 +63,7 @@ const mountedRouter = new Hono<{
   .use('*', mailDb)
   .use('*', configReader)
   .use('*', async (c, next) => {
-    c.set('sender', pickSender(c.env))
+    c.set('sender', await pickSender(c.env, c.var.config))
     c.set('mintId', mintId)
     // accountId is set by bearerAuth — re-bind under the router's expected key.
     c.set('accountId', c.var.accountId)

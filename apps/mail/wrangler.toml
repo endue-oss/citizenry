@@ -41,22 +41,26 @@ JWT_AUDIENCE = "mail.citizenry.id,citizenry-mail"
 MAIL_DOMAIN = "citizenry.id"
 
 # Outbound — Cloudflare Email Service (public beta, 2026-04-16).
-# Highest-priority sender; when bound, supersedes RESEND_API_KEY. Requires
-# MAIL_DOMAIN to be hosted on Cloudflare DNS so CF auto-configures
-# SPF/DKIM/DMARC. Optionally restrict envelope senders with
-# `allowed_sender_addresses = ["noreply@citizenry.id"]`.
+# Highest-priority sender; when bound, supersedes the config-backed
+# providers below. Requires MAIL_DOMAIN to be hosted on Cloudflare DNS
+# so CF auto-configures SPF/DKIM/DMARC. Optionally restrict envelope
+# senders with `allowed_sender_addresses = ["noreply@citizenry.id"]`.
 [[send_email]]
 name = "MAIL"
 
-# secrets — `wrangler secret put`
-#   RESEND_API_KEY               Optional fallback when the Cloudflare MAIL
-#                                binding is unavailable.
-#   AWS_SES_ACCESS_KEY_ID        Optional AWS SES credentials, used as a fallback
-#   AWS_SES_SECRET_ACCESS_KEY    after Resend. Both access key and secret are
-#                                required to activate the SES sender.
-#   AWS_SES_REGION               Optional, defaults to us-east-1 (var, not secret —
-#                                set under [vars] if needed).
-#   AWS_SES_SESSION_TOKEN        Optional, for STS assumed-role / temporary creds.
+# Outbound provider credentials live in the config D1, not in Worker
+# secrets. Set them via admin api `PUT /api/v1/admin/config/:key`:
 #
-# If none of the above are configured, outbound is logged-only and rows land
-# with deliveryStatus='queued'.
+#   Resend (priority 2)
+#     mail.outbound.resend.api_key
+#
+#   AWS SES (priority 3) — both access_key_id and secret_access_key
+#                          required to activate the sender.
+#     mail.outbound.aws_ses.access_key_id
+#     mail.outbound.aws_ses.secret_access_key
+#     mail.outbound.aws_ses.region          (optional, default us-east-1)
+#     mail.outbound.aws_ses.session_token   (optional, STS temporary creds)
+#
+# When none are configured, outbound falls back to the log-only sender
+# and rows land with deliveryStatus='queued'. Changes propagate after
+# the 5-minute colo-local TTL elapses; no redeploy needed.

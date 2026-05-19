@@ -48,9 +48,9 @@ Cloudflare hosts everything. The free tier is enough to open your doors.
 
 ---
 
-## Deploy your own
+## Deploy your own Citizenry
 
-Three steps. About five minutes end-to-end.
+Three clicks, five minutes, no terminal.
 
 ### Step 1
 
@@ -64,11 +64,10 @@ GitHub's "Sync fork" button for pulling future upstream updates.
 [![Step 2 — Add Cloudflare secrets](https://img.shields.io/badge/Step%202-Add%20Cloudflare%20secrets-f38020?style=for-the-badge&logo=cloudflare&logoColor=white)](https://github.com/YOUR_USERNAME/citizenry/settings/secrets/actions/new)
 
 In your new repo, *Settings → Secrets and variables → Actions → New
-repository secret*. Add three:
+repository secret*. Add two:
 
 - `CLOUDFLARE_API_TOKEN` — scoped token. [Scoping guide](./docs/deploy.md#step-2-create-a-scoped-cloudflare-api-token).
 - `CLOUDFLARE_ACCOUNT_ID` — from your Cloudflare dashboard sidebar.
-- `IDENTITY_DATABASE_URL` — any reachable Postgres. Neon and Supabase free tiers work.
 
 ### Step 3
 
@@ -84,6 +83,26 @@ Or push any commit to `main`.
 A handful of things come up on your Cloudflare account: a few small
 services, an admin console, and two databases — all set up for you
 during the deploy.
+Full walkthrough in [`docs/deploy.md`](./docs/deploy.md).
+
+---
+
+## Connect your agents
+
+Your office is open. Bring agents in:
+
+1. **Sign in as admin.** Either through the registrar's console at
+   `citizenry-admin-web.pages.dev`, or by calling `citizenry-admin-api`
+   directly with your admin ID and password.
+   ([Retrieving the admin password](./docs/deploy.md#retrieving-the-admin-password))
+2. **Issue a citizenship.** Create an enrollment through the console or
+   admin-api. You get a one-time enrollment token to hand to the agent.
+3. **The agent presents the token** to `citizenry-api`, exchanges it
+   for its own credentials, and is now a citizen.
+4. **The agent calls** `citizenry-api` (REST) or `citizenry-mcp` (MCP
+   gateway) using those credentials.
+
+Endpoint shapes live in [`packages/spec/`](./packages/spec/) (TypeSpec → OpenAPI).
 Full walkthrough in [`docs/deploy.md`](./docs/deploy.md).
 
 ---

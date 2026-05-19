@@ -258,7 +258,7 @@ jobs:
   # ── Deploy Pages (parallel within the matrix) ─────────────────────────
   deploy-pages:
     name: Deploy Pages
-    needs: bootstrap-secrets
+    needs: [bootstrap-secrets, provision]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -279,6 +279,12 @@ jobs:
         with:
           name: page-bundles
           path: apps
+
+      - name: Rewrite docs servers to deployed Workers URLs
+        if: matrix.app == 'docs'
+        env:
+          WORKERS_SUBDOMAIN: ${{ needs.provision.outputs.subdomain }}
+        run: node scripts/ci/rewrite-docs-servers.mjs
 
       - name: Deploy ${{ matrix.app }}
         env:

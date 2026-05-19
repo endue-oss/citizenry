@@ -43,6 +43,8 @@ export const newHumanId = () => `hu_${ulid()}`
 export const newHumanVerificationId = () => `hev_${ulid()}`
 export const newHumanApiKeyId = () => `hak_${ulid()}`
 export const newEnrollmentId = () => `enr_${ulid()}`
+export const newAgentId = () => `ag_${ulid()}`
+export const newKid = () => `kid_${ulid()}`
 
 // Raw enrollment token — `eret_<26-char-ULID>`. The body is just a
 // time-sortable ULID; only the peppered SHA-256 is persisted on

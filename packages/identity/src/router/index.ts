@@ -11,7 +11,6 @@ type Vars = { db: Db } & Partial<FederationVars>
  * User-facing identity router.
  *
  * Routes (mirror the reference spec — exposed as-is when mounted at root):
- *   POST   /v1/agent/register      (Bearer enrollment token)
  *   GET    /v1/agent/me            (Bearer self-signed JWT)
  *   POST   /v1/agent/me/rotate-key (body JWS, old key signed)
  *   DELETE /v1/agent/me            (body JWS, current key signed)
@@ -19,11 +18,10 @@ type Vars = { db: Db } & Partial<FederationVars>
  *   GET    /.well-known/did.json       (public, no auth)
  *   GET    /agent/:id/jwks.json        (public, no auth)
  *   GET    /agent/:id/did.json         (public, no auth)
+ *
+ * Note: POST /v1/agent/register moved to `registerRouter` (Bearer chk_).
  */
 export const identityRouter = new Hono<{ Variables: Vars }>()
-  // ── Register ──────────────────────────────────────────
-  .post('/v1/agent/register', (c) => c.json({ todo: 'register' }, 201))
-
   // ── /me self-service ─────────────────────────────────
   .get('/v1/agent/me', (c) => c.json({ todo: 'whoami' }))
   .post('/v1/agent/me/rotate-key', (c) => c.json({ todo: 'rotate-key' }))

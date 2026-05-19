@@ -1,7 +1,6 @@
 import type { MiddlewareHandler } from 'hono'
 import {
   AuthError,
-  checkEnrollmentBearerShape,
   verifyAgentJwt,
   type TokenPayload,
 } from '@citizenry/identity/auth'
@@ -25,13 +24,14 @@ type AuthVars = {
 // "Public" here means "global JWT/enrollment-bearer middleware does NOT
 // run" — these routes either need no auth or carry their own
 // per-route guard (e.g. apiKeyAuth on /v1/humans/:id/api-key/*,
-// /v1/enrollments).
+// /v1/enrollments, /v1/agent/register).
 const PUBLIC_PATH_PREFIXES = [
   '/_health',
   '/.well-known/',
   '/agent/',
   '/v1/humans',
   '/v1/enrollments',
+  '/v1/agent/register',
 ]
 
 const isPublic = (path: string): boolean =>
@@ -81,17 +81,6 @@ export const auth: MiddlewareHandler<{
   const bearer = extractBearer(c)
   if (!bearer) {
     return unauthorized(c, new AuthError('ERR-P01-S01-0401', 'Authorization Bearer missing'))
-  }
-
-  // ── Register: only validate the enrollment Bearer shape ─────────────
-  if (path === '/v1/agent/register') {
-    try {
-      checkEnrollmentBearerShape(bearer)
-    } catch (err) {
-      return unauthorized(c, err as AuthError)
-    }
-    c.set('enrollmentToken', bearer)
-    return next()
   }
 
   // ── Agent JWT verification (GET /me + /vault/*) ────────────────

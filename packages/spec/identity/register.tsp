@@ -14,13 +14,15 @@ namespace Citizenry.Identity;
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 /**
- * Agent self-registration request.
+ * Agent registration request.
  *
- * Presents the enrollment token in `Authorization: Bearer eret_…`.
- * The body carries only the Ed25519 public-key JWK that the agent
- * **generated locally**.
+ * Authenticated with the owner human's API-Key
+ * (`Authorization: Bearer chk_…`); owner is derived from the key, so
+ * the body carries no owner field. The caller may either submit a
+ * locally generated Ed25519 public-key JWK or ask the server to
+ * generate the keypair and return the private key once.
  *
- * @status confirmed
+ * @status draft
  * @example
  * ```json
  * {
@@ -32,6 +34,13 @@ namespace Citizenry.Identity;
  *   }
  * }
  * ```
+ * @example
+ * ```json
+ * {
+ *   "slug": "scout-007",
+ *   "generate_keypair": true
+ * }
+ * ```
  */
 model AgentRegisterRequest {
   /** Human-friendly identifier. Unique within the instance. */
@@ -40,17 +49,30 @@ model AgentRegisterRequest {
   /** Human-readable name (optional) */
   display_name?: string;
 
-  /** Ed25519 public-key JWK generated locally by the agent (no kid — server issues it) */
-  public_key_jwk: JwkOkpEd25519Submission;
+  /**
+   * Locally generated Ed25519 public-key JWK. Exactly one of
+   * `public_key_jwk` and `generate_keypair=true` must be supplied.
+   */
+  public_key_jwk?: JwkOkpEd25519Submission;
+
+  /**
+   * When true, the server generates a fresh Ed25519 keypair and
+   * returns the private key in the response (surfaced only once).
+   * @status draft
+   */
+  generate_keypair?: boolean = false;
+
+  /** Tenant to grant. Defaults to `public`. */
+  tenant?: Tenant = Tenant.public;
 
   /** Free-form metadata (optional) */
   metadata?: Record<unknown>;
 }
 
 /**
- * Agent self-registration response.
+ * Agent registration response.
  *
- * @status confirmed
+ * @status draft
  */
 model AgentRegisterResponse {
   /** Issued agent_id */
@@ -65,11 +87,18 @@ model AgentRegisterResponse {
   /** Public-key identifier (JWS / JWT header `kid`) */
   kid: kid;
 
-  /** Inherited tenant (determined by the enrollment) */
+  /** Tenant the agent is a member of */
   tenant: Tenant;
 
   /** End of the responsibility chain — owner human */
   owner_human_principal_id: humanId;
+
+  /**
+   * Raw private-key JWK — present only when the request set
+   * `generate_keypair=true`. Surfaced once and never recoverable.
+   * @status draft
+   */
+  private_key_jwk?: Record<unknown>;
 
   metadata?: Record<unknown>;
 
@@ -77,34 +106,33 @@ model AgentRegisterResponse {
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// Register Route (Bearer enrollment token)
+// Register Route (Bearer chk_ — human API-Key)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 /**
- * Agent self-registration.
+ * Agent registration.
  *
  * Validation:
- * 1. `Authorization: Bearer eret_…` token prefix.
- * 2. peppered SHA-256 comparison + use-count decrement (atomic).
- * 3. tenant inheritance (enrollment tenant → agent tenant membership).
- * 4. slug uniqueness check.
+ * 1. `Authorization: Bearer chk_…` resolves to an active human.
+ * 2. slug uniqueness.
+ * 3. Either `public_key_jwk` (caller key) or `generate_keypair=true`
+ *    (server keygen).
  *
- * @status confirmed
+ * @status draft
  */
 @tag("Register")
 @route("/v1/agent/register")
-@useAuth(EnrollmentBearerAuth)
+@useAuth(ApiKeyBearerAuth)
 interface Register {
   /**
    * Possible errors:
-   * - 400 BadRequest (malformed body)
-   * - 401 Unauthorized (enrollment_token_invalid)
+   * - 400 BadRequest (malformed body / both jwk & generate set)
+   * - 401 Unauthorized (api-key invalid)
    * - 409 Conflict (slug duplicate)
-   * - 410 Gone (enrollment expired/exhausted)
    * - 422 Unprocessable (jwk_invalid / slug_invalid / tenant_invalid)
    * - 429 RateLimited
    */
-  @summary("Self-register an agent with an enrollment bearer token")
+  @summary("Register a new agent under the calling human")
   @operationId("agent-register")
   @post register(@body body: AgentRegisterRequest):
     | {
@@ -114,7 +142,6 @@ interface Register {
     | BadRequestError
     | UnauthorizedError
     | ConflictError
-    | GoneError
     | UnprocessableError
     | RateLimitedError
     | InternalError;

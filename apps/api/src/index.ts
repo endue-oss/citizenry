@@ -6,6 +6,8 @@ import {
   type HumanRouterVars,
   enrollmentsRouter,
   type EnrollmentRouterVars,
+  registerRouter,
+  type RegisterRouterVars,
 } from '@citizenry/identity'
 import { vaultRouter, adminVaultRouter } from '@citizenry/vault'
 import { adminConfigRouter } from '@citizenry/config'
@@ -30,6 +32,8 @@ import {
   newApiKeyToken,
   newEnrollmentId,
   newEnrollmentToken,
+  newAgentId,
+  newKid,
   hexToBytes,
 } from './ids'
 
@@ -89,6 +93,21 @@ const enrollmentsApp = new Hono<{ Bindings: Bindings; Variables: EnrollmentRoute
   .use('*', apiKeyAuth)
   .route('/', enrollmentsRouter)
 app.route('/', enrollmentsApp)
+
+// register — Bearer chk_ public surface (replaces the old eret_ Bearer
+// flow). The body either supplies public_key_jwk or asks the server to
+// generate the keypair.
+const registerApp = new Hono<{ Bindings: Bindings; Variables: RegisterRouterVars }>()
+  .use('*', identityDb)
+  .use('*', async (c, next) => {
+    c.set('mintAgentId', newAgentId)
+    c.set('mintKid', newKid)
+    c.set('issuerHost', c.env.ISSUER_HOST)
+    await next()
+  })
+  .use('*', apiKeyAuth)
+  .route('/', registerRouter)
+app.route('/', registerApp)
 
 // /_admin/* — admin-only. Validate the SERVICE_KEY header (X-Service-Key), then mount admin routers.
 //   admin-api HTTP-proxies into this surface → api owns all admin logic.

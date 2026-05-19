@@ -22,25 +22,50 @@
   })
 </script>
 
-<div class="shell">
-  <Sidebar />
+<div class="layout">
+  <div class="left">
+    <Sidebar />
+  </div>
   <div class="main">
     {@render children?.()}
   </div>
 </div>
 
 <style lang="scss">
-  .shell {
-    display: flex;
+  @use '$lib/styles/variables' as *;
+  @use '$lib/styles/mixins' as *;
+
+  // 2-column grid mirroring endue-ai/web's AppLayout: a 64px rail
+  // sticky on the left and a flexible main column on the right.
+  .layout {
+    display: grid;
+    grid-template-columns: 64px 1fr;
     min-height: 100dvh;
     background: var(--background);
     color: var(--foreground);
+
+    @include below(sm) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .left {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    position: sticky;
+    top: 0;
+    z-index: $z-nav;
+
+    @include below(sm) {
+      display: none;
+    }
   }
 
   .main {
-    flex: 1;
     min-width: 0;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
   }
 </style>

@@ -51,7 +51,9 @@ export type InboundMail = {
   }>
 }
 
-export type IdMinter = (kind: 'MAILBOX' | 'MAIL' | 'ATTACHMENT' | 'THREAD') => string
+export type IdMinter = (
+  kind: 'MAILBOX' | 'MAIL' | 'ATTACHMENT' | 'THREAD' | 'INBOUND_LOG',
+) => string
 
 // ── mailboxes ──────────────────────────────────────────────────────
 
@@ -174,6 +176,10 @@ export async function getMail(
 
 // ── inbound ────────────────────────────────────────────────────────
 
+/** Outcome of {@link storeInbound}. `duplicate` is true when the row
+ *  was found by Message-ID idempotency check rather than newly inserted. */
+export type StoreInboundResult = { mail: MailRow; duplicate: boolean }
+
 /**
  * Persist a parsed inbound message into the recipient's Inbox.
  *
@@ -185,7 +191,7 @@ export async function storeInbound(
   db: Db,
   msg: InboundMail,
   mintId: IdMinter,
-): Promise<MailRow> {
+): Promise<StoreInboundResult> {
   // Idempotency check on Message-ID. NULL message-id falls through and
   // always inserts — those are rare and replaying them is acceptable for v1.
   if (msg.messageId) {
@@ -194,7 +200,7 @@ export async function storeInbound(
       .from(mail)
       .where(and(eq(mail.accountId, msg.accountId), eq(mail.messageId, msg.messageId)))
       .limit(1)
-    if (dup[0]) return dup[0]
+    if (dup[0]) return { mail: dup[0], duplicate: true }
   }
 
   await ensureDefaultMailboxes(db, msg.accountId, mintId)
@@ -248,7 +254,39 @@ export async function storeInbound(
 
   const inserted = await getMail(db, { accountId: msg.accountId, mailId })
   if (!inserted) throw new Error('insert succeeded but row not found')
-  return inserted
+  return { mail: inserted, duplicate: false }
+}
+
+/**
+ * Record one row in `mail_inbound_log`. Used by apps/mail's Email Worker
+ * handler so every CF invocation leaves a DB trace — including drops.
+ */
+export async function recordInboundLog(
+  db: Db,
+  input: {
+    logId: string
+    rcptTo: string
+    mailFrom: string | null
+    rawSize: number | null
+    disposition: import('../db/schema').InboundDisposition
+    accountId?: string | null
+    mailId?: string | null
+    messageId?: string | null
+    errorMessage?: string | null
+  },
+): Promise<void> {
+  await db.insert(schema.mailInboundLog).values({
+    inboundLogId: input.logId,
+    receivedAt: new Date(),
+    rcptTo: input.rcptTo,
+    mailFrom: input.mailFrom,
+    rawSize: input.rawSize ?? null,
+    disposition: input.disposition,
+    accountId: input.accountId ?? null,
+    mailId: input.mailId ?? null,
+    messageId: input.messageId ?? null,
+    errorMessage: input.errorMessage ?? null,
+  })
 }
 
 // ── outbound ───────────────────────────────────────────────────────

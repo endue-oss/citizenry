@@ -13,6 +13,8 @@ export const ID_PREFIX = {
   ATTACHMENT: 'att',
   /** Thread — bucket of related mails. */
   THREAD: 'thr',
+  /** Inbound audit-log row. */
+  INBOUND_LOG: 'inl',
 } as const
 
 export type IdKind = keyof typeof ID_PREFIX

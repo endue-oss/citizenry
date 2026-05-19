@@ -145,12 +145,55 @@ export const mailAttachment = sqliteTable(
   }),
 )
 
-export const schema = { mailbox, mail, mailAttachment }
+// ── mail_inbound_log ───────────────────────────────────────
+// Audit row per Cloudflare Email Worker invocation, including drops.
+// `mail_id` is set only when the message reached `mail`. `disposition`
+// stays in sync with the CHECK constraint in migration 0002.
+export const mailInboundLog = sqliteTable(
+  'mail_inbound_log',
+  {
+    inboundLogId: text('inbound_log_id').primaryKey(),
+    receivedAt: integer('received_at', { mode: 'timestamp_ms' })
+      .notNull()
+      .default(sql`(unixepoch() * 1000)`),
+    rcptTo: text('rcpt_to').notNull(),
+    mailFrom: text('mail_from'),
+    rawSize: integer('raw_size'),
+    disposition: text('disposition').notNull(),
+    accountId: text('account_id'),
+    mailId: text('mail_id'),
+    messageId: text('message_id'),
+    errorMessage: text('error_message'),
+  },
+  (t) => ({
+    receivedIdx: index('mail_inbound_log_received_idx').on(t.receivedAt),
+    rcptToIdx: index('mail_inbound_log_rcpt_to_idx').on(t.rcptTo),
+    dispositionIdx: index('mail_inbound_log_disposition_idx').on(t.disposition),
+    dispositionCheck: check(
+      'mail_inbound_log_disposition_check',
+      sql`disposition IN ('stored','duplicate','malformed_recipient','wrong_host','unresolved_recipient','parse_failed','store_failed')`,
+    ),
+  }),
+)
+
+export const INBOUND_DISPOSITIONS = [
+  'stored',
+  'duplicate',
+  'malformed_recipient',
+  'wrong_host',
+  'unresolved_recipient',
+  'parse_failed',
+  'store_failed',
+] as const
+export type InboundDisposition = (typeof INBOUND_DISPOSITIONS)[number]
+
+export const schema = { mailbox, mail, mailAttachment, mailInboundLog }
 export type Schema = typeof schema
 
 export type MailboxRow = typeof mailbox.$inferSelect
 export type MailRow = typeof mail.$inferSelect
 export type MailAttachmentRow = typeof mailAttachment.$inferSelect
+export type MailInboundLogRow = typeof mailInboundLog.$inferSelect
 
 /** JMAP well-known mailbox roles, in display order. */
 export const WELL_KNOWN_ROLES = ['inbox', 'sent', 'drafts', 'archive', 'trash', 'junk'] as const

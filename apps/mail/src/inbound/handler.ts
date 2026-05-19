@@ -3,20 +3,29 @@
 // local-part identifies the account (we resolve `local@MAIL_DOMAIN` →
 // `account_id`).
 //
-// The handler:
-//   1. Reads the raw RFC 5322 message stream into memory.
-//   2. Parses it with postal-mime.
-//   3. For each `to` whose host matches MAIL_DOMAIN, resolves the local-part
-//      to an account_id and persists one row per account.
-//   4. Unknown recipients are dropped silently (we don't reject — accepting
-//      and then dropping is the conservative default for v0).
+// The handler is observability-first: every invocation leaves a row in
+// `mail_inbound_log`, including drops. Operators can verify mail is
+// arriving with:
+//
+//   wrangler d1 execute citizenry-mail-db --remote \
+//     --command="SELECT * FROM mail_inbound_log ORDER BY received_at DESC LIMIT 20;"
+//
+// Stored messages land in `mail` AND get a 'stored' row in the log;
+// dropped messages stay in the log with `mail_id IS NULL` and a
+// disposition that explains why.
 
 import { drizzle } from 'drizzle-orm/d1'
 import { eq } from 'drizzle-orm'
 import PostalMime from 'postal-mime'
 import { schema as identitySchema } from '@citizenry/identity/schema'
 import { schema as mailSchema } from '@citizenry/mail/schema'
-import { storeInbound, type InboundMail, type AddressEntry } from '@citizenry/mail'
+import {
+  storeInbound,
+  recordInboundLog,
+  type InboundMail,
+  type AddressEntry,
+  type InboundDisposition,
+} from '@citizenry/mail'
 import { mintId } from '../ids'
 import type { Bindings } from '../env'
 
@@ -32,37 +41,62 @@ type ForwardableLike = {
   setReject?: (reason: string) => void
 }
 
+type LogCtx = {
+  rcptTo: string
+  mailFrom: string | null
+  rawSize: number | null
+}
+
 export async function handleInboundMail(
   message: ForwardableLike,
   env: Bindings,
   _ctx: { waitUntil: (p: Promise<unknown>) => void },
 ): Promise<void> {
+  const mailDb = drizzle(env.DB_MAIL, { schema: mailSchema })
+  const logCtx: LogCtx = {
+    rcptTo: message.to,
+    mailFrom: message.from ?? null,
+    rawSize: typeof message.rawSize === 'number' ? message.rawSize : null,
+  }
+
   const recipient = message.to.toLowerCase()
   const at = recipient.lastIndexOf('@')
-  if (at < 0) return // malformed; drop silently
+  if (at < 0) {
+    await record(mailDb, logCtx, { disposition: 'malformed_recipient' })
+    return
+  }
 
   const local = recipient.slice(0, at)
   const host = recipient.slice(at + 1)
 
-  // Hard reject anything addressed to a host we don't own. CF's Email
-  // Routing should not give us such a message, but defense in depth.
-  if (host !== env.MAIL_DOMAIN.toLowerCase()) return
-
-  const accountId = await resolveLocalPart(env, local)
-  if (!accountId) {
-    // No matching agent — drop silently. Logged for diagnostics.
-    console.log(JSON.stringify({ inbound: 'unresolved_recipient', recipient }))
+  if (host !== env.MAIL_DOMAIN.toLowerCase()) {
+    await record(mailDb, logCtx, {
+      disposition: 'wrong_host',
+      errorMessage: `expected host '${env.MAIL_DOMAIN}', got '${host}'`,
+    })
     return
   }
 
-  // Stream → ArrayBuffer (CF Email max is 25 MiB). postal-mime accepts a
-  // string, ArrayBuffer, Uint8Array, or Blob.
-  const buf = await streamToArrayBuffer(message.raw)
-  const parser = new PostalMime()
-  const parsed = await parser.parse(buf)
+  const accountId = await resolveLocalPart(env, local)
+  if (!accountId) {
+    await record(mailDb, logCtx, { disposition: 'unresolved_recipient' })
+    return
+  }
+
+  let parsed: Awaited<ReturnType<PostalMime['parse']>>
+  try {
+    const buf = await streamToArrayBuffer(message.raw)
+    parsed = await new PostalMime().parse(buf)
+  } catch (err) {
+    await record(mailDb, logCtx, {
+      disposition: 'parse_failed',
+      accountId,
+      errorMessage: err instanceof Error ? err.message : String(err),
+    })
+    return
+  }
 
   const refs = parseRefHeader(parsed.references ?? null)
-
   const inbound: InboundMail = {
     accountId,
     messageId: parsed.messageId ?? null,
@@ -88,8 +122,77 @@ export async function handleInboundMail(
     })),
   }
 
-  const db = drizzle(env.DB_MAIL, { schema: mailSchema })
-  await storeInbound(db, inbound, mintId)
+  try {
+    const result = await storeInbound(mailDb, inbound, mintId)
+    await record(mailDb, logCtx, {
+      disposition: result.duplicate ? 'duplicate' : 'stored',
+      accountId,
+      mailId: result.mail.mailId,
+      messageId: inbound.messageId,
+    })
+  } catch (err) {
+    await record(mailDb, logCtx, {
+      disposition: 'store_failed',
+      accountId,
+      messageId: inbound.messageId,
+      errorMessage: err instanceof Error ? err.message : String(err),
+    })
+    throw err
+  }
+}
+
+// ── audit ──────────────────────────────────────────────────────────
+
+type RecordInput = {
+  disposition: InboundDisposition
+  accountId?: string | null
+  mailId?: string | null
+  messageId?: string | null
+  errorMessage?: string | null
+}
+
+async function record(
+  db: ReturnType<typeof drizzle<typeof mailSchema>>,
+  ctx: LogCtx,
+  input: RecordInput,
+): Promise<void> {
+  const logId = mintId('INBOUND_LOG')
+  const line = {
+    inbound: input.disposition,
+    rcpt_to: ctx.rcptTo,
+    mail_from: ctx.mailFrom,
+    raw_size: ctx.rawSize,
+    account_id: input.accountId ?? null,
+    mail_id: input.mailId ?? null,
+    message_id: input.messageId ?? null,
+    error_message: input.errorMessage ?? null,
+    inbound_log_id: logId,
+  }
+  console.log(JSON.stringify(line))
+
+  try {
+    await recordInboundLog(db, {
+      logId,
+      rcptTo: ctx.rcptTo,
+      mailFrom: ctx.mailFrom,
+      rawSize: ctx.rawSize,
+      disposition: input.disposition,
+      accountId: input.accountId,
+      mailId: input.mailId,
+      messageId: input.messageId,
+      errorMessage: input.errorMessage,
+    })
+  } catch (err) {
+    // Audit-log write failure is logged but never throws — a broken
+    // inbound_log table must not also break the primary delivery path.
+    console.log(
+      JSON.stringify({
+        inbound: 'audit_write_failed',
+        inbound_log_id: logId,
+        error_message: err instanceof Error ? err.message : String(err),
+      }),
+    )
+  }
 }
 
 // ── helpers ────────────────────────────────────────────────────────

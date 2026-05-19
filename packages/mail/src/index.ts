@@ -16,9 +16,13 @@ export {
   listMails,
   getMail,
   storeInbound,
+  recordInboundLog,
   sendMail,
   type MailSender,
   type OutboundMessage,
   type InboundMail,
   type IdMinter,
+  type StoreInboundResult,
 } from './service'
+export type { InboundDisposition, MailInboundLogRow } from './db/schema'
+export { INBOUND_DISPOSITIONS } from './db/schema'

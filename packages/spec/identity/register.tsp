@@ -92,7 +92,7 @@ model AgentRegisterResponse {
  * @status confirmed
  */
 @tag("Register")
-@route("/api/v1/agent/register")
+@route("/v1/agent/register")
 @useAuth(EnrollmentBearerAuth)
 interface Register {
   /**

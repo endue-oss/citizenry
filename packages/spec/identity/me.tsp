@@ -14,7 +14,7 @@ namespace Citizenry.Identity;
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 /**
- * Self-info response (`GET /api/v1/agent/me`).
+ * Self-info response (`GET /v1/agent/me`).
  * @status confirmed
  */
 model AgentMeGetResponse {
@@ -153,7 +153,7 @@ model SelfRevokeRequest {
  * @status confirmed
  */
 @tag("Self-service")
-@route("/api/v1/agent/me")
+@route("/v1/agent/me")
 interface Me {
   /**
    * Read self-info. Requires `Authorization: Bearer <self-signed JWT>`.

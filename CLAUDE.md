@@ -78,7 +78,7 @@ wrangler d1 execute citizenry-identity --remote \
 ```
 
 Runtime config (operator-managed, set via admin-api `PUT
-/api/v1/admin/config/:key`) lives in the **config D1**:
+/v1/admin/config/:key`) lives in the **config D1**:
 
 | Key                                       | Used by      | Notes |
 | ----------------------------------------- | ------------ | ----- |

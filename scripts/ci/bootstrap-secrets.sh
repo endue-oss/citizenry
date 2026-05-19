@@ -25,7 +25,7 @@
 #                        via `wrangler d1 execute citizenry-config-db ...`.
 #
 # Outbound provider credentials (Resend, AWS SES) are operator-managed
-# through the admin api `PUT /api/v1/admin/config/:key`. They are not
+# through the admin api `PUT /v1/admin/config/:key`. They are not
 # handled here. See apps/mail/wrangler.toml for the key list.
 #
 # Inspect values:

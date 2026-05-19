@@ -34,9 +34,9 @@ using TypeSpec.OpenAPI;
  * # Authentication
  *
  * - **Public** routes (`/.well-known/*`, `/agent/{id}/*`) — no auth, cacheable.
- * - **Agent** self-service (`/api/v1/agent/me*`) — `Authorization: Bearer <self-signed JWT>` (RFC 7523).
- * - **Register** (`/api/v1/agent/register`) — `Authorization: Bearer eret_<enrollment token>`.
- * - **Admin** (`/api/v1/enrollments*`, `/api/v1/admin/*`) — `X-Service-Key` (PSK).
+ * - **Agent** self-service (`/v1/agent/me*`) — `Authorization: Bearer <self-signed JWT>` (RFC 7523).
+ * - **Register** (`/v1/agent/register`) — `Authorization: Bearer eret_<enrollment token>`.
+ * - **Admin** (`/v1/enrollments*`, `/v1/admin/*`) — `X-Service-Key` (PSK).
  *
  * # Standards
  *

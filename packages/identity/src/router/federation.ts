@@ -126,7 +126,7 @@ export const mountPublicFederationRoutes = <T extends Hono<Env>>(app: T): T => {
 
 /** Mount the admin federation routes onto an existing Hono router. */
 export const mountAdminFederationRoutes = <T extends Hono<Env>>(app: T): T => {
-  app.post('/api/v1/admin/federation/peers', (c) =>
+  app.post('/v1/admin/federation/peers', (c) =>
     handle(
       c,
       async () => {
@@ -154,7 +154,7 @@ export const mountAdminFederationRoutes = <T extends Hono<Env>>(app: T): T => {
     ),
   )
 
-  app.get('/api/v1/admin/federation/peers', (c) =>
+  app.get('/v1/admin/federation/peers', (c) =>
     handle(c, async () => {
       const stateRaw = c.req.query('state')
       const state =
@@ -169,11 +169,11 @@ export const mountAdminFederationRoutes = <T extends Hono<Env>>(app: T): T => {
     }),
   )
 
-  app.get('/api/v1/admin/federation/peers/:id', (c) =>
+  app.get('/v1/admin/federation/peers/:id', (c) =>
     handle(c, () => c.var.federation.getPeer(c.req.param('id'))),
   )
 
-  app.post('/api/v1/admin/federation/peers/:id/transition', (c) =>
+  app.post('/v1/admin/federation/peers/:id/transition', (c) =>
     handle(c, async () => {
       const body = (await c.req.json()) as { target_state: FederationPeerState }
       if (!body || !STATES.has(body.target_state)) {
@@ -194,14 +194,14 @@ export const mountAdminFederationRoutes = <T extends Hono<Env>>(app: T): T => {
     }),
   )
 
-  app.delete('/api/v1/admin/federation/peers/:id', (c) =>
+  app.delete('/v1/admin/federation/peers/:id', (c) =>
     handle(c, async () => {
       await c.var.federation.revokePeer(c.req.param('id'))
       return undefined
     }),
   )
 
-  app.post('/api/v1/admin/federation/peers/:id/jwks-refresh', (c) =>
+  app.post('/v1/admin/federation/peers/:id/jwks-refresh', (c) =>
     handle(c, () => c.var.federation.refreshJwks(c.req.param('id'))),
   )
 

@@ -15,7 +15,7 @@ related:
 
 ## Summary
 
-`POST /api/v1/admin/federation/peers` was called for an `issuer_url` that
+`POST /v1/admin/federation/peers` was called for an `issuer_url` that
 already has a non-revoked `federation_peer` row.
 
 ## When this is raised
@@ -29,9 +29,9 @@ already has a non-revoked `federation_peer` row.
 ## What to do
 
 - If you intend to re-establish a connection, first revoke the existing peer
-  via `DELETE /api/v1/admin/federation/peers/:id`, then POST again.
+  via `DELETE /v1/admin/federation/peers/:id`, then POST again.
 - If you intended a state change (resume / suspend), use
-  `POST /api/v1/admin/federation/peers/:id/transition` with `target_state`.
+  `POST /v1/admin/federation/peers/:id/transition` with `target_state`.
 
 ## Server-side cause
 
@@ -52,8 +52,8 @@ already has a non-revoked `federation_peer` row.
     "state":       "trusted"
   },
   "method":    "POST",
-  "instance":  "/api/v1/admin/federation/peers",
-  "request_url": "https://api.citizenry.id/api/v1/admin/federation/peers",
+  "instance":  "/v1/admin/federation/peers",
+  "request_url": "https://api.citizenry.id/v1/admin/federation/peers",
   "timestamp": "2026-05-17T09:30:00.000Z"
 }
 ```

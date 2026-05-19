@@ -50,8 +50,8 @@ guard. Lets future maintainers find it.>
   "message":   "<message string the server actually emits>",
   "detail":    { },
   "method":    "GET",
-  "instance":  "/api/v1/...",
-  "request_url": "https://api.citizenry.id/api/v1/...",
+  "instance":  "/v1/...",
+  "request_url": "https://api.citizenry.id/v1/...",
   "timestamp": "2026-05-17T00:00:00.000Z"
 }
 ```

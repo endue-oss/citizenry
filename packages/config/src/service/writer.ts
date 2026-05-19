@@ -1,6 +1,6 @@
 // Write/delete config service.
 //
-// Mounted under api `/_admin/api/v1/admin/config/*` and reached only
+// Mounted under api `/_admin/v1/admin/config/*` and reached only
 // through admin-api's X-Service-Key proxy. The data-plane packages
 // (identity, mail) do not import this — they hold a `ConfigReader`
 // only.

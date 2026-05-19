@@ -11,10 +11,10 @@ type Vars = { db: Db } & Partial<FederationVars>
  * User-facing identity router.
  *
  * Routes (mirror the reference spec — exposed as-is when mounted at root):
- *   POST   /api/v1/agent/register      (Bearer enrollment token)
- *   GET    /api/v1/agent/me            (Bearer self-signed JWT)
- *   POST   /api/v1/agent/me/rotate-key (body JWS, old key signed)
- *   DELETE /api/v1/agent/me            (body JWS, current key signed)
+ *   POST   /v1/agent/register      (Bearer enrollment token)
+ *   GET    /v1/agent/me            (Bearer self-signed JWT)
+ *   POST   /v1/agent/me/rotate-key (body JWS, old key signed)
+ *   DELETE /v1/agent/me            (body JWS, current key signed)
  *   GET    /.well-known/jwks.json      (public, no auth — federation/instance only, see ADR-2026-0003)
  *   GET    /.well-known/did.json       (public, no auth)
  *   GET    /agent/:id/jwks.json        (public, no auth)
@@ -22,12 +22,12 @@ type Vars = { db: Db } & Partial<FederationVars>
  */
 export const identityRouter = new Hono<{ Variables: Vars }>()
   // ── Register ──────────────────────────────────────────
-  .post('/api/v1/agent/register', (c) => c.json({ todo: 'register' }, 201))
+  .post('/v1/agent/register', (c) => c.json({ todo: 'register' }, 201))
 
   // ── /me self-service ─────────────────────────────────
-  .get('/api/v1/agent/me', (c) => c.json({ todo: 'whoami' }))
-  .post('/api/v1/agent/me/rotate-key', (c) => c.json({ todo: 'rotate-key' }))
-  .delete('/api/v1/agent/me', (c) => c.body(null, 204))
+  .get('/v1/agent/me', (c) => c.json({ todo: 'whoami' }))
+  .post('/v1/agent/me/rotate-key', (c) => c.json({ todo: 'rotate-key' }))
+  .delete('/v1/agent/me', (c) => c.body(null, 204))
 
   // ── Public well-known (issuer) ───────────────────────
   // /.well-known/jwks.json carries the instance-level federation-signing key set

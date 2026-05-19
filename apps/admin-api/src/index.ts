@@ -6,7 +6,7 @@
 //   POST /auth/refresh                     — refresh_token → new JWT pair
 //   POST /auth/logout                      — revoke a refresh token
 //   GET  /auth/me                          — current admin claims (Bearer)
-//   *    /api/v1/admin/*                   — JWT-protected, proxied to api
+//   *    /v1/admin/*                   — JWT-protected, proxied to api
 //
 // Internal hop (admin-api → api) still rides X-Service-Key, so the api
 // worker can authenticate calls coming from this gateway separately
@@ -30,7 +30,7 @@ app.get('/_health', (c) => c.json({ service: 'citizenry-admin-api', status: 'ok'
 app.route('/', authRouter)
 app.route('/', meRouter)
 
-// JWT-protected proxy for /api/v1/admin/*.
+// JWT-protected proxy for /v1/admin/*.
 //
 // The middleware verifies a Bearer access token signed with
 // ADMIN_JWT_SECRET; the request is then forwarded via the API service
@@ -71,7 +71,7 @@ const proxied = new Hono<{ Bindings: Bindings; Variables: AuthVars }>()
 
 // Mount under the admin prefix. `c.req.url` inside the proxied handler
 // retains the full original URL, which is what we need to construct
-// the upstream `/_admin/api/v1/admin/...` path.
-app.route('/api/v1/admin', proxied)
+// the upstream `/_admin/v1/admin/...` path.
+app.route('/v1/admin', proxied)
 
 export default app

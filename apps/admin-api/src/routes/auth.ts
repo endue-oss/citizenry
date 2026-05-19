@@ -180,7 +180,7 @@ export const authRouter = new Hono<{ Bindings: Bindings; Variables: Vars }>()
 
 // ── GET /auth/me ────────────────────────────────────────
 // Returns the claims of the presenting access token. JWT-protected
-// like the rest of /api/v1/admin/*. Lives on the auth router for
+// like the rest of /v1/admin/*. Lives on the auth router for
 // route locality.
 export const meRouter = new Hono<{ Bindings: Bindings; Variables: AuthVars }>()
   .use('*', adminJwtAuth)

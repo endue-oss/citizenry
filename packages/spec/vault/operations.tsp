@@ -127,7 +127,7 @@ model VaultEntryAdminGetResponse extends VaultEntryBase {}
  * @status draft
  */
 @tag("Vault Admin")
-@route("/api/v1/admin/vault/entries")
+@route("/v1/admin/vault/entries")
 @useAuth(ServiceKeyAuth)
 interface AdminEntries {
   /**

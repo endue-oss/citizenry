@@ -14,7 +14,7 @@ export type RenderedTemplate = {
 
 // ── human_verification ─────────────────────────────────────
 // Sent by api when a human starts registration. The recipient enters
-// the code at POST /api/v1/humans/:id/verify within 30 minutes.
+// the code at POST /v1/humans/:id/verify within 30 minutes.
 
 export type HumanVerificationContext = {
   /** Verification code (6-digit numeric as a string). */

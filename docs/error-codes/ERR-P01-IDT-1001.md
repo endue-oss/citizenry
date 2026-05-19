@@ -49,8 +49,8 @@ The JWS header's `alg` claim is not the EdDSA algorithm required by Citizenry.
   "code":      "ERR-P01-IDT-1001",
   "message":   "unexpected alg: RS256",
   "method":    "GET",
-  "instance":  "/api/v1/agent/me",
-  "request_url": "https://api.citizenry.id/api/v1/agent/me",
+  "instance":  "/v1/agent/me",
+  "request_url": "https://api.citizenry.id/v1/agent/me",
   "timestamp": "2026-05-17T07:00:00.000Z"
 }
 ```

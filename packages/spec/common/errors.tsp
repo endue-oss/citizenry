@@ -38,7 +38,7 @@ model BaseError {
   /** HTTP method (e.g. "POST") */
   method: string;
 
-  /** Request path (e.g. "/api/v1/agent/register") */
+  /** Request path (e.g. "/v1/agent/register") */
   instance: string;
 
   /** Full request URL */

@@ -180,7 +180,7 @@ export const verifyAgentJwt = async (
 
 /**
  * Enrollment Bearer token shape check — actual hash compare / atomic decrement
- * happens in the `/api/v1/agent/register` handler. Middleware only checks the prefix.
+ * happens in the `/v1/agent/register` handler. Middleware only checks the prefix.
  */
 export const checkEnrollmentBearerShape = (token: string): void => {
   if (!/^eret_[A-Za-z0-9]{32,}$/.test(token)) {

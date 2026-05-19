@@ -20,7 +20,7 @@ from its current state under the RFC-0001 state machine.
 
 ## When this is raised
 
-- `POST /api/v1/admin/federation/peers/:id/transition` with `target_state`
+- `POST /v1/admin/federation/peers/:id/transition` with `target_state`
   that is neither `trusted` nor `suspended`, or where the current state does
   not allow that transition.
 - An inbound `federation.invite` arrives for a peer that is already
@@ -31,7 +31,7 @@ from its current state under the RFC-0001 state machine.
 ## What to do
 
 - Inspect the current state via
-  `GET /api/v1/admin/federation/peers/:id` and consult the
+  `GET /v1/admin/federation/peers/:id` and consult the
   RFC-0001 state machine:
 
   ```
@@ -63,8 +63,8 @@ from its current state under the RFC-0001 state machine.
   "message":   "trusted → invited not allowed",
   "detail":    { "from": "trusted", "to": "invited" },
   "method":    "POST",
-  "instance":  "/api/v1/admin/federation/peers/fdp_01J…/transition",
-  "request_url": "https://api.citizenry.id/api/v1/admin/federation/peers/fdp_01J…/transition",
+  "instance":  "/v1/admin/federation/peers/fdp_01J…/transition",
+  "request_url": "https://api.citizenry.id/v1/admin/federation/peers/fdp_01J…/transition",
   "timestamp": "2026-05-17T09:30:00.000Z"
 }
 ```

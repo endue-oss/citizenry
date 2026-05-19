@@ -49,8 +49,8 @@ The JWT's `exp` (expiration) claim is in the past, or the claim is missing.
   "message":   "JWT expired",
   "detail":    { "exp": 1715923200, "now": 1715926800 },
   "method":    "GET",
-  "instance":  "/api/v1/agent/me",
-  "request_url": "https://api.citizenry.id/api/v1/agent/me",
+  "instance":  "/v1/agent/me",
+  "request_url": "https://api.citizenry.id/v1/agent/me",
   "timestamp": "2026-05-17T07:00:00.000Z"
 }
 ```

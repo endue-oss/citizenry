@@ -18,18 +18,18 @@ The federation peer id referenced by an admin operation does not exist.
 
 ## When this is raised
 
-- `GET /api/v1/admin/federation/peers/:id` — no `federation_peer` row with the
+- `GET /v1/admin/federation/peers/:id` — no `federation_peer` row with the
   given `fdp_*` id.
-- `POST /api/v1/admin/federation/peers/:id/transition` or `/jwks-refresh` for
+- `POST /v1/admin/federation/peers/:id/transition` or `/jwks-refresh` for
   an unknown id.
-- `DELETE /api/v1/admin/federation/peers/:id` for an unknown id (note: revoke
+- `DELETE /v1/admin/federation/peers/:id` for an unknown id (note: revoke
   of an already-revoked peer is **idempotent**, returns 204, not 404).
 - Inbound `federation.confirm`, `federation.revoke`, or `federation.suspend`
   references an issuer that has no corresponding local row.
 
 ## What to do
 
-- Verify the `fdp_*` id with `GET /api/v1/admin/federation/peers`.
+- Verify the `fdp_*` id with `GET /v1/admin/federation/peers`.
 - If you expected the peer to exist, check whether it was revoked — revoked
   rows still respond to read operations until pruning.
 
@@ -51,8 +51,8 @@ The federation peer id referenced by an admin operation does not exist.
   "code":      "ERR-P01-FED-3001",
   "message":   "fdp fdp_01JABCDXYZ012345678901234",
   "method":    "GET",
-  "instance":  "/api/v1/admin/federation/peers/fdp_01JABCDXYZ012345678901234",
-  "request_url": "https://api.citizenry.id/api/v1/admin/federation/peers/fdp_01JABCDXYZ012345678901234",
+  "instance":  "/v1/admin/federation/peers/fdp_01JABCDXYZ012345678901234",
+  "request_url": "https://api.citizenry.id/v1/admin/federation/peers/fdp_01JABCDXYZ012345678901234",
   "timestamp": "2026-05-17T09:30:00.000Z"
 }
 ```

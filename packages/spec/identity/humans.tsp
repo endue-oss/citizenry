@@ -13,13 +13,13 @@ namespace Citizenry.Identity;
 // Human self-registration with email verification
 //
 // Flow (see ADR-2026-0005):
-//   1. POST /api/v1/humans                  — start, code sent via mail Worker
-//   2. POST /api/v1/humans/:id/verify       — submit 6-digit code
-//   3. POST /api/v1/humans/:id/verify/resend — re-request code (rate-limited)
+//   1. POST /v1/humans                  — start, code sent via mail Worker
+//   2. POST /v1/humans/:id/verify       — submit 6-digit code
+//   3. POST /v1/humans/:id/verify/resend — re-request code (rate-limited)
 //
 // All routes are unauthenticated — the email round-trip is the
 // credential. Once verified, the `hu_<ULID>` is consumable as
-// `owner_human_principal_id` on POST /api/v1/enrollments.
+// `owner_human_principal_id` on POST /v1/enrollments.
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 /**
@@ -76,7 +76,7 @@ model HumanVerifyRequest {
 
 /**
  * Response after successful verification — the human is now `active`
- * and can be referenced from `POST /api/v1/enrollments`.
+ * and can be referenced from `POST /v1/enrollments`.
  *
  * @status draft
  */
@@ -113,7 +113,7 @@ model HumanResendResponse {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 @tag("Humans")
-@route("/api/v1/humans")
+@route("/v1/humans")
 @useAuth(NoAuth)
 interface Humans {
   /**

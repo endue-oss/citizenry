@@ -284,7 +284,7 @@ interface FederationHandshake {
  * @status confirmed
  */
 @tag("Federation")
-@route("/api/v1/admin/federation/peers")
+@route("/v1/admin/federation/peers")
 @useAuth(ServiceKeyAuth)
 interface AdminFederationPeers {
   /**

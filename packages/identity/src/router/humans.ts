@@ -1,8 +1,8 @@
 // Public, unauth human-registration routes.
 //
-//   POST /api/v1/humans                  → start verification flow
-//   POST /api/v1/humans/:id/verify       → submit code
-//   POST /api/v1/humans/:id/verify/resend → request another code
+//   POST /v1/humans                  → start verification flow
+//   POST /v1/humans/:id/verify       → submit code
+//   POST /v1/humans/:id/verify/resend → request another code
 //
 // All BaseError-shaped (packages/spec/common/errors.tsp BaseError). The
 // HumanError catalog maps to specific HTTP status + ERR-P01-S01-{NNNN}
@@ -84,7 +84,7 @@ function service(c: Context<Env>) {
 
 export const humansRouter = new Hono<Env>()
   // ── 1: start ───────────────────────────────────────────
-  .post('/api/v1/humans', async (c) => {
+  .post('/v1/humans', async (c) => {
     let body: { mail?: string; display_name?: string }
     try {
       body = (await c.req.json()) as { mail?: string; display_name?: string }
@@ -132,7 +132,7 @@ export const humansRouter = new Hono<Env>()
   })
 
   // ── 3: verify ──────────────────────────────────────────
-  .post('/api/v1/humans/:id/verify', async (c) => {
+  .post('/v1/humans/:id/verify', async (c) => {
     let body: { code?: string }
     try {
       body = (await c.req.json()) as { code?: string }
@@ -160,7 +160,7 @@ export const humansRouter = new Hono<Env>()
   })
 
   // ── 4: resend ──────────────────────────────────────────
-  .post('/api/v1/humans/:id/verify/resend', async (c) => {
+  .post('/v1/humans/:id/verify/resend', async (c) => {
     try {
       const id = c.req.param('id')
       const humanRow = await service(c).findById(id)

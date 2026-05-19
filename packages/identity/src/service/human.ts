@@ -1,16 +1,16 @@
 // Human self-registration with email verification.
 //
-// Flow (see ADR-2026-0005 + the /api/v1/humans spec):
+// Flow (see ADR-2026-0005 + the /v1/humans spec):
 //
-//   1. POST /api/v1/humans { mail }
+//   1. POST /v1/humans { mail }
 //        → mint principal + human (status='pending_verification')
 //        → mint verification row with code_hash + 30-min expiry
 //        → return code to the caller (Notifier sends it via mail Worker)
 //   2. recipient enters the 6-digit code
-//   3. POST /api/v1/humans/:id/verify { code }
+//   3. POST /v1/humans/:id/verify { code }
 //        → constant-time hash compare against stored peppered SHA-256
 //        → flip human.status='active', humanEmailVerification.verifiedAt
-//   4. POST /api/v1/humans/:id/verify/resend
+//   4. POST /v1/humans/:id/verify/resend
 //        → bumps resend_count, recomputes next_resend_at with the
 //          arithmetic backoff (1,2,3,...,60 min)
 //
@@ -277,7 +277,7 @@ export function createHumanService(deps: HumanServiceDeps) {
       return { verification: updated, code }
     },
 
-    /** Read-only lookup used by GET /api/v1/humans/:id (if exposed). */
+    /** Read-only lookup used by GET /v1/humans/:id (if exposed). */
     findById: async (humanId: string): Promise<HumanRow | undefined> => {
       const rows = await deps.db.select().from(human).where(eq(human.principalId, humanId)).limit(1)
       return rows[0]

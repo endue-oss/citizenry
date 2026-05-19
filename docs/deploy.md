@@ -24,7 +24,7 @@ Storage:
 - **D1** `citizenry-identity` — identity domain. Migrations: `packages/identity/migrations/*.sql`.
 - **D1** `citizenry-mail` — mail domain. Migrations: `packages/mail/migrations/*.sql`.
 - **D1** `citizenry-config` — runtime control-plane key/value store.
-  Written through admin-api (api `/_admin/api/v1/admin/config/*`), read
+  Written through admin-api (api `/_admin/v1/admin/config/*`), read
   by data-plane code via `packages/config` with a colo-local TTL cache
   (default 5 minutes). Every key follows `{namespace}.{keyname}` —
   e.g. `admin.password`, `mail.outbound.resend.api_key`. Migrations:
@@ -50,7 +50,7 @@ Admin model:
   credential channel (see "Retrieving the admin password" below).
   Setting `ADMIN_PASSWORD` rotates the value; leaving it unset on
   subsequent deploys is a no-op.
-- Every `/api/v1/admin/*` route on `admin-api` requires the access
+- Every `/v1/admin/*` route on `admin-api` requires the access
   token. After verification, `admin-api` proxies the request to api
   `/_admin/*` with the existing `SERVICE_KEY` PSK plus an `X-Admin-Id`
   breadcrumb. The two layers of auth keep operator credentials
@@ -251,17 +251,17 @@ after deploy, no redeploy needed:
 
 ```bash
 # Resend
-curl -X PUT https://<admin-api>/api/v1/admin/config/mail.outbound.resend.api_key \
+curl -X PUT https://<admin-api>/v1/admin/config/mail.outbound.resend.api_key \
   -H "Authorization: Bearer <admin access token>" \
   -H "Content-Type: application/json" \
   -d '{"value":"re_xxx..."}'
 
 # AWS SES (both required to activate)
-curl -X PUT https://<admin-api>/api/v1/admin/config/mail.outbound.aws_ses.access_key_id \
+curl -X PUT https://<admin-api>/v1/admin/config/mail.outbound.aws_ses.access_key_id \
   -H "Authorization: Bearer <admin access token>" \
   -H "Content-Type: application/json" \
   -d '{"value":"AKIA..."}'
-curl -X PUT https://<admin-api>/api/v1/admin/config/mail.outbound.aws_ses.secret_access_key \
+curl -X PUT https://<admin-api>/v1/admin/config/mail.outbound.aws_ses.secret_access_key \
   -H "Authorization: Bearer <admin access token>" \
   -H "Content-Type: application/json" \
   -d '{"value":"..."}'

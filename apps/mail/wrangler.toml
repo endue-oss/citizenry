@@ -58,7 +58,7 @@ MAIL_DOMAIN = "citizenry.id"
 name = "MAIL"
 
 # Outbound provider credentials live in the config D1, not in Worker
-# secrets. Set them via admin api `PUT /api/v1/admin/config/:key`:
+# secrets. Set them via admin api `PUT /v1/admin/config/:key`:
 #
 #   Resend (priority 2)
 #     mail.outbound.resend.api_key

@@ -41,7 +41,7 @@ model AgentAdminGetResponse {
  * @status confirmed
  */
 @tag("Admin")
-@route("/api/v1/admin/enrollments")
+@route("/v1/admin/enrollments")
 @useAuth(ServiceKeyAuth)
 interface AdminEnrollments {
   /**
@@ -62,7 +62,7 @@ interface AdminEnrollments {
  * @status confirmed
  */
 @tag("Admin")
-@route("/api/v1/admin/agents")
+@route("/v1/admin/agents")
 @useAuth(ServiceKeyAuth)
 interface AdminAgents {
   /**

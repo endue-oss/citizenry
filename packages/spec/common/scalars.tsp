@@ -74,7 +74,7 @@ scalar enrollmentId extends string;
  * Enrollment token (raw) — `eret_` + 32+ chars (Crockford Base32 + alpha).
  *
  * Surfaced once at bootstrap and stored as peppered SHA-256.
- * Sent as `Authorization: Bearer eret_…` to `/api/v1/agent/register`.
+ * Sent as `Authorization: Bearer eret_…` to `/v1/agent/register`.
  * @status confirmed
  */
 @pattern("^eret_[A-Za-z0-9]{32,}$")

@@ -1,10 +1,10 @@
 // Admin-only router for config — mounted by `apps/api` under `/_admin`.
 //
 // External surface (after admin-api's proxy):
-//   GET    /api/v1/admin/config            → list (optional `?prefix=`)
-//   GET    /api/v1/admin/config/:key       → one entry, 404 if missing
-//   PUT    /api/v1/admin/config/:key       → upsert
-//   DELETE /api/v1/admin/config/:key       → idempotent delete
+//   GET    /v1/admin/config            → list (optional `?prefix=`)
+//   GET    /v1/admin/config/:key       → one entry, 404 if missing
+//   PUT    /v1/admin/config/:key       → upsert
+//   DELETE /v1/admin/config/:key       → idempotent delete
 //
 // Auth is handled by the parent `apps/api` admin middleware (the same
 // X-Service-Key PSK that gates every other `/_admin/*` route).
@@ -19,7 +19,7 @@ type Vars = { db: Db }
 
 export const adminConfigRouter = new Hono<{ Variables: Vars }>()
   // ── List ──────────────────────────────────────────────
-  .get('/api/v1/admin/config', async (c) => {
+  .get('/v1/admin/config', async (c) => {
     const reader = createConfigReader(c.var.db)
     const prefix = c.req.query('prefix')
     const items = await reader.list(prefix)
@@ -35,7 +35,7 @@ export const adminConfigRouter = new Hono<{ Variables: Vars }>()
   })
 
   // ── Read one ──────────────────────────────────────────
-  .get('/api/v1/admin/config/:key', async (c) => {
+  .get('/v1/admin/config/:key', async (c) => {
     const reader = createConfigReader(c.var.db)
     const entry = await reader.get(c.req.param('key'))
     if (!entry) {
@@ -51,7 +51,7 @@ export const adminConfigRouter = new Hono<{ Variables: Vars }>()
   })
 
   // ── Upsert ────────────────────────────────────────────
-  .put('/api/v1/admin/config/:key', async (c) => {
+  .put('/v1/admin/config/:key', async (c) => {
     let body: unknown
     try {
       body = await c.req.json()
@@ -92,7 +92,7 @@ export const adminConfigRouter = new Hono<{ Variables: Vars }>()
   })
 
   // ── Delete (idempotent) ───────────────────────────────
-  .delete('/api/v1/admin/config/:key', async (c) => {
+  .delete('/v1/admin/config/:key', async (c) => {
     const writer = createConfigWriter(c.var.db)
     await writer.delete(c.req.param('key'))
     return c.body(null, 204)

@@ -56,8 +56,8 @@ not pass the structural checks (`protocol_version`, `issuer`,
   "message":   "HTTP 503 from https://bob.example/.well-known/citizenry-peer",
   "detail":    { "status": 503 },
   "method":    "POST",
-  "instance":  "/api/v1/admin/federation/peers",
-  "request_url": "https://api.citizenry.id/api/v1/admin/federation/peers",
+  "instance":  "/v1/admin/federation/peers",
+  "request_url": "https://api.citizenry.id/v1/admin/federation/peers",
   "timestamp": "2026-05-17T09:30:00.000Z"
 }
 ```

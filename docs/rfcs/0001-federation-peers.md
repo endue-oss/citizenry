@@ -67,7 +67,7 @@ where citizenship issued by one instance is consumed by another.
 ### Operator walkthrough
 
 ```
-$ curl -X POST https://api.alice.citizenry.example/api/v1/admin/federation/peers \
+$ curl -X POST https://api.alice.citizenry.example/v1/admin/federation/peers \
        -H 'X-Service-Key: <PSK>' \
        -H 'Content-Type: application/json' \
        -d '{
@@ -95,7 +95,7 @@ The response to the admin POST is the new `FederationPeer` resource.
 To remove a peer:
 
 ```
-$ curl -X DELETE https://api.alice.citizenry.example/api/v1/admin/federation/peers/fdp_01J… \
+$ curl -X DELETE https://api.alice.citizenry.example/v1/admin/federation/peers/fdp_01J… \
        -H 'X-Service-Key: <PSK>'
 ```
 

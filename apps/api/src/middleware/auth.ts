@@ -14,7 +14,7 @@ type AuthVars = {
   enrollmentToken?: string
 }
 
-const PUBLIC_PATH_PREFIXES = ['/_health', '/.well-known/', '/agent/', '/api/v1/humans']
+const PUBLIC_PATH_PREFIXES = ['/_health', '/.well-known/', '/agent/', '/v1/humans']
 
 const isPublic = (path: string): boolean =>
   PUBLIC_PATH_PREFIXES.some((p) => path.startsWith(p))
@@ -54,8 +54,8 @@ export const auth: MiddlewareHandler<{
 
   // body-JWS endpoints: header Bearer is irrelevant (the body JWS authenticates).
   if (
-    (c.req.method === 'POST' && path === '/api/v1/agent/me/rotate-key') ||
-    (c.req.method === 'DELETE' && path === '/api/v1/agent/me')
+    (c.req.method === 'POST' && path === '/v1/agent/me/rotate-key') ||
+    (c.req.method === 'DELETE' && path === '/v1/agent/me')
   ) {
     return next()
   }
@@ -66,7 +66,7 @@ export const auth: MiddlewareHandler<{
   }
 
   // ── Register: only validate the enrollment Bearer shape ─────────────
-  if (path === '/api/v1/agent/register') {
+  if (path === '/v1/agent/register') {
     try {
       checkEnrollmentBearerShape(bearer)
     } catch (err) {

@@ -111,7 +111,7 @@ model EnrollmentGetResponse {
  * @status confirmed
  */
 @tag("Enrollment")
-@route("/api/v1/enrollments")
+@route("/v1/enrollments")
 @useAuth(ServiceKeyAuth)
 interface Enrollments {
   /**

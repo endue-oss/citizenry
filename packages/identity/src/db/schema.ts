@@ -268,6 +268,37 @@ export const enrollmentToken = sqliteTable(
   }),
 )
 
+// ── human_api_key ────────────────────────────────────────────
+// Long-lived bearer credential a verified human uses to call the
+// authenticated identity surface (enrollments, agent register, key
+// rotation, etc.). The raw `chk_<token>` is surfaced only once; the
+// server retains only a peppered SHA-256.
+export const humanApiKey = sqliteTable(
+  'human_api_key',
+  {
+    apiKeyId: text('api_key_id').primaryKey(),
+    tokenHash: bytes('token_hash')
+      .notNull()
+      .unique('human_api_key_token_hash_uniq'),
+    ownerHumanPrincipalId: text('owner_human_principal_id')
+      .notNull()
+      .references(() => human.principalId, { onDelete: 'cascade' }),
+    displayName: text('display_name'),
+    status: text('status').default('active').notNull(),
+    expiresAt: integer('expires_at', { mode: 'timestamp_ms' }),
+    lastUsedAt: integer('last_used_at', { mode: 'timestamp_ms' }),
+    createdAt: integer('created_at', { mode: 'timestamp_ms' })
+      .notNull()
+      .default(sql`(unixepoch() * 1000)`),
+    revokedAt: integer('revoked_at', { mode: 'timestamp_ms' }),
+  },
+  (t) => ({
+    ownerIdx: index('human_api_key_owner_idx').on(t.ownerHumanPrincipalId),
+    statusIdx: index('human_api_key_status_idx').on(t.status),
+    statusChk: check('human_api_key_status_check', sql`${t.status} IN ('active', 'revoked')`),
+  }),
+)
+
 // ── jti_replay ───────────────────────────────────────────────
 export const jtiReplay = sqliteTable(
   'jti_replay',
@@ -349,6 +380,7 @@ export const schema = {
   agent,
   agentKey,
   enrollmentToken,
+  humanApiKey,
   jtiReplay,
   auditLog,
   federationPeer,
@@ -364,6 +396,7 @@ export type HumanEmailVerificationRow = typeof humanEmailVerification.$inferSele
 export type AgentRow = typeof agent.$inferSelect
 export type AgentKeyRow = typeof agentKey.$inferSelect
 export type EnrollmentTokenRow = typeof enrollmentToken.$inferSelect
+export type HumanApiKeyRow = typeof humanApiKey.$inferSelect
 export type AuditLogRow = typeof auditLog.$inferSelect
 export type FederationPeerRow = typeof federationPeer.$inferSelect
 export type AdminRefreshTokenRow = typeof adminRefreshToken.$inferSelect

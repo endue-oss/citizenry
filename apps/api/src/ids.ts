@@ -41,6 +41,27 @@ function ulid(): string {
 
 export const newHumanId = () => `hu_${ulid()}`
 export const newHumanVerificationId = () => `hev_${ulid()}`
+export const newHumanApiKeyId = () => `hak_${ulid()}`
+
+// Raw API-Key body. `chk_` + 26-char Crockford Base32 of 130 random
+// bits; only the peppered SHA-256 is persisted. Caller surfaces this
+// once and delivers it out of band (typically via the mail Worker).
+export const newApiKeyToken = (): string => {
+  const buf = randomBytes(16)
+  let bits = 0
+  let buffer = 0
+  let out = ''
+  for (const byte of buf) {
+    buffer = (buffer << 8) | byte
+    bits += 8
+    while (bits >= 5) {
+      bits -= 5
+      out += CROCKFORD[(buffer >>> bits) & 0x1f]
+    }
+  }
+  if (bits > 0) out += CROCKFORD[(buffer << (5 - bits)) & 0x1f]
+  return `chk_${out.slice(0, 26)}`
+}
 
 export const hexToBytes = (hex: string): Uint8Array => {
   if (hex.length % 2 !== 0) throw new Error('hex length must be even')

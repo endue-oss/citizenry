@@ -44,6 +44,11 @@ export const identityMigrations: readonly Migration[] = [
     checksum: "sha256-e9886e7e3b48da1e12f23cf3665716587bb52f81ef11de97902bcd35c12bd0fa",
     sql: "-- Reverse 0002: rename `human.mail` back to `human.email` so the column\n-- name matches the project-wide identifier (\"email\") used in specs,\n-- service code, and the `human_email_verification` table. The inline\n-- UNIQUE constraint follows the column rename; the SQLite-internal\n-- constraint name stays `human_email_uniq`, which now reads correctly.\n\nALTER TABLE human RENAME COLUMN mail TO email;\n",
   },
+  {
+    filename: "0007_human_api_key.sql",
+    checksum: "sha256-f8b7e24a03e58fa2b94a556389aaaf14059595d3d3f10dec79323e0e72dc1aac",
+    sql: "-- Long-lived bearer credential for verified humans. Mirrors\n-- enrollment_token's hash-only storage: `chk_<random>` is surfaced once\n-- at issue, and the server keeps a peppered SHA-256 to authenticate\n-- inbound requests. Replaces the X-Service-Key + eret_ Bearer auth\n-- model on the public identity surface (enrollments, agent register).\n\nCREATE TABLE IF NOT EXISTS human_api_key (\n    api_key_id   TEXT    NOT NULL,\n    token_hash   BLOB    NOT NULL,\n    owner_human_principal_id TEXT NOT NULL,\n    display_name TEXT,\n    status       TEXT    NOT NULL DEFAULT 'active',\n\n    expires_at   INTEGER,\n    last_used_at INTEGER,\n    created_at   INTEGER NOT NULL DEFAULT (unixepoch() * 1000),\n    revoked_at   INTEGER,\n\n    CONSTRAINT human_api_key_pkey PRIMARY KEY (api_key_id),\n    CONSTRAINT human_api_key_token_hash_uniq UNIQUE (token_hash),\n    CONSTRAINT human_api_key_owner_fk FOREIGN KEY (owner_human_principal_id)\n        REFERENCES human (principal_id) ON DELETE CASCADE,\n    CONSTRAINT human_api_key_status_check CHECK (status IN ('active', 'revoked'))\n);\n\nCREATE INDEX IF NOT EXISTS human_api_key_owner_idx\n    ON human_api_key (owner_human_principal_id);\n\nCREATE INDEX IF NOT EXISTS human_api_key_status_idx\n    ON human_api_key (status);\n",
+  },
 ] as const
 
 export const vaultMigrations: readonly Migration[] = [

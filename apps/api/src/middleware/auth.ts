@@ -7,11 +7,19 @@ import {
 } from '@citizenry/identity/auth'
 import { drizzle } from 'drizzle-orm/d1'
 import { schema } from '@citizenry/identity/schema'
+import { ApiKeyError, createApiKeyService } from '@citizenry/identity'
 import type { Bindings } from '../env'
+import { hexToBytes, newApiKeyToken, newHumanApiKeyId } from '../ids'
+
+export type ApiKeyActor = {
+  humanPrincipalId: string
+  apiKeyId: string
+}
 
 type AuthVars = {
   agentJwtPayload?: TokenPayload
   enrollmentToken?: string
+  actor?: ApiKeyActor
 }
 
 const PUBLIC_PATH_PREFIXES = ['/_health', '/.well-known/', '/agent/', '/v1/humans']
@@ -116,4 +124,58 @@ function safeEqual(a: string, b: string): boolean {
   let diff = 0
   for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i)
   return diff === 0
+}
+
+const API_KEY_ERROR_CODE: Record<string, string> = {
+  api_key_invalid: 'ERR-P01-S01-1040',
+  api_key_revoked: 'ERR-P01-S01-1041',
+  api_key_expired: 'ERR-P01-S01-1042',
+  human_not_active: 'ERR-P01-S01-1043',
+}
+
+const apiKeyUnauthorized = (c: Ctx, err: ApiKeyError) =>
+  c.json(
+    {
+      title: 'Unauthorized',
+      message: err.message,
+      detail: err.detail,
+      code: API_KEY_ERROR_CODE[err.code] ?? 'ERR-P01-S01-0401',
+      method: c.req.method,
+      instance: c.req.path,
+      request_url: c.req.url,
+      timestamp: new Date().toISOString(),
+    },
+    401,
+  )
+
+/**
+ * Per-route API-Key authenticator. Resolves `Authorization: Bearer
+ * chk_…` to the owner human and sets `c.var.actor`. Routes that need a
+ * verified-human caller (POST /v1/enrollments, DELETE /v1/enrollments/:id,
+ * POST /v1/agent/register, POST /v1/humans/:id/api-key/revoke) mount
+ * this in front of their handler.
+ */
+export const apiKeyAuth: MiddlewareHandler<{
+  Bindings: Bindings
+  Variables: AuthVars
+}> = async (c, next) => {
+  const bearer = extractBearer(c)
+  if (!bearer) {
+    return apiKeyUnauthorized(c, new ApiKeyError('api_key_invalid', 'Authorization Bearer missing'))
+  }
+  const db = drizzle(c.env.DB_IDENTITY, { schema })
+  const svc = createApiKeyService({
+    db,
+    pepper: hexToBytes(c.env.ENROLLMENT_PEPPER),
+    mintApiKeyId: newHumanApiKeyId,
+    mintToken: newApiKeyToken,
+  })
+  try {
+    const resolved = await svc.verify(bearer)
+    c.set('actor', { humanPrincipalId: resolved.owner.principalId, apiKeyId: resolved.apiKeyId })
+  } catch (err) {
+    if (err instanceof ApiKeyError) return apiKeyUnauthorized(c, err)
+    throw err
+  }
+  await next()
 }

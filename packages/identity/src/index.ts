@@ -2,6 +2,14 @@ export { identityRouter } from './router'
 export { adminIdentityRouter } from './router/admin'
 export { humansRouter, type HumanRouterVars } from './router/humans'
 export { createHumanService, HumanError, type Notifier } from './service/human'
+export {
+  createApiKeyService,
+  ApiKeyError,
+  API_KEY_PREFIX,
+  type ApiKeyService,
+  type IssuedApiKey,
+  type ResolvedApiKey,
+} from './service/api_key'
 export { schema, type Schema, type Db } from './db'
 export type {
   PrincipalRow,
@@ -11,6 +19,7 @@ export type {
   AgentRow,
   AgentKeyRow,
   EnrollmentTokenRow,
+  HumanApiKeyRow,
   AuditLogRow,
   FederationPeerRow,
   AdminRefreshTokenRow,

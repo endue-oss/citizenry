@@ -45,12 +45,7 @@
 
 <section class="card" aria-labelledby="auth-title">
   <div class="brand">
-    <div class="logo" aria-hidden="true">
-      <svg viewBox="0 0 48 48" width="48" height="48" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M24 4l16 8v12c0 10-7 18-16 20-9-2-16-10-16-20V12l16-8z" />
-        <path d="M16 24l6 6 12-12" />
-      </svg>
-    </div>
+    <img class="logo" src="/logo.svg" alt="" width="64" height="64" />
     <h1 id="auth-title" class="title">Citizenry</h1>
     <p class="subtitle">Admin control plane</p>
   </div>
@@ -126,7 +121,9 @@
   }
 
   .logo {
-    color: var(--primary);
+    display: block;
+    width: 64px;
+    height: 64px;
   }
 
   .title {

@@ -39,7 +39,7 @@
 
 <aside class="sidebar">
   <div class="brand">
-    <span class="brand-mark" aria-hidden="true">C</span>
+    <img class="brand-mark" src="/logo.svg" alt="" width="28" height="28" />
     <span class="brand-text">Citizenry</span>
     <span class="brand-tag">admin</span>
   </div>
@@ -106,15 +106,8 @@
     .brand-mark {
       width: 28px;
       height: 28px;
-      border-radius: $radius-md;
-      background: linear-gradient(135deg, var(--logo-tone-light), var(--logo-tone-dark));
-      color: var(--primary-foreground);
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: $font-weight-bold;
-      font-size: $font-size-sm;
-      letter-spacing: 0;
+      display: block;
+      flex-shrink: 0;
     }
 
     .brand-text {

@@ -19,6 +19,7 @@ import type { Bindings } from './env'
 import { mailDb, configReader, type MailVars, type ConfigVars } from './db'
 import { bearerAuth, type AuthVars } from './middleware/auth'
 import { handleInboundMail } from './inbound/handler'
+import { internalRouter } from './internal/notify'
 import { pickSender } from './outbound'
 import { mintId } from './ids'
 
@@ -52,6 +53,11 @@ app.get('/.well-known/mail-api', (c) => {
     },
   })
 })
+
+// Internal cross-Worker routes. Gated by `X-Service-Key` PSK and
+// mounted BEFORE `bearerAuth` so the JWT middleware never sees them.
+// See ADR-2026-0005.
+app.route('/', internalRouter)
 
 app.use('*', bearerAuth)
 

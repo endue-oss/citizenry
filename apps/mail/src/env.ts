@@ -15,6 +15,13 @@ export type Bindings = {
   MAIL_DOMAIN: string
 
   /**
+   * Pre-shared key used to gate `/_internal/notify` from other Workers
+   * (api / admin-api). Same value api / admin-api already hold for
+   * X-Service-Key against api `/_admin/*`. See ADR-2026-0005.
+   */
+  SERVICE_KEY: string
+
+  /**
    * Cloudflare Email Service binding (`[[send_email]]` in wrangler.toml).
    * Highest-priority sender — when present, supersedes config-backed
    * providers. Wrangler binding, not a credential, so it stays on env.

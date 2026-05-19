@@ -24,5 +24,25 @@ export {
   type IdMinter,
   type StoreInboundResult,
 } from './service'
-export type { InboundDisposition, MailInboundLogRow } from './db/schema'
-export { INBOUND_DISPOSITIONS } from './db/schema'
+export {
+  processNotify,
+  type NotifyRequest,
+  type NotifyResult,
+  type NotifyDeps,
+} from './service/notify'
+export {
+  renderTemplate,
+  isKnownTemplate,
+  KNOWN_TEMPLATES,
+  type TemplateKey,
+  type TemplatePayload,
+  type RenderedTemplate,
+  type HumanVerificationContext,
+} from './templates'
+export type {
+  InboundDisposition,
+  MailInboundLogRow,
+  OutboundStatus,
+  MailOutboundLogRow,
+} from './db/schema'
+export { INBOUND_DISPOSITIONS, OUTBOUND_STATUSES } from './db/schema'

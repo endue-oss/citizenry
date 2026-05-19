@@ -15,6 +15,8 @@ export const ID_PREFIX = {
   THREAD: 'thr',
   /** Inbound audit-log row. */
   INBOUND_LOG: 'inl',
+  /** Outbound audit-log row. */
+  OUTBOUND_LOG: 'oul',
 } as const
 
 export type IdKind = keyof typeof ID_PREFIX

@@ -187,13 +187,46 @@ export const INBOUND_DISPOSITIONS = [
 ] as const
 export type InboundDisposition = (typeof INBOUND_DISPOSITIONS)[number]
 
-export const schema = { mailbox, mail, mailAttachment, mailInboundLog }
+// ── mail_outbound_log ──────────────────────────────────────
+// System-initiated send audit (POST /_internal/notify). See ADR-2026-0005.
+export const mailOutboundLog = sqliteTable(
+  'mail_outbound_log',
+  {
+    outboundLogId: text('outbound_log_id').primaryKey(),
+    requestedAt: integer('requested_at', { mode: 'timestamp_ms' })
+      .notNull()
+      .default(sql`(unixepoch() * 1000)`),
+    caller: text('caller'),
+    template: text('template').notNull(),
+    toAddrs: text('to_addrs').notNull().default('[]'),
+    fromAddr: text('from_addr'),
+    status: text('status').notNull(),
+    providerMessageId: text('provider_message_id'),
+    senderName: text('sender_name'),
+    errorMessage: text('error_message'),
+  },
+  (t) => ({
+    requestedIdx: index('mail_outbound_log_requested_idx').on(t.requestedAt),
+    templateIdx: index('mail_outbound_log_template_idx').on(t.template),
+    statusIdx: index('mail_outbound_log_status_idx').on(t.status),
+    statusCheck: check(
+      'mail_outbound_log_status_check',
+      sql`status IN ('queued','sent','failed','invalid_request')`,
+    ),
+  }),
+)
+
+export const OUTBOUND_STATUSES = ['queued', 'sent', 'failed', 'invalid_request'] as const
+export type OutboundStatus = (typeof OUTBOUND_STATUSES)[number]
+
+export const schema = { mailbox, mail, mailAttachment, mailInboundLog, mailOutboundLog }
 export type Schema = typeof schema
 
 export type MailboxRow = typeof mailbox.$inferSelect
 export type MailRow = typeof mail.$inferSelect
 export type MailAttachmentRow = typeof mailAttachment.$inferSelect
 export type MailInboundLogRow = typeof mailInboundLog.$inferSelect
+export type MailOutboundLogRow = typeof mailOutboundLog.$inferSelect
 
 /** JMAP well-known mailbox roles, in display order. */
 export const WELL_KNOWN_ROLES = ['inbox', 'sent', 'drafts', 'archive', 'trash', 'junk'] as const

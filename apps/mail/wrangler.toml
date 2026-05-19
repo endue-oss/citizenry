@@ -70,6 +70,11 @@ name = "MAIL"
 #     mail.outbound.aws_ses.region          (optional, default us-east-1)
 #     mail.outbound.aws_ses.session_token   (optional, STS temporary creds)
 #
-# When none are configured, outbound falls back to the log-only sender
-# and rows land with deliveryStatus='queued'. Changes propagate after
+# Worker secrets (`wrangler secret put`):
+#   SERVICE_KEY  — shared PSK for /_internal/notify auth (ADR-2026-0005);
+#                  pushed by scripts/ci/bootstrap-secrets.sh.
+#
+# When no outbound provider is configured, outbound falls back to the
+# log-only sender and rows land with deliveryStatus='queued'.
+# Changes propagate after
 # the 5-minute colo-local TTL elapses; no redeploy needed.

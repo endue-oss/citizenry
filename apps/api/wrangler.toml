@@ -41,10 +41,20 @@ database_name = "citizenry-config-db"
 database_id = "local-dev-placeholder"
 migrations_dir = "../../packages/config/migrations"
 
+# Service binding — api → mail. Used by human verification (and future
+# enrollment / agent notifications) to dispatch outbound mail through
+# citizenry-mail's `/_internal/notify` privileged route. Gated by the
+# shared SERVICE_KEY PSK. See ADR-2026-0005.
+[[services]]
+binding = "MAIL_WORKER"
+service = "citizenry-mail"
+
 [vars]
 JWT_AUDIENCE = "api.citizenry.id,citizenry-id"
 ISSUER_HOST = "citizenry.id"
 
 # secrets — `wrangler secret put`
 #   ENROLLMENT_PEPPER
-#   SERVICE_KEY        — X-Service-Key check for /_admin/* routes (admin-api uses this)
+#   SERVICE_KEY        — shared PSK. Used both as X-Service-Key on /_admin/*
+#                        (admin-api → api) and outbound to MAIL_WORKER's
+#                        /_internal/notify route.

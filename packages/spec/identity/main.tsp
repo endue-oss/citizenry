@@ -5,6 +5,7 @@ import "../common/main.tsp";
 
 import "./errors.tsp";
 import "./enrollment.tsp";
+import "./humans.tsp";
 import "./register.tsp";
 import "./me.tsp";
 import "./public.tsp";

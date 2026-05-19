@@ -1,4 +1,4 @@
-import type { D1Database } from '@cloudflare/workers-types'
+import type { D1Database, Fetcher } from '@cloudflare/workers-types'
 
 export type Bindings = {
   /** D1 binding — identity domain */
@@ -19,6 +19,17 @@ export type Bindings = {
   /** Issuer host — DID builder (`did:web:{ISSUER_HOST}`) */
   ISSUER_HOST: string
 
-  /** Service key — value checked against the X-Service-Key header on `/_admin/*` routes. Sent by admin-api. */
+  /**
+   * Service key — shared PSK. Used both as inbound X-Service-Key on
+   * `/_admin/*` (from admin-api) and outbound on `MAIL_WORKER`'s
+   * `/_internal/notify` route. See ADR-2026-0005.
+   */
   SERVICE_KEY: string
+
+  /**
+   * Service binding to the citizenry-mail Worker. Used to dispatch
+   * system-initiated outbound mail (human verification, future
+   * enrollment / agent notifications). See ADR-2026-0005.
+   */
+  MAIL_WORKER: Fetcher
 }

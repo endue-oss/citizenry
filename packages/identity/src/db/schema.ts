@@ -150,6 +150,37 @@ export const human = sqliteTable(
   }),
 )
 
+// ── human_email_verification ────────────────────────────────
+// One outstanding verification row per principal (UNIQUE). The code
+// is stored only as a peppered SHA-256; the 6-digit plaintext is
+// dispatched by the mail Worker via `/_internal/notify`. See
+// migration 0005 and ADR-2026-0005.
+export const humanEmailVerification = sqliteTable(
+  'human_email_verification',
+  {
+    verificationId: text('verification_id').primaryKey(),
+    principalId: text('principal_id')
+      .notNull()
+      .unique('human_email_verification_principal_uniq')
+      .references(() => human.principalId, { onDelete: 'cascade' }),
+    codeHash: bytes('code_hash').notNull(),
+    expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull(),
+    verifiedAt: integer('verified_at', { mode: 'timestamp_ms' }),
+    resendCount: integer('resend_count').notNull().default(0),
+    lastSentAt: integer('last_sent_at', { mode: 'timestamp_ms' }).notNull(),
+    nextResendAt: integer('next_resend_at', { mode: 'timestamp_ms' }).notNull(),
+    createdAt: integer('created_at', { mode: 'timestamp_ms' })
+      .notNull()
+      .default(sql`(unixepoch() * 1000)`),
+    updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+      .notNull()
+      .default(sql`(unixepoch() * 1000)`),
+  },
+  (t) => ({
+    expiresIdx: index('human_email_verification_expires_idx').on(t.expiresAt),
+  }),
+)
+
 // ── agent ────────────────────────────────────────────────────
 export const agent = sqliteTable(
   'agent',
@@ -314,6 +345,7 @@ export const schema = {
   tenant,
   tenantPrincipalMembership,
   human,
+  humanEmailVerification,
   agent,
   agentKey,
   enrollmentToken,
@@ -328,6 +360,7 @@ export type Schema = typeof schema
 export type PrincipalRow = typeof principal.$inferSelect
 export type TenantRow = typeof tenant.$inferSelect
 export type HumanRow = typeof human.$inferSelect
+export type HumanEmailVerificationRow = typeof humanEmailVerification.$inferSelect
 export type AgentRow = typeof agent.$inferSelect
 export type AgentKeyRow = typeof agentKey.$inferSelect
 export type EnrollmentTokenRow = typeof enrollmentToken.$inferSelect

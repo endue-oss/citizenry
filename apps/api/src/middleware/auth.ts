@@ -14,7 +14,7 @@ type AuthVars = {
   enrollmentToken?: string
 }
 
-const PUBLIC_PATH_PREFIXES = ['/_health', '/.well-known/', '/agent/']
+const PUBLIC_PATH_PREFIXES = ['/_health', '/.well-known/', '/agent/', '/api/v1/humans']
 
 const isPublic = (path: string): boolean =>
   PUBLIC_PATH_PREFIXES.some((p) => path.startsWith(p))

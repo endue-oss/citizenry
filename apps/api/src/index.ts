@@ -1,5 +1,10 @@
 import { Hono } from 'hono'
-import { identityRouter, adminIdentityRouter } from '@citizenry/identity'
+import {
+  identityRouter,
+  adminIdentityRouter,
+  humansRouter,
+  type HumanRouterVars,
+} from '@citizenry/identity'
 import { vaultRouter, adminVaultRouter } from '@citizenry/vault'
 import { adminConfigRouter } from '@citizenry/config'
 import type { Bindings } from './env'
@@ -14,6 +19,8 @@ import {
 import { auth, serviceKeyAuth } from './middleware/auth'
 import { cors } from './middleware/cors'
 import { errorHandler } from './middleware/error'
+import { createNotifier } from './notifier'
+import { newHumanId, newHumanVerificationId, hexToBytes } from './ids'
 
 const app = new Hono<{ Bindings: Bindings }>()
 
@@ -35,6 +42,21 @@ const identityApp = new Hono<{ Bindings: Bindings; Variables: IdentityVars }>()
   .use('*', identityDb)
   .route('/', identityRouter)
 app.route('/', identityApp)
+
+// humans — public self-registration with email verification. Mounted
+// at root because the routes are absolute (/api/v1/humans*). See
+// ADR-2026-0005 for the outbound-mail-via-mail-Worker design.
+const humansApp = new Hono<{ Bindings: Bindings; Variables: HumanRouterVars }>()
+  .use('*', identityDb)
+  .use('*', async (c, next) => {
+    c.set('notifier', createNotifier(c.env))
+    c.set('pepper', hexToBytes(c.env.ENROLLMENT_PEPPER))
+    c.set('mintHumanId', newHumanId)
+    c.set('mintVerificationId', newHumanVerificationId)
+    await next()
+  })
+  .route('/', humansRouter)
+app.route('/', humansApp)
 
 // /_admin/* — admin-only. Validate the SERVICE_KEY header (X-Service-Key), then mount admin routers.
 //   admin-api HTTP-proxies into this surface → api owns all admin logic.

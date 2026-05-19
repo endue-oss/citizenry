@@ -1,10 +1,13 @@
 export { identityRouter } from './router'
 export { adminIdentityRouter } from './router/admin'
+export { humansRouter, type HumanRouterVars } from './router/humans'
+export { createHumanService, HumanError, type Notifier } from './service/human'
 export { schema, type Schema, type Db } from './db'
 export type {
   PrincipalRow,
   TenantRow,
   HumanRow,
+  HumanEmailVerificationRow,
   AgentRow,
   AgentKeyRow,
   EnrollmentTokenRow,

@@ -15,11 +15,15 @@
 import { Hono } from 'hono'
 import type { Bindings } from './env'
 import { errorHandler } from './middleware/error'
+import { cors } from './middleware/cors'
 import { adminJwtAuth, type AuthVars } from './middleware/auth'
 import { authRouter, meRouter } from './routes/auth'
 
 const app = new Hono<{ Bindings: Bindings }>()
 
+// CORS must run before everything else so preflight OPTIONS get
+// answered before the JWT middleware tries to authenticate them.
+app.use('*', cors)
 app.onError(errorHandler)
 
 app.get('/_health', (c) => c.json({ service: 'citizenry-admin-api', status: 'ok' }))

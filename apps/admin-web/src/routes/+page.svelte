@@ -1,11 +1,36 @@
 <script lang="ts">
   import Topbar from '$lib/components/Topbar.svelte'
+  import { onMount } from 'svelte'
+  import { adminApi, AdminApiError } from '$lib/api'
+  import { session } from '$lib/session'
 
-  const stats = [
-    { label: 'Citizens', value: '—', delta: 'no data', tone: 'muted' as const },
-    { label: 'Active sessions', value: '—', delta: 'no data', tone: 'muted' as const },
-    { label: 'Vault secrets', value: '—', delta: 'no data', tone: 'muted' as const },
-    { label: 'API requests (24h)', value: '—', delta: 'no data', tone: 'muted' as const },
+  type Me = { sub: string; iat: number; exp: number }
+
+  let me = $state<Me | null>(null)
+  let error = $state<string | null>(null)
+  let loading = $state(true)
+
+  onMount(async () => {
+    try {
+      me = await adminApi.me()
+    } catch (err) {
+      if (err instanceof AdminApiError && err.status === 401) {
+        // Layout guard will redirect; nothing to do here.
+        return
+      }
+      error = err instanceof Error ? err.message : 'Failed to load /auth/me'
+    } finally {
+      loading = false
+    }
+  })
+
+  const fmt = (sec: number) => new Date(sec * 1000).toLocaleString()
+
+  const placeholders = [
+    { label: 'Humans', value: '—', hint: '/v1/admin/humans (not yet wired)' },
+    { label: 'Agents', value: '—', hint: '/v1/admin/agents (stub)' },
+    { label: 'Enrollments', value: '—', hint: '/v1/admin/enrollments (stub)' },
+    { label: 'Vault entries', value: '—', hint: '/v1/admin/vault/entries (stub)' },
   ]
 </script>
 
@@ -15,17 +40,37 @@
   <section class="hero">
     <div>
       <h2>Welcome back</h2>
-      <p>Operate the Citizenry control plane — identity, vault, and gateway health at a glance.</p>
+      <p>Operate the Citizenry control plane — identity, mail, vault, and gateway health at a glance.</p>
     </div>
-    <button class="cta" type="button">New invitation</button>
+  </section>
+
+  <section class="card panel session">
+    <header>
+      <h3>Session</h3>
+      <span class="pill" class:pill-ok={!!me} class:pill-warn={!!error}>
+        {loading ? 'loading' : error ? 'error' : 'live'}
+      </span>
+    </header>
+    {#if loading}
+      <p class="muted">Verifying admin session…</p>
+    {:else if error}
+      <p class="error">{error}</p>
+    {:else if me}
+      <ul class="kv">
+        <li><span>Admin id</span><code>{me.sub}</code></li>
+        <li><span>Issued</span><code>{fmt(me.iat)}</code></li>
+        <li><span>Expires</span><code>{fmt(me.exp)}</code></li>
+        <li><span>Refresh</span><code>{$session ? 'rotating on use' : '—'}</code></li>
+      </ul>
+    {/if}
   </section>
 
   <section class="stats">
-    {#each stats as s}
+    {#each placeholders as s}
       <article class="card">
         <div class="card-label">{s.label}</div>
         <div class="card-value">{s.value}</div>
-        <div class="card-delta">{s.delta}</div>
+        <div class="card-delta">{s.hint}</div>
       </article>
     {/each}
   </section>
@@ -34,10 +79,9 @@
     <article class="card panel">
       <header>
         <h3>Recent activity</h3>
-        <span class="pill">live</span>
       </header>
       <div class="empty">
-        <p>No activity yet. Connect <code>@citizenry/admin-api</code> to start streaming events.</p>
+        <p>No activity yet. Wire an admin endpoint that streams audit events.</p>
       </div>
     </article>
 
@@ -46,10 +90,8 @@
         <h3>System</h3>
       </header>
       <ul class="kv">
-        <li><span>Environment</span><code>local</code></li>
-        <li><span>API</span><code>http://localhost:8788</code></li>
+        <li><span>admin-api</span><code>connected</code></li>
         <li><span>Spec</span><code>@citizenry/spec</code></li>
-        <li><span>Build</span><code>dev</code></li>
       </ul>
     </article>
   </section>
@@ -66,35 +108,16 @@
     gap: $space-6;
   }
 
-  .hero {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: $space-4;
-
-    h2 {
-      font-size: $font-size-2xl;
-      font-weight: $font-weight-semibold;
-      margin-bottom: $space-1;
-    }
-
-    p {
-      color: var(--muted-foreground);
-      font-size: $font-size-sm;
-      max-width: 56ch;
-    }
+  .hero h2 {
+    font-size: $font-size-2xl;
+    font-weight: $font-weight-semibold;
+    margin-bottom: $space-1;
+    letter-spacing: $letter-spacing-tight;
   }
-
-  .cta {
-    background: var(--primary);
-    color: var(--primary-foreground);
-    padding: $space-2 $space-4;
+  .hero p {
+    color: var(--muted-foreground);
     font-size: $font-size-sm;
-    font-weight: $font-weight-medium;
-    border-radius: $radius-md;
-    transition: filter $transition-fast;
-
-    &:hover { filter: brightness(1.08); }
+    max-width: 56ch;
   }
 
   .stats {
@@ -163,9 +186,21 @@
     font-size: $font-size-xs;
     padding: 2px 8px;
     border-radius: $radius-full;
+    background: var(--muted);
+    color: var(--muted-foreground);
+    font-weight: $font-weight-medium;
+  }
+  .pill-ok {
     background: var(--success);
     color: var(--success-foreground);
-    font-weight: $font-weight-medium;
+  }
+  .pill-warn {
+    background: var(--destructive);
+    color: var(--destructive-foreground);
+  }
+
+  .session ul.kv li code {
+    font-family: $font-mono;
   }
 
   .empty {
@@ -175,13 +210,15 @@
     text-align: center;
     color: var(--muted-foreground);
     font-size: $font-size-sm;
+  }
 
-    code {
-      background: var(--muted);
-      padding: 1px 6px;
-      border-radius: $radius-sm;
-      font-size: $font-size-xs;
-    }
+  .muted { color: var(--muted-foreground); font-size: $font-size-sm; }
+  .error {
+    padding: $space-2 $space-3;
+    color: var(--destructive-foreground);
+    background: var(--destructive);
+    border-radius: $radius-md;
+    font-size: $font-size-sm;
   }
 
   .kv {

@@ -1,7 +1,21 @@
 <script lang="ts">
   import ThemeToggle from './ThemeToggle.svelte'
+  import { adminApi } from '$lib/api'
+  import { goto } from '$app/navigation'
+  import { session } from '$lib/session'
 
   let { title = 'Dashboard' }: { title?: string } = $props()
+
+  let menuOpen = $state(false)
+
+  const adminId = $derived($session?.claims.sub ?? null)
+  const initial = $derived((adminId ?? 'A').trim().charAt(0).toUpperCase() || 'A')
+
+  async function logout() {
+    menuOpen = false
+    await adminApi.logout()
+    await goto('/login', { replaceState: true })
+  }
 </script>
 
 <header class="topbar">
@@ -17,7 +31,24 @@
       <input type="search" placeholder="Search…" aria-label="Search" />
     </div>
     <ThemeToggle />
-    <div class="avatar" aria-label="Admin">A</div>
+    <div class="account">
+      <button
+        type="button"
+        class="avatar"
+        aria-haspopup="menu"
+        aria-expanded={menuOpen}
+        aria-label={adminId ? `Admin: ${adminId}` : 'Admin menu'}
+        onclick={() => (menuOpen = !menuOpen)}
+      >
+        {initial}
+      </button>
+      {#if menuOpen}
+        <div class="menu" role="menu">
+          <div class="menu-id" title={adminId ?? ''}>{adminId ?? '—'}</div>
+          <button class="menu-item" role="menuitem" onclick={logout}>Sign out</button>
+        </div>
+      {/if}
+    </div>
   </div>
 </header>
 
@@ -74,6 +105,10 @@
     }
   }
 
+  .account {
+    position: relative;
+  }
+
   .avatar {
     width: 32px;
     height: 32px;
@@ -85,5 +120,53 @@
     justify-content: center;
     font-size: $font-size-sm;
     font-weight: $font-weight-semibold;
+    border: none;
+    cursor: pointer;
+    transition: filter $transition-fast;
+
+    &:hover {
+      filter: brightness(1.08);
+    }
+  }
+
+  .menu {
+    position: absolute;
+    top: calc(100% + #{$space-2});
+    right: 0;
+    min-width: 200px;
+    padding: $space-2;
+    background: var(--popover);
+    color: var(--popover-foreground);
+    border: 1px solid var(--border);
+    border-radius: $radius-md;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    z-index: $z-modal;
+  }
+
+  .menu-id {
+    padding: $space-2 $space-3;
+    font-size: $font-size-xs;
+    color: var(--muted-foreground);
+    border-bottom: 1px solid var(--border);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .menu-item {
+    width: 100%;
+    text-align: left;
+    padding: $space-2 $space-3;
+    font-size: $font-size-sm;
+    color: var(--foreground);
+    background: transparent;
+    border: none;
+    border-radius: $radius-sm;
+    cursor: pointer;
+    transition: background-color $transition-fast;
+
+    &:hover {
+      background: var(--muted);
+    }
   }
 </style>

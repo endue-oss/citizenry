@@ -1,0 +1,11 @@
+# Astro build artefacts
+.astro/
+
+# Files materialised by sync-content.mjs at build time. The canonical
+# markdown lives at <repo>/docs/; the OpenAPI YAMLs at
+# packages/spec/generated/; the Scalar bundle in node_modules.
+src/content/docs/handbook/
+public/identity-api.yaml
+public/vault-api.yaml
+public/mail-api.yaml
+public/scalar.standalone.js

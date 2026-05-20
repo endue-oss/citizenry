@@ -5,13 +5,19 @@
   "license": "Apache-2.0",
   "type": "module",
   "scripts": {
-    "build": "node build.mjs",
-    "dev": "node build.mjs && wrangler pages dev dist --port 8790 --ip 127.0.0.1",
+    "prebuild": "node sync-content.mjs",
+    "build": "astro build",
+    "predev": "node sync-content.mjs",
+    "dev": "astro dev --port 8790 --host 127.0.0.1",
+    "preview": "astro preview --port 8790",
     "deploy": "wrangler pages deploy dist",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist .astro src/content/docs/handbook public/openapi public/scalar.standalone.js"
   },
   "dependencies": {
-    "@citizenry/spec": "workspace:*"
+    "@astrojs/sitemap": "^3.7.2",
+    "@astrojs/starlight": "^0.39.2",
+    "@citizenry/spec": "workspace:*",
+    "astro": "^6.3.5"
   },
   "devDependencies": {
     "@scalar/api-reference": "^1.57.2",

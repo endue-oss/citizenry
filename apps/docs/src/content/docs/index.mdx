@@ -1,0 +1,32 @@
+---
+title: Citizenry
+description: The Endue Citizenry handbook — architecture decisions, RFCs, error codes, and a live API reference.
+template: splash
+hero:
+  tagline: Identity, vault, and mail for agents — running on Cloudflare.
+  actions:
+    - text: Deploy your own
+      link: /handbook/deploy/
+      icon: right-arrow
+      variant: primary
+    - text: Read the RFCs
+      link: /handbook/rfcs/readme/
+      icon: external
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components'
+
+<CardGrid>
+  <Card title="Architecture Decisions" icon="puzzle">
+    [Browse the ADRs](/handbook/adr/2026-0001/) — why the codebase is shaped the way it is.
+  </Card>
+  <Card title="RFCs" icon="document">
+    [Read accepted and draft RFCs](/handbook/rfcs/readme/) — protocol changes, federation, realms.
+  </Card>
+  <Card title="Error codes" icon="warning">
+    [Public catalog](/handbook/error-codes/guideline/) — every `ERR-P##-XXX-NNNN` returned by the API.
+  </Card>
+  <Card title="API Reference" icon="rocket">
+    Live OpenAPI for [Identity](/api/identity/), [Vault](/api/vault/), and [Mail](/api/mail/).
+  </Card>
+</CardGrid>

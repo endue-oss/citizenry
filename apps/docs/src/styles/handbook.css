@@ -1,0 +1,6 @@
+/* Light Starlight theme tweaks — keep the chrome quiet so RFCs and
+   ADRs feel like reference material, not marketing pages. */
+
+:root {
+  --sl-font: 'Inter', system-ui, sans-serif;
+}

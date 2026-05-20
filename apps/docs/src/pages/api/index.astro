@@ -1,0 +1,17 @@
+---
+// Bare landing under /api/ — redirect to the first reference.
+// Pre-rendered to a static HTML meta-refresh so this works on
+// Cloudflare Pages without an edge function.
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="refresh" content="0; url=/api/identity/" />
+    <title>Citizenry API</title>
+    <link rel="canonical" href="/api/identity/" />
+  </head>
+  <body>
+    <p>Redirecting to <a href="/api/identity/">/api/identity/</a>…</p>
+  </body>
+</html>

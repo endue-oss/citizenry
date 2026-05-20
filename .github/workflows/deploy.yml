@@ -36,10 +36,17 @@ on:
   push:
     branches: [main]
     paths-ignore:
-      - '**.md'
-      - 'docs/**'
+      # docs/**/*.md is part of the deployed handbook (apps/docs ships
+      # them through Starlight), so it must trigger a deploy. Only the
+      # repo-level legal / housekeeping files stay excluded.
+      - 'README.md'
       - 'LICENSE'
       - 'NOTICE'
+      - 'TRADEMARKS.md'
+      - 'CONTRIBUTING.md'
+      - 'CODE_OF_CONDUCT.md'
+      - 'SECURITY.md'
+      - 'GOVERNANCE.md'
       - '.github/workflows/ci.yml'
 
 concurrency:

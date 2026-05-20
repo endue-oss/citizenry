@@ -1,0 +1,84 @@
+---
+// Scalar API Reference, full-bleed inside the Starlight site.
+//
+// Three SSG routes are generated — /api/identity/, /api/vault/,
+// /api/mail/ — each loading exactly one OpenAPI YAML. The Scalar
+// standalone bundle and the YAMLs sit at `public/` root, copied by
+// sync-content.mjs. Configuration mirrors what the prior static
+// shell already shipped (modal Client + inline Test Request both
+// enabled, Powered-by-Scalar hidden via customCss).
+
+export function getStaticPaths() {
+  return [
+    { params: { slug: 'identity' }, props: { title: 'Identity', file: 'identity-api.yaml' } },
+    { params: { slug: 'vault' },    props: { title: 'Vault',    file: 'vault-api.yaml' } },
+    { params: { slug: 'mail' },     props: { title: 'Mail',     file: 'mail-api.yaml' } },
+  ]
+}
+
+const { title, file } = Astro.props
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Citizenry API · {title}</title>
+    <meta
+      name="description"
+      content={`OpenAPI reference for the Endue Citizenry ${title} service.`}
+    />
+    <link rel="icon" href="data:," />
+    <style>
+      html, body { margin: 0; padding: 0; height: 100%; }
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        display: flex;
+        align-items: center;
+        gap: 24px;
+        padding: 10px 18px;
+        background: #0b0d10;
+        color: #f5f7fa;
+        font: 500 13px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        border-bottom: 1px solid #1e2227;
+      }
+      .topbar a { color: #b9c1cc; text-decoration: none; }
+      .topbar a:hover { color: #fff; }
+      .topbar a.active { color: #fff; font-weight: 600; }
+      .topbar .home { color: #fff; font-weight: 600; margin-right: auto; }
+    </style>
+  </head>
+  <body>
+    <nav class="topbar" aria-label="API reference navigation">
+      <a class="home" href="/">← Citizenry handbook</a>
+      <a href="/api/identity/" class:list={[{ active: title === 'Identity' }]}>Identity</a>
+      <a href="/api/vault/"    class:list={[{ active: title === 'Vault' }]}>Vault</a>
+      <a href="/api/mail/"     class:list={[{ active: title === 'Mail' }]}>Mail</a>
+    </nav>
+    <div id="app"></div>
+    <script is:inline src="/scalar.standalone.js"></script>
+    <script type="module" is:inline define:vars={{ file, title }}>
+      Scalar.createApiReference('#app', {
+        theme: 'deepSpace',
+        layout: 'modern',
+        darkMode: true,
+        hideClientButton: false,
+        hideTestRequestButton: false,
+        hideDownloadButton: true,
+        sources: [{ url: `/${file}`, title, slug: title.toLowerCase(), default: true }],
+        metaData: { title: `Citizenry API · ${title}` },
+        // Selectors track Scalar's internal markup and may need a touch-up
+        // when @scalar/api-reference is bumped. The `a[href*="scalar.com"]`
+        // rule is the safety net — if the brand link survives, this catches it.
+        customCss: `
+          .scalar-api-reference [data-testid="scalar-brand"],
+          .scalar-api-reference .references-footer,
+          .scalar-api-reference .scalar-api-client__footer,
+          .scalar-api-reference a[href*="scalar.com"] { display: none !important; }
+        `,
+      })
+    </script>
+  </body>
+</html>

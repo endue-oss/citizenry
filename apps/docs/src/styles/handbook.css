@@ -165,3 +165,16 @@ starlight-theme-select,
   background: transparent;
   border: 0;
 }
+
+/* Remove the underline decoration from every link inside the
+ * Starlight chrome (sidebar, breadcrumbs, pagination, markdown
+ * body, hero buttons, …). Scoped to `.page` so the citizenry.id
+ * Header (which lives inside this scope but handles its own link
+ * styling) and the full-bleed Scalar /api/* pages are unaffected.
+ * Hover / focus states still apply via color changes. */
+.page a,
+.page a:hover,
+.page a:focus,
+.page a:visited {
+  text-decoration: none;
+}

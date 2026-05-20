@@ -82,30 +82,42 @@ app.route('/', humansApp)
 
 // enrollments — Bearer chk_ public surface. Owner is sourced from the
 // caller's API-Key, so the request body carries no owner field.
+//
+// Middlewares are path-scoped to /v1/enrollments* so the wildcard
+// apiKeyAuth doesn't leak onto unrelated paths (notably /_admin/*,
+// which has its own serviceKeyAuth guard).
 const enrollmentsApp = new Hono<{ Bindings: Bindings; Variables: EnrollmentRouterVars }>()
-  .use('*', identityDb)
-  .use('*', async (c, next) => {
+  .use('/v1/enrollments', identityDb)
+  .use('/v1/enrollments/*', identityDb)
+  .use('/v1/enrollments', async (c, next) => {
     c.set('pepper', hexToBytes(c.env.ENROLLMENT_PEPPER))
     c.set('mintEnrollmentId', newEnrollmentId)
     c.set('mintEnrollmentToken', newEnrollmentToken)
     await next()
   })
-  .use('*', apiKeyAuth)
+  .use('/v1/enrollments/*', async (c, next) => {
+    c.set('pepper', hexToBytes(c.env.ENROLLMENT_PEPPER))
+    c.set('mintEnrollmentId', newEnrollmentId)
+    c.set('mintEnrollmentToken', newEnrollmentToken)
+    await next()
+  })
+  .use('/v1/enrollments', apiKeyAuth)
+  .use('/v1/enrollments/*', apiKeyAuth)
   .route('/', enrollmentsRouter)
 app.route('/', enrollmentsApp)
 
 // register — Bearer chk_ public surface (replaces the old eret_ Bearer
 // flow). The body either supplies public_key_jwk or asks the server to
-// generate the keypair.
+// generate the keypair. Same path-scoping reasoning as enrollmentsApp.
 const registerApp = new Hono<{ Bindings: Bindings; Variables: RegisterRouterVars }>()
-  .use('*', identityDb)
-  .use('*', async (c, next) => {
+  .use('/v1/agent/register', identityDb)
+  .use('/v1/agent/register', async (c, next) => {
     c.set('mintAgentId', newAgentId)
     c.set('mintKid', newKid)
     c.set('issuerHost', c.env.ISSUER_HOST)
     await next()
   })
-  .use('*', apiKeyAuth)
+  .use('/v1/agent/register', apiKeyAuth)
   .route('/', registerRouter)
 app.route('/', registerApp)
 

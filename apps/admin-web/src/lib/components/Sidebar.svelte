@@ -27,19 +27,13 @@
         'M23 21v-2a4 4 0 0 0-3-3.87',
     },
     {
-      // Agents — bot face: antenna + rectangular frame + two dot eyes.
-      // Non-anthropomorphic silhouette signals "AI principal" while
-      // matching the stroke-2 line style of the rest of the rail.
+      // Agents — hexagonal node. Abstract identity-as-peer shape;
+      // contrasts cleanly with the curvy Humans silhouette next to it
+      // and stays readable at 20px. From Lucide's `hexagon`.
       href: '/agents',
       label: 'Agents',
       icon:
-        'M12 7V4 ' +
-        'M11 4h2 ' +
-        'M19 17H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2z ' +
-        'M2 13h2 ' +
-        'M20 13h2 ' +
-        'M9 12.5v1 ' +
-        'M15 12.5v1',
+        'M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z',
     },
     {
       href: '/enrollments',
@@ -47,13 +41,8 @@
       icon: 'M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z',
     },
     {
-      href: '/vault',
-      label: 'Vault',
-      icon: 'M12 2l8 4v6c0 5-3.5 9-8 10-4.5-1-8-5-8-10V6l8-4z',
-    },
-    {
-      href: '/config',
-      label: 'Config',
+      href: '/settings',
+      label: 'Settings',
       icon: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.04 1.56V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.66 15 1.7 1.7 0 0 0 3.1 14H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.66 9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.66 1.7 1.7 0 0 0 10 3.1V3a2 2 0 1 1 4 0v.09A1.7 1.7 0 0 0 15 4.66a1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V9c.55.23 1 .68 1.22 1.22H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1z',
     },
   ]

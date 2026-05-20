@@ -4,7 +4,12 @@
   import { adminApi, AdminApiError } from '$lib/api'
   import { session } from '$lib/session'
 
-  type Me = { sub: string; iat: number; exp: number }
+  type Me = {
+    admin_id: string
+    issued_at: string
+    expires_at: string
+    jti: string
+  }
 
   let me = $state<Me | null>(null)
   let error = $state<string | null>(null)
@@ -24,11 +29,11 @@
     }
   })
 
-  const fmt = (sec: number) => new Date(sec * 1000).toLocaleString()
+  const fmt = (iso: string) => new Date(iso).toLocaleString()
 
   const placeholders = [
-    { label: 'Humans', value: '—', hint: '/v1/admin/humans (not yet wired)' },
-    { label: 'Agents', value: '—', hint: '/v1/admin/agents (stub)' },
+    { label: 'Humans', value: '—', hint: '/v1/admin/humans (wired — see /humans page)' },
+    { label: 'Agents', value: '—', hint: '/v1/admin/agents (wired — see /agents page)' },
     { label: 'Enrollments', value: '—', hint: '/v1/admin/enrollments (stub)' },
     { label: 'Vault entries', value: '—', hint: '/v1/admin/vault/entries (stub)' },
   ]
@@ -57,9 +62,9 @@
       <p class="error">{error}</p>
     {:else if me}
       <ul class="kv">
-        <li><span>Admin id</span><code>{me.sub}</code></li>
-        <li><span>Issued</span><code>{fmt(me.iat)}</code></li>
-        <li><span>Expires</span><code>{fmt(me.exp)}</code></li>
+        <li><span>Admin id</span><code>{me.admin_id}</code></li>
+        <li><span>Issued</span><code>{fmt(me.issued_at)}</code></li>
+        <li><span>Expires</span><code>{fmt(me.expires_at)}</code></li>
         <li><span>Refresh</span><code>{$session ? 'rotating on use' : '—'}</code></li>
       </ul>
     {/if}

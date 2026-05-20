@@ -2,6 +2,7 @@
 import { defineConfig } from 'astro/config'
 import starlight from '@astrojs/starlight'
 import sitemap from '@astrojs/sitemap'
+import svelte from '@astrojs/svelte'
 
 // SSG-only. Pure static output → Cloudflare Pages deploy unchanged.
 export default defineConfig({
@@ -21,7 +22,13 @@ export default defineConfig({
       },
       favicon: '/favicon.svg',
       // Brand is dark-only (matches citizenry.id). Hide the theme picker.
-      components: {},
+      // The Header slot is replaced wholesale with the citizenry.id
+      // marketing-site header so the handbook + main site share one
+      // chrome — Search is replaced too because the citizenry.id
+      // header doesn't carry one.
+      components: {
+        Header: './src/components/StarlightHeader.astro',
+      },
       social: [
         { icon: 'github', label: 'GitHub', href: 'https://github.com/endue-oss/citizenry' },
       ],
@@ -59,5 +66,6 @@ export default defineConfig({
       customCss: ['./src/styles/handbook.css'],
     }),
     sitemap(),
+    svelte(),
   ],
 })

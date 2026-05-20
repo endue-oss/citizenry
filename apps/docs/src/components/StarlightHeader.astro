@@ -1,0 +1,12 @@
+---
+// Replaces Starlight's default Header slot with the citizenry.id
+// marketing-site header verbatim. The Svelte component owns its
+// own markup, styles, and interactivity (hover dropdowns, scroll
+// state, GitHub fork count fetch); we hydrate it with client:load
+// so the dropdowns work on first paint.
+//
+// `onEnroll` is a noop here — the docs site doesn't host an
+// enrollment flow, but the Header expects the prop.
+import Header from '../citizenry-id/Header.svelte'
+---
+<Header client:load onEnroll={() => {}} />

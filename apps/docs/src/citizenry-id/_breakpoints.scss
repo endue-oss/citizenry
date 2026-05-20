@@ -1,0 +1,24 @@
+// ─── Single source of truth: mobile/desktop split at 640px ───
+// Convention:
+//   @use '../styles/breakpoints' as bp;
+//   @include bp.mobile  { ... }   // ≤ 640px
+//   @include bp.desktop { ... }   // ≥ 641px
+//
+// Never write raw `@media (max-width: ...)` for the mobile/desktop boundary.
+// Other media queries (prefers-reduced-motion, hover, layout-fit breaks like
+// Hero's 1100) live where they apply with a comment explaining intent.
+
+$mobile-max: 640px;
+$desktop-min: $mobile-max + 1;
+
+@mixin mobile {
+  @media (max-width: #{$mobile-max}) {
+    @content;
+  }
+}
+
+@mixin desktop {
+  @media (min-width: #{$desktop-min}) {
+    @content;
+  }
+}

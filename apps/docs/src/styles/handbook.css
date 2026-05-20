@@ -53,6 +53,61 @@
   --sl-font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Pretendard,
     'Apple SD Gothic Neo', sans-serif;
   --sl-font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+  /* ── citizenry.id raw tokens ──────────────────────────────────
+   * Exposed verbatim so the Header.scss / CtaDuo.scss copies under
+   * src/citizenry-id/ compile against the same names they expect.
+   * Kept in sync with citizenry.id/src/styles/tokens.scss.
+   */
+  --bg: #09090b;
+  --bg-elev: #18181b;
+  --bg-elev-2: #232327;
+  --bg-bright: #1c1c1f;
+
+  --fg: #fafafa;
+  --fg-mute: #a1a1aa;
+  --fg-dim: #71717a;
+
+  --accent: #5cead4;
+  --accent-strong: #2dd4bf;
+  --accent-dim: #115e59;
+  --accent-glow: rgba(92, 234, 212, 0.20);
+
+  --mod-identity:      #5cead4;
+  --mod-identity-glow: rgba(92, 234, 212, 0.22);
+  --mod-mail:          #6bc1fe;
+  --mod-mail-glow:     rgba(107, 193, 254, 0.22);
+  --mod-vault:         #b191f9;
+  --mod-vault-glow:    rgba(177, 145, 249, 0.22);
+
+  --ok: #5cead4;
+  --warn: #ffcc4d;
+  --warn-dim: rgba(255, 204, 77, 0.35);
+
+  --border: rgba(255, 255, 255, 0.10);
+  --border-strong: rgba(255, 255, 255, 0.18);
+  --guide: rgba(255, 255, 255, 0.06);
+
+  --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Pretendard,
+    'Apple SD Gothic Neo', sans-serif;
+
+  --radius-sm: 4px;
+  --radius-md: 4px;
+  --radius-lg: 4px;
+  --radius-pill: 999px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 16px;
+  --space-4: 24px;
+  --space-5: 40px;
+  --space-6: 64px;
+  --space-7: 96px;
+  --space-8: 128px;
+
+  --max-w: 1120px;
+  --header-h: 56px;
 }
 
 /* Force the dark palette even when Starlight or the OS would prefer
@@ -97,4 +152,16 @@ html {
 starlight-theme-select,
 [aria-label='Select theme'] {
   display: none !important;
+}
+
+/* The Header slot is overridden with citizenry.id's <header
+ * class="site-header"> which owns its own sticky + backdrop. Strip
+ * Starlight's outer wrapper chrome so the inner header pins to the
+ * viewport correctly without doubled borders / heights. */
+.page > header.header {
+  position: static;
+  height: auto;
+  padding: 0;
+  background: transparent;
+  border: 0;
 }

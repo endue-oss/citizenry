@@ -1,0 +1,416 @@
+@use './breakpoints' as bp;
+
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: transparent;
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.2s ease;
+
+  &.scrolled {
+    border-bottom-color: var(--border);
+  }
+
+  .inner {
+    position: relative;
+    width: 100%;
+    max-width: var(--max-w);
+    height: var(--header-h);
+    padding: 0 var(--space-4);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-4);
+
+    @include bp.mobile {
+      padding: 0 var(--space-3);
+    }
+  }
+
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    color: var(--fg);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    font-size: 1rem;
+    &:hover { text-decoration: none; }
+
+    .logo {
+      width: 28px;
+      height: 28px;
+      display: block;
+      filter: drop-shadow(0 0 12px var(--accent-glow));
+    }
+    .wordmark { display: inline-flex; }
+    .word { color: var(--fg); }
+    .tld { color: var(--accent); }
+  }
+
+  nav {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  // Header CTA: hidden on top of page, fades in once user has scrolled.
+  // Stays in flow (visibility:hidden) so the grid column reservation is stable.
+  .header-cta {
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-2px);
+    transition: opacity 0.18s ease, transform 0.18s ease, visibility 0s linear 0.18s;
+
+    // Strip the CtaDuo's own pill chrome — the nav-pill already provides
+    // capsule chrome; doubling it makes the header look stamped.
+    .cta-duo {
+      background: transparent;
+      border-color: transparent;
+    }
+
+    // On mobile the duo CTA's two-half pill (~270px) doesn't share well
+    // with the brand on a 360px viewport. Page sections (Hero, Why, …)
+    // carry their own CTAs, so the sticky header drops to brand-only.
+    @include bp.mobile {
+      display: none;
+    }
+  }
+  &.scrolled .header-cta {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+    transition: opacity 0.18s ease, transform 0.18s ease, visibility 0s linear 0s;
+  }
+
+  // Centered cluster: nav-pill + GitHub fork CTA. Absolute-centered so brand /
+  // header-cta widths can change without shifting the pill off-axis.
+  // The two pills sit flush (gap 0) and the fork pill pulls its left edge
+  // onto the nav-pill's right edge by 1px so the touching border reads as a
+  // single line — together they form one conjoined `)( ` cluster.
+  .nav-center {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    display: inline-flex;
+    align-items: stretch;
+    gap: 0;
+
+    @include bp.mobile {
+      display: none;
+    }
+  }
+
+  .nav-pill {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 4px;
+    background: rgba(255, 255, 255, 0.10);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-pill);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  // GitHub Fork CTA — visually echoes the nav-pill (capsule, same border /
+  // backdrop) so it reads as part of the same cluster, not a separate widget.
+  // Height is left auto so flex `align-items: stretch` on .nav-center matches
+  // it to the nav-pill exactly; `margin-left: -1px` overlaps the border with
+  // the nav-pill's right edge so the touching seam is a single 1px line.
+  .gh-fork {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 10px;
+    margin-left: -1px;
+    color: var(--fg-mute);
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    background: rgba(255, 255, 255, 0.10);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-pill);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    transition: color 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+
+    // Hovered fork sits above the nav-pill so the stronger border colour
+    // wins along the overlapping seam instead of being half-hidden.
+    &:hover {
+      position: relative;
+      z-index: 1;
+      color: var(--fg);
+      background: rgba(255, 255, 255, 0.16);
+      border-color: var(--border-strong);
+      text-decoration: none;
+    }
+  }
+
+  .gh-fork__icon {
+    width: 16px;
+    height: 16px;
+    display: block;
+    flex-shrink: 0;
+  }
+
+  .gh-fork__label {
+    line-height: 1;
+  }
+
+  // Subtle count chip — divider on the left so it reads as metadata rather
+  // than a second label.
+  .gh-fork__count {
+    line-height: 1;
+    padding-left: 6px;
+    margin-left: 2px;
+    border-left: 1px solid var(--border);
+    color: var(--fg);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .nav-item {
+    position: relative;
+    display: inline-flex;
+  }
+
+  .nav-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--fg);
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    padding: 6px 12px;
+    border: 0;
+    background: transparent;
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+    transition: color 0.12s ease, background 0.12s ease;
+    &:hover,
+    .nav-item.is-open & {
+      background: rgba(255, 255, 255, 0.08);
+      text-decoration: none;
+    }
+  }
+
+  .nav-chev {
+    width: 10px;
+    height: 10px;
+    opacity: 0.7;
+    transition: transform 0.18s ease;
+    .nav-item.is-open & { transform: rotate(180deg); }
+  }
+
+  // Single shared panel — anchored to the pill, so its position stays put as
+  // the user moves between Features / Use Cases / Resources triggers.
+  // Width is locked to the pill's width via left:0/right:0.
+  .nav-panel {
+    position: absolute;
+    top: calc(100% + 10px);
+    left: 0;
+    right: 0;
+    padding: 8px;
+    background: rgba(13, 17, 22, 0.92);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    backdrop-filter: blur(20px) saturate(140%);
+    -webkit-backdrop-filter: blur(20px) saturate(140%);
+    box-shadow:
+      0 16px 48px rgba(0, 0, 0, 0.55),
+      inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    animation: nav-panel-in 0.16s ease-out both;
+
+    // hover bridge — keeps menu open while traversing the gap from triggers
+    &::before {
+      content: "";
+      position: absolute;
+      top: -10px;
+      left: 0;
+      right: 0;
+      height: 10px;
+    }
+  }
+
+  // Clip wrapper: hides the horizontal overshoot of the slide transition
+  // without clipping the panel's own hover-bridge ::before.
+  // Grid-stack lets the outgoing & incoming items occupy the same cell so
+  // they slide past each other (instead of stacking vertically).
+  .nav-panel__clip {
+    display: grid;
+    overflow: hidden;
+    border-radius: var(--radius-sm);
+  }
+
+  .nav-panel__items {
+    grid-area: 1 / 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .nav-panel__item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px;
+    border-radius: var(--radius-sm);
+    color: var(--fg-mute);
+    transition: background 0.12s ease, color 0.12s ease;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.05);
+      text-decoration: none;
+      .nav-panel__icon  { color: var(--accent); border-color: var(--border-strong); }
+      .nav-panel__title { color: var(--fg); }
+    }
+
+    &[data-tone="identity"]:hover .nav-panel__icon { color: var(--mod-identity); }
+    &[data-tone="mail"]:hover     .nav-panel__icon { color: var(--mod-mail); }
+    &[data-tone="vault"]:hover    .nav-panel__icon { color: var(--mod-vault); }
+  }
+
+  .nav-panel__icon {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--fg-mute);
+    transition: color 0.12s ease, border-color 0.12s ease;
+  }
+
+  .nav-panel__text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .nav-panel__title {
+    color: var(--fg);
+    font-family: var(--sans);
+    font-size: 0.875rem;
+    font-weight: 500;
+    letter-spacing: -0.005em;
+    line-height: 1.2;
+    transition: color 0.12s ease;
+  }
+
+  .nav-panel__desc {
+    color: var(--fg-mute);
+    font-family: var(--sans);
+    font-size: 0.75rem;
+    line-height: 1.35;
+  }
+
+  @keyframes nav-panel-in {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .enroll {
+    background: var(--accent-strong);
+    color: var(--bg);
+    border: 0;
+    padding: 8px 16px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    border-radius: var(--radius-pill);
+    transition: transform 0.1s ease, box-shadow 0.15s ease, background 0.15s ease;
+    &:hover {
+      transform: translateY(-1px);
+      background: var(--accent);
+      box-shadow: 0 6px 22px var(--accent-glow);
+    }
+  }
+
+  // ─── Product sub-nav (Identity / Mail / Vault) ─────────────────────
+  // Renders only on /identity, /mail, /vault. Sits as a second row inside
+  // the sticky header, sharing the same blur surface.
+  .product-subnav {
+    width: 100%;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: center;
+  }
+
+  .product-subnav__inner {
+    width: 100%;
+    max-width: var(--max-w);
+    padding: 0 var(--space-4);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    height: 44px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    &::-webkit-scrollbar { display: none; }
+  }
+
+  .product-subnav__tab {
+    --tone: var(--fg-dim);
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    color: var(--fg-mute);
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    letter-spacing: 0.01em;
+    border-radius: var(--radius-sm);
+    transition: color 0.12s ease, background 0.12s ease;
+    white-space: nowrap;
+
+    &[data-tone="identity"] { --tone: var(--mod-identity); }
+    &[data-tone="mail"]     { --tone: var(--mod-mail); }
+    &[data-tone="vault"]    { --tone: var(--mod-vault); }
+
+    &:hover {
+      color: var(--fg);
+      background: rgba(255, 255, 255, 0.04);
+      text-decoration: none;
+      .product-subnav__icon { color: var(--tone); opacity: 1; }
+    }
+
+    &.is-active {
+      color: var(--fg);
+      background: rgba(255, 255, 255, 0.06);
+      .product-subnav__icon {
+        color: var(--tone);
+        opacity: 1;
+        filter: drop-shadow(0 0 6px var(--tone));
+      }
+    }
+  }
+
+  .product-subnav__icon {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    color: var(--fg-mute);
+    opacity: 0.75;
+    transition: color 0.15s ease, opacity 0.15s ease, filter 0.15s ease;
+
+    svg { width: 16px; height: 16px; display: block; }
+  }
+}

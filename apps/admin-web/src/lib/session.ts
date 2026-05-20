@@ -79,6 +79,8 @@ function readInitial(): AdminSession | null {
 export const session = writable<AdminSession | null>(readInitial())
 
 if (browser) {
+  // Persist every store change to localStorage so other tabs can pick
+  // it up via the `storage` event below.
   session.subscribe((s) => {
     if (s) {
       localStorage.setItem(
@@ -88,6 +90,15 @@ if (browser) {
     } else {
       localStorage.removeItem(STORAGE_KEY)
     }
+  })
+
+  // Cross-tab sync. The `storage` event only fires in OTHER tabs, so
+  // this is safe from re-entry. When a peer tab refreshes or signs out
+  // we mirror that here, which keeps the layout guard accurate.
+  window.addEventListener('storage', (e) => {
+    if (e.key !== STORAGE_KEY) return
+    const next = readInitial()
+    session.set(next)
   })
 }
 
@@ -120,4 +131,30 @@ export function isAuthenticated(s: AdminSession | null = getSession()): boolean 
   if (!s) return false
   const nowSec = Math.floor(Date.now() / 1000)
   return s.claims.exp > nowSec
+}
+
+/**
+ * True when the session has both tokens — i.e. it is *worth* trying
+ * to call `/auth/refresh`. The layout guard uses this (instead of
+ * {@link isAuthenticated}) so an expired access token does not
+ * silently bounce the user to /login when the refresh token is still
+ * viable. The api fetch wrapper will handle the actual 401 → refresh
+ * dance; this just keeps the guard from kicking too early.
+ */
+export function hasUsableSession(
+  s: AdminSession | null = getSession(),
+): boolean {
+  return !!s && typeof s.refreshToken === 'string' && s.refreshToken.length > 0
+}
+
+/**
+ * Seconds until the current access token expires (negative if past
+ * `exp`). Used to decide when to proactively trigger a refresh before
+ * the first 401 round-trip.
+ */
+export function accessExpiresInSec(
+  s: AdminSession | null = getSession(),
+): number {
+  if (!s) return -1
+  return s.claims.exp - Math.floor(Date.now() / 1000)
 }

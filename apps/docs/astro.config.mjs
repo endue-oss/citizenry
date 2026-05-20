@@ -14,6 +14,14 @@ export default defineConfig({
       description: 'Endue Citizenry — handbook, RFCs, and API reference.',
       lastUpdated: true,
       pagination: true,
+      logo: {
+        src: './src/assets/endue-logo-dark.svg',
+        alt: 'Endue Citizenry',
+        replacesTitle: false,
+      },
+      favicon: '/favicon.svg',
+      // Brand is dark-only (matches citizenry.id). Hide the theme picker.
+      components: {},
       social: [
         { icon: 'github', label: 'GitHub', href: 'https://github.com/endue-oss/citizenry' },
       ],

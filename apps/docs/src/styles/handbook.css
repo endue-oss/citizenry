@@ -1,6 +1,100 @@
-/* Light Starlight theme tweaks — keep the chrome quiet so RFCs and
-   ADRs feel like reference material, not marketing pages. */
+/* citizenry.id brand applied to Starlight.
+ *
+ * Tokens mirror the canonical set in
+ *   <repo>/citizenry.id/src/styles/tokens.scss
+ *
+ * The Scalar `/api/*` pages are intentionally NOT styled by this file —
+ * those routes own their own full-bleed Scalar theme.
+ *
+ * Starlight ships separate :root vs [data-theme='dark'] variable blocks
+ * and a `light-dark()` fallback. citizenry.id is dark-only, so we set
+ * the same dark palette on every selector to lock the theme regardless
+ * of OS preference.
+ */
 
-:root {
-  --sl-font: 'Inter', system-ui, sans-serif;
+:root,
+:root[data-theme='dark'],
+:root[data-theme='light'] {
+  /* ── brand surfaces (Zinc neutral) ─────────────────────────── */
+  --sl-color-black: #09090b;          /* page bg */
+  --sl-color-gray-7: #09090b;
+  --sl-color-gray-6: #18181b;         /* elevated card */
+  --sl-color-gray-5: #232327;         /* most elevated / sidebar item hover */
+  --sl-color-gray-4: #3f3f46;
+  --sl-color-gray-3: #71717a;
+  --sl-color-gray-2: #a1a1aa;
+  --sl-color-gray-1: #d4d4d8;
+  --sl-color-white: #fafafa;
+
+  --sl-color-bg: var(--sl-color-black);
+  --sl-color-bg-nav: var(--sl-color-gray-7);
+  --sl-color-bg-sidebar: var(--sl-color-gray-7);
+  --sl-color-bg-inline-code: var(--sl-color-gray-6);
+
+  /* ── text ──────────────────────────────────────────────────── */
+  --sl-color-text: #fafafa;
+  --sl-color-text-accent: #5cead4;
+  --sl-color-text-invert: #09090b;
+
+  /* ── brand accent (teal-mint) ──────────────────────────────── */
+  --sl-color-accent-low: #115e59;
+  --sl-color-accent: #2dd4bf;
+  --sl-color-accent-high: #5cead4;
+
+  --sl-color-bg-accent: #2dd4bf;
+  --sl-color-text-on-accent: #09090b;
+
+  /* ── borders / hairlines ──────────────────────────────────── */
+  --sl-color-hairline-light: rgba(255, 255, 255, 0.10);
+  --sl-color-hairline: rgba(255, 255, 255, 0.10);
+  --sl-color-hairline-shade: rgba(255, 255, 255, 0.18);
+
+  /* ── typography ───────────────────────────────────────────── */
+  --sl-font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Pretendard,
+    'Apple SD Gothic Neo', sans-serif;
+  --sl-font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+
+/* Force the dark palette even when Starlight or the OS would prefer
+ * light. citizenry.id is dark-only; toggling produces a partial theme
+ * because Starlight components mix `light-dark()`. */
+html {
+  color-scheme: dark;
+}
+
+/* Stop the splash-template gradient from washing out the teal accent. */
+.hero {
+  --sl-color-accent: #2dd4bf;
+}
+
+/* Sidebar active state — paint the row with the accent dim so it
+ * matches citizenry.id's "selected" pattern (background tint, no
+ * heavy border). */
+.sidebar nav a[aria-current='page'] {
+  color: var(--sl-color-text);
+  background: rgba(92, 234, 212, 0.12);
+}
+.sidebar nav a:hover {
+  color: var(--sl-color-text);
+}
+
+/* Inline code chip — accent-tinted instead of generic muted. */
+:not(pre) > code {
+  color: #5cead4;
+  background: rgba(92, 234, 212, 0.10);
+  border: 1px solid rgba(92, 234, 212, 0.18);
+}
+
+/* Logo tweaks — the endue-logo-dark mark is 512×512; cap height in
+ * the header so it sits next to the title without dominating. */
+.site-title img {
+  max-height: 28px;
+  width: auto;
+}
+
+/* Dark-only — hide the theme toggle entirely (no light variant
+ * ships in this brand). */
+starlight-theme-select,
+[aria-label='Select theme'] {
+  display: none !important;
 }

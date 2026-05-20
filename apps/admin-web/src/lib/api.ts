@@ -8,6 +8,7 @@
 
 import { env } from '$env/dynamic/public'
 import {
+  accessExpiresInSec,
   clearSession,
   getSession,
   setSession,
@@ -92,6 +93,11 @@ async function refreshOnce(): Promise<AdminSession | null> {
 
 type RequestInitWithJson = Omit<RequestInit, 'body'> & { json?: unknown }
 
+// Refresh proactively if the access token has 30s or less left. Saves
+// one 401 round-trip on the common "tab idle for 15 minutes" case and
+// keeps long requests from racing the expiry boundary.
+const PROACTIVE_REFRESH_WINDOW_SEC = 30
+
 async function request<T>(path: string, init: RequestInitWithJson = {}): Promise<T> {
   const send = async (token: string | null): Promise<Response> => {
     const headers = new Headers(init.headers ?? {})
@@ -103,10 +109,20 @@ async function request<T>(path: string, init: RequestInitWithJson = {}): Promise
     return fetch(url(path), { ...init, headers, body })
   }
 
-  const cur = getSession()
+  let cur = getSession()
+
+  // Proactive refresh — avoid the 401 round-trip when we already know
+  // the token is about to (or did) expire.
+  if (cur && accessExpiresInSec(cur) <= PROACTIVE_REFRESH_WINDOW_SEC) {
+    const refreshed = await refreshOnce()
+    if (refreshed) cur = refreshed
+    else cur = getSession()  // refresh failed → cur is now null
+  }
+
   let res = await send(cur?.accessToken ?? null)
 
-  if (res.status === 401 && cur) {
+  // Reactive refresh — server-decided 401 (clock skew, revoked etc.).
+  if (res.status === 401 && getSession()) {
     const refreshed = await refreshOnce()
     if (refreshed) {
       res = await send(refreshed.accessToken)
@@ -120,6 +136,18 @@ async function request<T>(path: string, init: RequestInitWithJson = {}): Promise
     return (await res.json()) as T
   }
   return (await res.text()) as unknown as T
+}
+
+/**
+ * Public refresh entry point. Used by the root layout's boot routine
+ * when it wants to confirm the session is still good before deciding
+ * whether to redirect to /login.
+ */
+export async function ensureFreshSession(): Promise<AdminSession | null> {
+  const cur = getSession()
+  if (!cur) return null
+  if (accessExpiresInSec(cur) > PROACTIVE_REFRESH_WINDOW_SEC) return cur
+  return refreshOnce()
 }
 
 // ── typed endpoints ─────────────────────────────────────────────────
@@ -165,7 +193,18 @@ export const adminApi = {
     clearSession()
   },
 
-  me(): Promise<{ sub: string; iat: number; exp: number }> {
+  /**
+   * Matches the server response shape from
+   * `apps/admin-api/src/routes/auth.ts` — note the field names are
+   * snake-case and timestamps are ISO strings (not the unix seconds
+   * carried inside the JWT body itself).
+   */
+  me(): Promise<{
+    admin_id: string
+    issued_at: string
+    expires_at: string
+    jti: string
+  }> {
     return request('/auth/me', { method: 'GET' })
   },
 

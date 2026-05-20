@@ -2,6 +2,7 @@
   // Agents list page. Same shape as Humans — hits /v1/admin/agents.
 
   import { onMount } from 'svelte'
+  import { goto } from '$app/navigation'
   import Topbar from '$lib/components/Topbar.svelte'
   import StatusBadge from '$lib/components/settings/StatusBadge.svelte'
   import { adminApi, AdminApiError } from '$lib/api'
@@ -149,7 +150,19 @@
         <tbody>
           {#each visible as a}
             {@const owner = humansById.get(a.owner_human_principal_id)}
-            <tr>
+            <tr
+              class="row clickable"
+              tabindex="0"
+              role="link"
+              aria-label="Open {a.slug}"
+              onclick={() => goto(`/agents/${a.id}`)}
+              onkeydown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  goto(`/agents/${a.id}`)
+                }
+              }}
+            >
               <td><code>{a.slug}</code></td>
               <td>{a.display_name ?? '—'}</td>
               <td>
@@ -294,7 +307,15 @@
   }
 
   tbody tr:last-child td { border-bottom: none; }
-  tbody tr:hover { background: var(--accent); }
+  tbody tr.clickable {
+    cursor: pointer;
+
+    &:hover { background: var(--accent); }
+    &:focus-visible {
+      outline: 2px solid var(--ring);
+      outline-offset: -2px;
+    }
+  }
 
   .error {
     padding: $space-3 $space-4;

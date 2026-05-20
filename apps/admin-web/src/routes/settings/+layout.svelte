@@ -172,8 +172,6 @@
     font-weight: $font-weight-medium;
     text-decoration: none;
     color: var(--muted-foreground);
-    border-left: 2px solid transparent;
-    margin-left: -2px;
     transition: background $transition-fast, color $transition-fast;
 
     &:hover {
@@ -184,7 +182,6 @@
     &.active {
       background: var(--accent);
       color: var(--foreground);
-      border-left-color: var(--primary);
     }
   }
 

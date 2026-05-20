@@ -91,16 +91,20 @@
 
   // Centered cluster: nav-pill + GitHub fork CTA. Absolute-centered so brand /
   // header-cta widths can change without shifting the pill off-axis.
-  // The two pills sit flush (gap 0) and the fork pill pulls its left edge
-  // onto the nav-pill's right edge by 1px so the touching border reads as a
-  // single line — together they form one conjoined `)( ` cluster.
+  // Both pills share an explicit --pill-h so the fork pill's left bite can
+  // be carved at exactly the nav-pill's right curve radius (half the height).
+  // `--fork-nest` is how far (px) the fork tucks into the nav-pill; values
+  // larger than --pill-h / 2 nest deeper, while the bite mask keeps the
+  // visible left edge tracing the nav-pill's curve exactly.
   .nav-center {
+    --pill-h: 36px;
+    --fork-nest: 30px;
     position: absolute;
     left: 50%;
     top: 50%;
     transform: translate(-50%, -50%);
     display: inline-flex;
-    align-items: stretch;
+    align-items: center;
     gap: 0;
 
     @include bp.mobile {
@@ -113,7 +117,8 @@
     display: inline-flex;
     align-items: center;
     gap: 2px;
-    padding: 4px;
+    height: var(--pill-h);
+    padding: 0 4px;
     background: rgba(255, 255, 255, 0.10);
     border: 1px solid var(--border);
     border-radius: var(--radius-pill);
@@ -121,17 +126,23 @@
     -webkit-backdrop-filter: blur(8px);
   }
 
-  // GitHub Fork CTA — visually echoes the nav-pill (capsule, same border /
-  // backdrop) so it reads as part of the same cluster, not a separate widget.
-  // Height is left auto so flex `align-items: stretch` on .nav-center matches
-  // it to the nav-pill exactly; `margin-left: -1px` overlaps the border with
-  // the nav-pill's right edge so the touching seam is a single 1px line.
+  // GitHub Fork CTA — `)___)` shape. Its left side is masked into a
+  // concave semicircle that matches the nav-pill's convex right curve.
+  // For nest depths larger than the pill radius, a second linear-gradient
+  // layer extends the cut as a flat strip so the fork can tuck arbitrarily
+  // deep without its top/bottom corners poking past the nav-pill's curve.
   .gh-fork {
+    --bite-cx: calc(var(--fork-nest) - var(--pill-h) / 2);
+
+    position: relative;
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 0 10px;
-    margin-left: -1px;
+    height: var(--pill-h);
+    // Extra left padding clears the carved-out bite area so the icon /
+    // label start to the right of the seam, not inside the cradle.
+    padding: 0 12px 0 calc(12px + var(--fork-nest));
+    margin-left: calc(var(--fork-nest) * -1);
     color: var(--fg-mute);
     font-family: var(--mono);
     font-size: 0.78rem;
@@ -144,15 +155,94 @@
     -webkit-backdrop-filter: blur(8px);
     transition: color 0.12s ease, background 0.12s ease, border-color 0.12s ease;
 
-    // Hovered fork sits above the nav-pill so the stronger border colour
-    // wins along the overlapping seam instead of being half-hidden.
+    // Two-layer mask intersected: (1) a vertical strip transparent left of
+    // the bite center clears everything that would otherwise poke past the
+    // nav-pill's right curve; (2) a circle at the bite center carves the
+    // matching arc. The intersection of the two opaque regions = the area
+    // strictly to the right of the nav-pill's right curve.
+    -webkit-mask-image:
+      linear-gradient(to right, transparent var(--bite-cx), #000 var(--bite-cx)),
+      radial-gradient(circle calc(var(--pill-h) / 2) at var(--bite-cx) 50%, transparent 99%, #000 100%);
+    -webkit-mask-composite: source-in;
+    mask-image:
+      linear-gradient(to right, transparent var(--bite-cx), #000 var(--bite-cx)),
+      radial-gradient(circle calc(var(--pill-h) / 2) at var(--bite-cx) 50%, transparent 99%, #000 100%);
+    mask-composite: intersect;
+
+    // Rainbow border ring — rendered as a dedicated ::before so the
+    // gradient lives ONLY in the 1px border lane. The inner translucent
+    // hover fill stays untouched (no rainbow bleed through the body) and
+    // the parent's )___) mask still clips the ring to the visible
+    // silhouette. The mask on the pseudo-element uses padding-box vs
+    // border-box clips, subtracted, to leave only the 1px ring lit.
+    &::before {
+      content: '';
+      position: absolute;
+      inset: -1px;
+      border: 1px solid transparent;
+      border-radius: inherit;
+      background: linear-gradient(
+        90deg,
+        #ff5f57 0%,
+        #febc2e 16%,
+        #28c840 33%,
+        #6df0c8 50%,
+        #4886ec 66%,
+        #b288ff 83%,
+        #ff5f57 100%
+      );
+      background-size: 200% 100%;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      -webkit-mask:
+        linear-gradient(#000, #000) padding-box,
+        linear-gradient(#000, #000) border-box;
+      -webkit-mask-composite: source-out;
+      mask:
+        linear-gradient(#000, #000) padding-box,
+        linear-gradient(#000, #000) border-box;
+      mask-composite: subtract;
+    }
+
+    // Hover keeps the original translucent fill — only the rainbow ring
+    // (::before) and the label/count text flow with the gradient.
     &:hover {
-      position: relative;
-      z-index: 1;
       color: var(--fg);
       background: rgba(255, 255, 255, 0.16);
-      border-color: var(--border-strong);
+      border-color: transparent;
       text-decoration: none;
+
+      &::before {
+        opacity: 1;
+        animation: gh-fork-rainbow 5s linear infinite;
+      }
+
+      .gh-fork__label,
+      .gh-fork__count {
+        background-image: linear-gradient(
+          90deg,
+          #ff5f57 0%,
+          #febc2e 16%,
+          #28c840 33%,
+          #6df0c8 50%,
+          #4886ec 66%,
+          #b288ff 83%,
+          #ff5f57 100%
+        );
+        background-size: 200% 100%;
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        -webkit-text-fill-color: transparent;
+        animation: gh-fork-rainbow 5s linear infinite;
+      }
+
+      // Divider line in the count chip would clash with the rainbow run —
+      // recolor it to a neutral mid-gray so it reads as a quiet separator.
+      .gh-fork__count {
+        border-left-color: rgba(255, 255, 255, 0.2);
+      }
     }
   }
 
@@ -222,11 +312,15 @@
     left: 0;
     right: 0;
     padding: 8px;
-    background: rgba(13, 17, 22, 0.92);
+    // Glassy surface — low-alpha tint lets the strong backdrop blur do the
+    // heavy lifting. `isolation: isolate` keeps the blur on its own
+    // stacking context so it doesn't fight the header's own backdrop layer.
+    background: rgba(13, 17, 22, 0.42);
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
-    backdrop-filter: blur(20px) saturate(140%);
-    -webkit-backdrop-filter: blur(20px) saturate(140%);
+    isolation: isolate;
+    backdrop-filter: blur(40px) saturate(200%) brightness(1.05);
+    -webkit-backdrop-filter: blur(40px) saturate(200%) brightness(1.05);
     box-shadow:
       0 16px 48px rgba(0, 0, 0, 0.55),
       inset 0 1px 0 rgba(255, 255, 255, 0.04);
@@ -412,5 +506,22 @@
     transition: color 0.15s ease, opacity 0.15s ease, filter 0.15s ease;
 
     svg { width: 16px; height: 16px; display: block; }
+  }
+}
+
+// Drives the rainbow flow across the fork pill's border and its label/count
+// text on hover. Each consumer sets `background-size: 200% 100%` so the
+// gradient stop loops seamlessly when position cycles from 0% → 200%.
+@keyframes gh-fork-rainbow {
+  from { background-position: 0% 50%; }
+  to   { background-position: 200% 50%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-header .gh-fork:hover::before,
+  .site-header .gh-fork:hover .gh-fork__label,
+  .site-header .gh-fork:hover .gh-fork__count {
+    animation: none;
+    background-position: 25% 50%;
   }
 }

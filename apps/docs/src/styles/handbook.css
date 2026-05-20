@@ -156,14 +156,30 @@ starlight-theme-select,
 
 /* The Header slot is overridden with citizenry.id's <header
  * class="site-header"> which owns its own sticky + backdrop. Strip
- * Starlight's outer wrapper chrome so the inner header pins to the
- * viewport correctly without doubled borders / heights. */
+ * Starlight's outer wrapper chrome AND hoist sticky positioning onto
+ * the wrapper itself — the inner sticky alone doesn't pin in
+ * Starlight's nested layout because the scroll container above it
+ * carries flex/overflow rules that break a child's sticky. Putting
+ * sticky on the outermost wrapper (a direct child of `.page`) keeps
+ * the header glued to the viewport on every scroll.
+ *
+ * Astro inserts an `<astro-island>` between `header.header` and
+ * `.site-header` for the hydrated Svelte component. We rely on
+ * `display: contents` flattening it for layout, and the descendant
+ * combinator below disarms the inner sticky regardless of intermediate
+ * island / fragment wrappers. */
 .page > header.header {
-  position: static;
+  position: sticky;
+  top: 0;
+  z-index: 50;
   height: auto;
   padding: 0;
   background: transparent;
   border: 0;
+}
+.page > header.header .site-header {
+  position: relative;
+  top: auto;
 }
 
 /* Remove the underline decoration from every link inside the

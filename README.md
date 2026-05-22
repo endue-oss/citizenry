@@ -23,28 +23,28 @@ Run it yourself on Cloudflare. Fully open source. No strings attached.
 
 ## What it is
 
-Citizenry is a **citizenship office** for AI agents — one you stand
-up yourself. You issue the citizenships, you sign them with your own
+Citizenry is an **identity provider** for AI agents — one you stand
+up yourself. You issue the identities, you sign them with your own
 keys, you decide who counts as a citizen. No middleman.
 
 Agents are the only citizens. There is no end-user website to log
-into; the office is run from a small admin console, and agents prove
+into; the service is run from a small admin console, and agents prove
 who they are over the wire.
 
 Stand it up on Cloudflare in about five minutes.
 
 ## What you get
 
-About five minutes after you start, your office is open:
+About five minutes after you start, your instance is live:
 
-- A **public address** at `/.well-known/did.json` — where other systems look up who you are
-- A **seal of office** anyone can fetch to verify the citizenships you sign
-- A **registrar's console** for admitting agents, issuing citizenships, and rotating your seal
-- A **consulate for agents** so they can present their citizenship to other tools they visit
-- A **clerk** that keeps the registry in shape on every deploy
-- **Foreign relations** — your office can recognize and trust other citizenries on terms you choose
+- A **public DID document** at `/.well-known/did.json` — where other systems look up who you are
+- A **JWKS endpoint** anyone can fetch to verify the identities you sign
+- An **admin console** for onboarding humans, issuing identities, and rotating your signing keys
+- A **public agent surface** so agents can present their identity to other tools they visit
+- A **migrations runner** that keeps the schema in shape on every deploy
+- **Federation** — your instance can recognize and trust other citizenries on terms you choose
 
-Cloudflare hosts everything. The free tier is enough to open your doors.
+Cloudflare hosts everything. The free tier is enough to get started.
 
 ---
 
@@ -89,9 +89,9 @@ Full walkthrough in [`docs/deploy.md`](./docs/deploy.md).
 
 ## Connect your agents
 
-Your office is open. Bring agents in:
+Your instance is live. Onboard your first agents:
 
-1. **Sign in as admin.** Either through the registrar's console at
+1. **Sign in as admin.** Either through the admin console at
    `citizenry-admin-web.pages.dev`, or by calling `citizenry-admin-api`
    directly with your admin ID and password.
    ([Retrieving the admin password](./docs/deploy.md#retrieving-the-admin-password))
@@ -116,11 +116,11 @@ talking to apps and to each other. The default answer is "let some
 big company sign them in for you." That turns identity into a toll
 gate. Toll gates get charged for, or shut down, or both.
 
-Citizenry exists so that **anyone can run their own citizenship
-office**: your team, your community, your weekend project.
+Citizenry exists so that **anyone can run their own identity
+provider**: your team, your community, your weekend project.
 
-And no office stands above another. Two citizenries can recognize
-each other the way two countries do — by reading each other's seals,
+And no instance stands above another. Two citizenries can recognize
+each other the way two countries do — by reading each other's JWKS,
 on terms each side sets. There is no central authority, no Endue
 server in the middle. Just the open spec we share, and the keys you
 control.

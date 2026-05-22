@@ -25,11 +25,11 @@ enum IdentityErrorCode {
   bad_request: "ERR-P01-S01-0400",
   /** 401 — missing or failed authentication (catch-all) */
   unauthorized: "ERR-P01-S01-0401",
-  /** 404 — resource not found (agent / enrollment / key) */
+  /** 404 — resource not found (agent / human / key) */
   not_found: "ERR-P01-S01-0404",
   /** 409 — conflict (e.g. slug duplicate) */
   conflict: "ERR-P01-S01-0409",
-  /** 410 — enrollment token expired or exhausted */
+  /** 410 — verification window expired (e.g. email verification) */
   gone: "ERR-P01-S01-0410",
   /** 429 — rate limited */
   rate_limited: "ERR-P01-S01-0429",
@@ -57,8 +57,6 @@ enum IdentityErrorCode {
   jws_lifetime_exceeded: "ERR-P01-S01-1012",
   /** Service PSK verification failed (`X-Service-Key`) */
   psk_invalid: "ERR-P01-S01-1020",
-  /** Bearer enrollment token malformed or failed verification */
-  enrollment_token_invalid: "ERR-P01-S01-1030",
 
   // ── 2xxx Schema / input validation ───────────────────
   /** public_key_jwk malformed (kty/crv/length, etc.) */
@@ -87,8 +85,6 @@ enum IdentityErrorCode {
   db_failure: "ERR-P01-S01-4001",
 
   // ── 7xxx Domain-specific ─────────────────────────────
-  /** enrollment token invalid or exhausted */
-  enrollment_invalid_or_exhausted: "ERR-P01-S01-7100",
   /** Human email-verification window (30 min) has elapsed (410) */
   human_verification_expired: "ERR-P01-S01-7200",
   /** Resend requested before the arithmetic backoff cleared (429) */

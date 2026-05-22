@@ -28,7 +28,6 @@ export type AuthErrorCode =
   | 'ERR-P01-S01-1002' // jwt_aud_mismatch
   | 'ERR-P01-S01-1003' // jwt_expired
   | 'ERR-P01-S01-1004' // jwt_kid_unknown
-  | 'ERR-P01-S01-1030' // enrollment_token_invalid
   | 'ERR-P01-S01-0401' // unauthorized (generic)
 
 export class AuthError extends Error {
@@ -176,14 +175,4 @@ export const verifyAgentJwt = async (
   }
 
   return payload
-}
-
-/**
- * Enrollment Bearer token shape check — actual hash compare / atomic decrement
- * happens in the `/v1/agent/register` handler. Middleware only checks the prefix.
- */
-export const checkEnrollmentBearerShape = (token: string): void => {
-  if (!/^eret_[A-Za-z0-9]{32,}$/.test(token)) {
-    throw new AuthError('ERR-P01-S01-1030', 'enrollment token shape invalid')
-  }
 }

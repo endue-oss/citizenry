@@ -1,7 +1,6 @@
-// Agent registration. Replaces the earlier enrollment-bearer flow:
-// the caller authenticates with their human API-Key (`chk_…`), the
-// router resolves the owner human, and this service mints a fresh
-// agent + initial Ed25519 key under that owner.
+// Agent registration. The caller authenticates with their human
+// API-Key (`chk_…`), the router resolves the owner human, and this
+// service mints a fresh agent + initial Ed25519 key under that owner.
 //
 //   1. Validate the keying request — exactly one of `publicKeyJwk` /
 //      `generateKeypair` must be present.

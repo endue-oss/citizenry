@@ -2,7 +2,7 @@
 //
 // Every key MUST follow `{namespace}.{keyname}` so the table doubles as a
 // flat namespace-segmented store ("admin.password", "mail.resend_api_key",
-// "enrollment.pepper"). Reads stay permissive (you can fetch any string)
+// "identity.pepper"). Reads stay permissive (you can fetch any string)
 // but writes go through `assertConfigKey` so we never end up with stray
 // flat keys mixed in with namespaced ones.
 //

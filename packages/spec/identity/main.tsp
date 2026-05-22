@@ -4,7 +4,6 @@ import "@typespec/openapi";
 import "../common/main.tsp";
 
 import "./errors.tsp";
-import "./enrollment.tsp";
 import "./humans.tsp";
 import "./register.tsp";
 import "./me.tsp";
@@ -35,8 +34,8 @@ using TypeSpec.OpenAPI;
  *
  * - **Public** routes (`/.well-known/*`, `/agent/{id}/*`) — no auth, cacheable.
  * - **Agent** self-service (`/v1/agent/me*`) — `Authorization: Bearer <self-signed JWT>` (RFC 7523).
- * - **Register** (`/v1/agent/register`) — `Authorization: Bearer eret_<enrollment token>`.
- * - **Admin** (`/v1/enrollments*`, `/v1/admin/*`) — `X-Service-Key` (PSK).
+ * - **Human API-Key** (`/v1/agent/register`, `/v1/humans/{id}/api-key/*`) — `Authorization: Bearer chk_<api-key>`.
+ * - **Admin** (`/v1/admin/*`) — `X-Service-Key` (PSK).
  *
  * # Standards
  *

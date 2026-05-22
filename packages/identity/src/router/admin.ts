@@ -22,28 +22,15 @@ function paginate(c: { req: { query(name: string): string | undefined } }) {
  * Admin identity router.
  *
  * Routes (mirror the reference spec — exposed as-is when mounted at root):
- *   GET    /v1/admin/enrollments        (X-Service-Key, paginated)
  *   GET    /v1/admin/humans             (X-Service-Key, paginated)
  *   GET    /v1/admin/humans/:id         (X-Service-Key)
  *   GET    /v1/admin/agents             (X-Service-Key, paginated)
  *   GET    /v1/admin/agents/:id         (X-Service-Key)
  *   DELETE /v1/admin/agents/:id         (X-Service-Key)
  *
- * Note: enrollment issue/revoke moved to the public surface in
- * `enrollmentsRouter` (Bearer chk_ API-Key auth) — operators issue
- * enrollments under their own human identity, not as a faceless PSK.
- *
  * Auth here is handled by apps/admin-api middleware (X-Service-Key).
  */
 export const adminIdentityRouter = new Hono<{ Variables: Vars }>()
-  // ── Admin enrollments list ────────────────────────────
-  .get('/v1/admin/enrollments', (c) =>
-    c.json({
-      items: [],
-      meta: { total: 0, page: 1, limit: 50, has_next_page: false },
-    }),
-  )
-
   // ── Admin humans list / get ──────────────────────────
   .get('/v1/admin/humans', async (c) => {
     const { page, limit, offset } = paginate(c)

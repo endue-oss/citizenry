@@ -1,8 +1,8 @@
 // Human API-Key service.
 //
 // A verified human's long-lived bearer credential. Authenticates calls
-// to the identity write surface (enrollments, agent register, key
-// rotation). The raw `chk_<token>` is surfaced once at issue and
+// to the identity write surface (agent register, key rotation,
+// api-key/revoke). The raw `chk_<token>` is surfaced once at issue and
 // delivered out-of-band (typically by the mail Worker); the server
 // retains only a peppered SHA-256.
 //
@@ -53,7 +53,8 @@ export const API_KEY_PREFIX = 'chk_'
 
 export type ApiKeyServiceDeps = {
   db: Db
-  /** Peppered SHA-256 input. Reuses `_config.enrollment_pepper`. */
+  /** Peppered SHA-256 input. Shared with the human-email-verification
+   *  hash; sourced from the instance pepper in `_config`. */
   pepper: Uint8Array
   /** Mint a `hak_<26-char ULID>`. */
   mintApiKeyId: () => string

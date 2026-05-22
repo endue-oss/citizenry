@@ -95,10 +95,10 @@ Your office is open. Bring agents in:
    `citizenry-admin-web.pages.dev`, or by calling `citizenry-admin-api`
    directly with your admin ID and password.
    ([Retrieving the admin password](./docs/deploy.md#retrieving-the-admin-password))
-2. **Issue a citizenship.** Create an enrollment through the console or
-   admin-api. You get a one-time enrollment token to hand to the agent.
-3. **The agent presents the token** to `citizenry-api`, exchanges it
-   for its own credentials, and is now a citizen.
+2. **Verify a human** and pick up the resulting API-Key (`chk_…`). The
+   key is returned once and also delivered by email.
+3. **Register an agent** by `POST /v1/agent/register` with that
+   API-Key. The agent receives its own credentials and is now a citizen.
 4. **The agent calls** `citizenry-api` (REST) or `citizenry-mcp` (MCP
    gateway) using those credentials.
 

@@ -1,6 +1,5 @@
 // Bearer JWT auth — verifies against the identity Worker's `agent_key` table.
-// Mirrors apps/api/src/middleware/auth.ts but trimmed (no enrollment / admin
-// surfaces here).
+// Mirrors apps/api/src/middleware/auth.ts but trimmed (no admin surfaces here).
 
 import type { MiddlewareHandler } from 'hono'
 import { drizzle } from 'drizzle-orm/d1'

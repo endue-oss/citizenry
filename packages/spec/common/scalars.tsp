@@ -87,24 +87,6 @@ scalar instanceId extends string;
 scalar kid extends string;
 
 /**
- * Enrollment record ID — `enr_` + 26-character ULID. (Admin identifier,
- * separate from the token itself.)
- * @status confirmed
- */
-@pattern("^enr_[0-9A-HJKMNP-TV-Z]{26}$")
-scalar enrollmentId extends string;
-
-/**
- * Enrollment token (raw) — `eret_` + 32+ chars (Crockford Base32 + alpha).
- *
- * Surfaced once at bootstrap and stored as peppered SHA-256.
- * Sent as `Authorization: Bearer eret_…` to `/v1/agent/register`.
- * @status confirmed
- */
-@pattern("^eret_[A-Za-z0-9]{32,}$")
-scalar enrollmentToken extends string;
-
-/**
  * Owner ID (e.g. a user or another agent). External IdP identifiers may
  * appear, so the format is not enforced — only constrained to a string
  * up to 64 characters.
@@ -170,12 +152,6 @@ scalar base64url extends string;
  */
 scalar serviceKey extends string;
 
-/**
- * Bearer enrollment token header value — `Bearer eret_…`.
- * @status confirmed
- */
-@pattern("^Bearer\\s+eret_[A-Za-z0-9]{32,}$")
-scalar bearerEnrollment extends string;
 
 /**
  * Bearer self-signed JWT header value — `Bearer eyJ…`.

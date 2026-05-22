@@ -23,20 +23,17 @@ export type ApiKeyActor = {
 
 type AuthVars = {
   agentJwtPayload?: TokenPayload
-  enrollmentToken?: string
   actor?: ApiKeyActor
 }
 
-// "Public" here means "global JWT/enrollment-bearer middleware does NOT
-// run" — these routes either need no auth or carry their own
-// per-route guard (e.g. apiKeyAuth on /v1/humans/:id/api-key/*,
-// /v1/enrollments, /v1/agent/register).
+// "Public" here means "global JWT middleware does NOT run" — these
+// routes either need no auth or carry their own per-route guard (e.g.
+// apiKeyAuth on /v1/humans/:id/api-key/*, /v1/agent/register).
 const PUBLIC_PATH_PREFIXES = [
   '/_health',
   '/.well-known/',
   '/agent/',
   '/v1/humans',
-  '/v1/enrollments',
   '/v1/agent/register',
 ]
 
@@ -156,9 +153,9 @@ const apiKeyUnauthorized = (c: Ctx, err: ApiKeyError) =>
 /**
  * Per-route API-Key authenticator. Resolves `Authorization: Bearer
  * chk_…` to the owner human and sets `c.var.actor`. Routes that need a
- * verified-human caller (POST /v1/enrollments, DELETE /v1/enrollments/:id,
- * POST /v1/agent/register, POST /v1/humans/:id/api-key/revoke) mount
- * this in front of their handler.
+ * verified-human caller (POST /v1/agent/register,
+ * POST /v1/humans/:id/api-key/revoke) mount this in front of their
+ * handler.
  */
 export const apiKeyAuth: MiddlewareHandler<{
   Bindings: Bindings

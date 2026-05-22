@@ -64,7 +64,7 @@ function d1(sql) {
 // ── ensure tenant + system principal ────────────────────────────────
 
 function ensureSystemTenant() {
-  // Tenant 'public' is referenced by enrollment_token; ensure it exists.
+  // Tenant 'public' is referenced by tenant_principal_membership; ensure it exists.
   d1(
     `INSERT OR IGNORE INTO tenant (tenant_id, slug, display_name, status, kind)
      VALUES ('tn_${ulid()}', 'public', 'Public', 'active', 'local');`,

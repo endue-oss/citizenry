@@ -4,8 +4,6 @@ import {
   adminIdentityRouter,
   humansRouter,
   type HumanRouterVars,
-  enrollmentsRouter,
-  type EnrollmentRouterVars,
   registerRouter,
   type RegisterRouterVars,
 } from '@citizenry/identity'
@@ -30,8 +28,6 @@ import {
   newHumanVerificationId,
   newHumanApiKeyId,
   newApiKeyToken,
-  newEnrollmentId,
-  newEnrollmentToken,
   newAgentId,
   newKid,
   hexToBytes,
@@ -80,35 +76,10 @@ const humansApp = new Hono<{ Bindings: Bindings; Variables: HumanRouterVars }>()
   .route('/', humansRouter)
 app.route('/', humansApp)
 
-// enrollments — Bearer chk_ public surface. Owner is sourced from the
-// caller's API-Key, so the request body carries no owner field.
-//
-// Middlewares are path-scoped to /v1/enrollments* so the wildcard
-// apiKeyAuth doesn't leak onto unrelated paths (notably /_admin/*,
-// which has its own serviceKeyAuth guard).
-const enrollmentsApp = new Hono<{ Bindings: Bindings; Variables: EnrollmentRouterVars }>()
-  .use('/v1/enrollments', identityDb)
-  .use('/v1/enrollments/*', identityDb)
-  .use('/v1/enrollments', async (c, next) => {
-    c.set('pepper', hexToBytes(c.env.ENROLLMENT_PEPPER))
-    c.set('mintEnrollmentId', newEnrollmentId)
-    c.set('mintEnrollmentToken', newEnrollmentToken)
-    await next()
-  })
-  .use('/v1/enrollments/*', async (c, next) => {
-    c.set('pepper', hexToBytes(c.env.ENROLLMENT_PEPPER))
-    c.set('mintEnrollmentId', newEnrollmentId)
-    c.set('mintEnrollmentToken', newEnrollmentToken)
-    await next()
-  })
-  .use('/v1/enrollments', apiKeyAuth)
-  .use('/v1/enrollments/*', apiKeyAuth)
-  .route('/', enrollmentsRouter)
-app.route('/', enrollmentsApp)
-
-// register — Bearer chk_ public surface (replaces the old eret_ Bearer
-// flow). The body either supplies public_key_jwk or asks the server to
-// generate the keypair. Same path-scoping reasoning as enrollmentsApp.
+// register — Bearer chk_ public surface. The body either supplies
+// public_key_jwk or asks the server to generate the keypair.
+// Middlewares are path-scoped to /v1/agent/register so the wildcard
+// apiKeyAuth doesn't leak onto unrelated paths.
 const registerApp = new Hono<{ Bindings: Bindings; Variables: RegisterRouterVars }>()
   .use('/v1/agent/register', identityDb)
   .use('/v1/agent/register', async (c, next) => {
@@ -124,8 +95,7 @@ app.route('/', registerApp)
 // /_admin/* — admin-only. Validate the SERVICE_KEY header (X-Service-Key), then mount admin routers.
 //   admin-api HTTP-proxies into this surface → api owns all admin logic.
 //   admin vault routes:    /v1/admin/vault/*
-//   admin identity routes: /v1/admin/{enrollments,agents,federation}/*,
-//                          /v1/enrollments
+//   admin identity routes: /v1/admin/{humans,agents,federation}/*
 //   Paths do not overlap, so the per-sub-app middleware (identityDb / vaultDb) stays cleanly separated.
 const adminApp = new Hono<{ Bindings: Bindings }>().use('*', serviceKeyAuth)
 

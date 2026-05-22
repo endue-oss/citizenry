@@ -113,7 +113,8 @@ export type HumanService = ReturnType<typeof createHumanService>
 
 export type HumanServiceDeps = {
   db: Db
-  /** Peppered SHA-256 input. Reuse `_config.enrollment_pepper`. */
+  /** Peppered SHA-256 input. Shared with the API-Key hash; sourced
+   *  from the instance pepper in `_config`. */
   pepper: Uint8Array
   /** Mint a `hu_<26-char ULID>`. */
   mintHumanId: () => string

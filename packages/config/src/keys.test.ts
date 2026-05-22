@@ -6,7 +6,7 @@ describe('config key convention', () => {
     for (const key of [
       'admin.password',
       'mail.resend_api_key',
-      'enrollment.pepper',
+      'identity.pepper',
       'a1.b2',
       'mail.outbound.resend_api_key',
     ]) {

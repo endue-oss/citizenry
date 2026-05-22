@@ -1,4 +1,3 @@
-export * from './enrollment'
 export * from './register'
 export * from './me'
 export * from './jwks'

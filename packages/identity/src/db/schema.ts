@@ -265,45 +265,11 @@ export const agentKey = sqliteTable(
   }),
 )
 
-// ── enrollment_token ─────────────────────────────────────────
-export const enrollmentToken = sqliteTable(
-  'enrollment_token',
-  {
-    enrollmentTokenId: text('enrollment_token_id').primaryKey(),
-    tokenHash: bytes('token_hash')
-      .notNull()
-      .unique('enrollment_token_token_hash_uniq'),
-    ownerHumanPrincipalId: text('owner_human_principal_id')
-      .notNull()
-      .references(() => human.principalId, { onDelete: 'restrict' }),
-    tenantId: text('tenant_id')
-      .notNull()
-      .references(() => tenant.tenantId, { onDelete: 'restrict' }),
-    usesTotal: integer('uses_total').notNull(),
-    usesLeft: integer('uses_left').notNull(),
-    allowKeygen: integer('allow_keygen', { mode: 'boolean' }).default(false).notNull(),
-    expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull(),
-    revokedAt: integer('revoked_at', { mode: 'timestamp_ms' }),
-    lastUsedAt: integer('last_used_at', { mode: 'timestamp_ms' }),
-    createdAt: integer('created_at', { mode: 'timestamp_ms' })
-      .notNull()
-      .default(sql`(unixepoch() * 1000)`),
-    createdBy: text('created_by').default('service-psk').notNull(),
-  },
-  (t) => ({
-    ownerIdx: index('enrollment_token_owner_human_principal_id_idx').on(t.ownerHumanPrincipalId),
-    tenantIdx: index('enrollment_token_tenant_id_idx').on(t.tenantId),
-    usesNonneg: check('enrollment_token_uses_nonneg', sql`${t.usesLeft} >= 0`),
-    usesOrdered: check('enrollment_token_uses_ordered', sql`${t.usesLeft} <= ${t.usesTotal}`),
-    usesPositive: check('enrollment_token_uses_positive', sql`${t.usesTotal} > 0`),
-  }),
-)
-
 // ── human_api_key ────────────────────────────────────────────
 // Long-lived bearer credential a verified human uses to call the
-// authenticated identity surface (enrollments, agent register, key
-// rotation, etc.). The raw `chk_<token>` is surfaced only once; the
-// server retains only a peppered SHA-256.
+// authenticated identity surface (agent register, key rotation, etc.).
+// The raw `chk_<token>` is surfaced only once; the server retains only
+// a peppered SHA-256.
 export const humanApiKey = sqliteTable(
   'human_api_key',
   {
@@ -411,7 +377,6 @@ export const schema = {
   humanEmailVerification,
   agent,
   agentKey,
-  enrollmentToken,
   humanApiKey,
   jtiReplay,
   auditLog,
@@ -428,7 +393,6 @@ export type HumanRow = typeof human.$inferSelect
 export type HumanEmailVerificationRow = typeof humanEmailVerification.$inferSelect
 export type AgentRow = typeof agent.$inferSelect
 export type AgentKeyRow = typeof agentKey.$inferSelect
-export type EnrollmentTokenRow = typeof enrollmentToken.$inferSelect
 export type HumanApiKeyRow = typeof humanApiKey.$inferSelect
 export type AuditLogRow = typeof auditLog.$inferSelect
 export type FederationPeerRow = typeof federationPeer.$inferSelect

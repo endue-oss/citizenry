@@ -15,15 +15,6 @@ namespace Citizenry.Common;
 model ServiceKeyAuth is ApiKeyAuth<ApiKeyLocation.header, "X-Service-Key">;
 
 /**
- * Enrollment Bearer token — one-shot bootstrap self-registration.
- *
- * `Authorization: Bearer eret_…`. Verified against the peppered SHA-256.
- *
- * @status confirmed
- */
-model EnrollmentBearerAuth is BearerAuth;
-
-/**
  * Self-signed JWT Bearer — self-service auth for a registered agent.
  *
  * `Authorization: Bearer eyJ…`. Ed25519-signed, `iss = sub` (self-signed).
@@ -34,8 +25,8 @@ model AgentJwtAuth is BearerAuth;
 
 /**
  * Human API-Key Bearer — long-lived credential a verified human uses
- * to authenticate writes against the identity surface (enrollments,
- * agent register, key rotation, api-key/revoke).
+ * to authenticate writes against the identity surface (agent register,
+ * key rotation, api-key/revoke).
  *
  * `Authorization: Bearer chk_…`. Verified against the peppered SHA-256
  * stored on `human_api_key.token_hash`.

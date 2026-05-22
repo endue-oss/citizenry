@@ -42,14 +42,8 @@ function ulid(): string {
 export const newHumanId = () => `hu_${ulid()}`
 export const newHumanVerificationId = () => `hev_${ulid()}`
 export const newHumanApiKeyId = () => `hak_${ulid()}`
-export const newEnrollmentId = () => `enr_${ulid()}`
 export const newAgentId = () => `ag_${ulid()}`
 export const newKid = () => `kid_${ulid()}`
-
-// Raw enrollment token — `eret_<26-char-ULID>`. The body is just a
-// time-sortable ULID; only the peppered SHA-256 is persisted on
-// `enrollment_token.token_hash`.
-export const newEnrollmentToken = () => `eret_${ulid()}`
 
 // Raw API-Key body. `chk_` + 26-char Crockford Base32 of 130 random
 // bits; only the peppered SHA-256 is persisted. Caller surfaces this

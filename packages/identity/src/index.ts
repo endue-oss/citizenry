@@ -1,7 +1,6 @@
 export { identityRouter } from './router'
 export { adminIdentityRouter } from './router/admin'
 export { humansRouter, type HumanRouterVars } from './router/humans'
-export { enrollmentsRouter, type EnrollmentRouterVars } from './router/enrollments'
 export { registerRouter, type RegisterRouterVars } from './router/register'
 export { createHumanService, HumanError, type Notifier } from './service/human'
 export {
@@ -12,12 +11,6 @@ export {
   type IssuedApiKey,
   type ResolvedApiKey,
 } from './service/api_key'
-export {
-  createEnrollmentService,
-  EnrollmentError,
-  type EnrollmentService,
-  type IssuedEnrollment,
-} from './service/enrollment'
 export {
   createRegisterService,
   RegisterError,
@@ -35,7 +28,6 @@ export type {
   HumanEmailVerificationRow,
   AgentRow,
   AgentKeyRow,
-  EnrollmentTokenRow,
   HumanApiKeyRow,
   AuditLogRow,
   FederationPeerRow,

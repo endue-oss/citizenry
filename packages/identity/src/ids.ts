@@ -7,8 +7,6 @@ export const ID_PREFIX = {
   human: 'hu_',
   tenant: 'tn_',
   key: 'kid_',
-  enrollment: 'enr_',
-  enrollmentToken: 'eret_',
   auditLog: 'alg_',
   federationPeer: 'fdp_',
   instance: 'ci_',

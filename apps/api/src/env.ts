@@ -13,7 +13,9 @@ export type Bindings = {
   /** JWT verification audience (e.g. "api.citizenry.id,citizenry-id") */
   JWT_AUDIENCE: string
 
-  /** Pepper for the enrollment token peppered hash */
+  /** Instance pepper for SHA-256-with-pepper hashes (human API-Key,
+   *  email-verification code). Held in `_config.enrollment_pepper` for
+   *  historical reasons — value is shared across all peppered hashes. */
   ENROLLMENT_PEPPER: string
 
   /** Issuer host — DID builder (`did:web:{ISSUER_HOST}`) */
@@ -35,8 +37,8 @@ export type Bindings = {
 
   /**
    * Service binding to the citizenry-mail Worker. Used to dispatch
-   * system-initiated outbound mail (human verification, future
-   * enrollment / agent notifications). See ADR-2026-0005.
+   * system-initiated outbound mail (human verification today; agent
+   * notifications in the future). See ADR-2026-0005.
    */
   MAIL_WORKER: Fetcher
 }

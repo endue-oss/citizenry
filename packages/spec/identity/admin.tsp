@@ -36,27 +36,6 @@ model AgentAdminGetResponse {
 }
 
 /**
- * Enrollment admin list / detail reuses EnrollmentGetResponse.
- *
- * @status confirmed
- */
-@tag("Admin")
-@route("/v1/admin/enrollments")
-@useAuth(ServiceKeyAuth)
-interface AdminEnrollments {
-  /**
-   * Possible errors: 401 (psk_invalid), 500.
-   */
-  @summary("List enrollments (admin, paginated)")
-  @operationId("admin-enrollment-list")
-  @get list(
-    @query tenant?: tenantSlug,
-    @query owner_human_principal_id?: humanId,
-    ...PaginationParams,
-  ): PaginatedList<EnrollmentGetResponse> | UnauthorizedError | InternalError;
-}
-
-/**
  * Agent admin list / detail / force-revoke.
  *
  * @status confirmed

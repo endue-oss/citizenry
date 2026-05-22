@@ -23,7 +23,7 @@ namespace Citizenry.Common;
  */
 @error
 model BaseError {
-  /** Error title (e.g. "Unauthorized", "EnrollmentExhausted") */
+  /** Error title (e.g. "Unauthorized", "Conflict") */
   title: string;
 
   /** Human-readable message */
@@ -94,7 +94,7 @@ model ConflictError extends BaseError {
 }
 
 /**
- * 410 Gone — enrollment token expired or exhausted.
+ * 410 Gone — resource window expired (e.g. human email verification).
  * @status confirmed
  */
 @error

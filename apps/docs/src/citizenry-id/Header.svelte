@@ -17,6 +17,7 @@
 
   let scrolled = $state(false)
   let open = $state<string | null>(null)
+  let mobileOpen = $state(false)
   let closeTimer: ReturnType<typeof setTimeout> | undefined
   // +1 = next-tab-to-the-right, -1 = previous-tab-to-the-left.
   // Drives the horizontal slide direction of the panel contents.
@@ -109,7 +110,10 @@
     onScroll()
     window.addEventListener('scroll', onScroll, { passive: true })
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') open = null
+      if (e.key === 'Escape') {
+        open = null
+        mobileOpen = false
+      }
     }
     window.addEventListener('keydown', onKey)
     return () => {
@@ -139,8 +143,21 @@
   }
 </script>
 
-<header class="site-header" class:scrolled>
+<header class="site-header" class:scrolled class:mobile-open={mobileOpen}>
   <div class="inner">
+    <button
+      class="nav-burger"
+      type="button"
+      aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+      aria-expanded={mobileOpen}
+      aria-controls="mobile-drawer"
+      onclick={() => (mobileOpen = !mobileOpen)}
+    >
+      <span class="nav-burger__bars" aria-hidden="true">
+        <span></span><span></span><span></span>
+      </span>
+    </button>
+
     <a href="/" class="brand">
       <img class="logo" src="/endue-logo-dark.svg" alt="" aria-hidden="true" />
       <span class="wordmark">
@@ -209,6 +226,7 @@
       {/if}
     </div>
 
+    <span class="gh-fork-wrap">
     <a
       class="gh-fork"
       href="https://github.com/endue-oss/citizenry/fork"
@@ -237,12 +255,49 @@
         </span>
       {/if}
     </a>
+    <span class="gh-fork-tooltip" aria-hidden="true">
+      <span class="gh-fork-tooltip__rocket" aria-hidden="true">🚀</span>
+      <span class="gh-fork-tooltip__text">Deploy your Agentic Citizenship</span>
+    </span>
+    </span>
     </div>
 
     <nav class="header-cta" aria-hidden={!scrolled}>
       <CtaDuo size="sm" short />
     </nav>
   </div>
+
+  {#if mobileOpen}
+    <div
+      id="mobile-drawer"
+      class="mobile-drawer"
+      role="menu"
+      aria-label="Mobile navigation"
+    >
+      {#each menus as m (m.id)}
+        <div class="mobile-drawer__group">
+          <div class="mobile-drawer__label">{m.label}</div>
+          {#each m.items as it (it.label)}
+            <a
+              class="mobile-drawer__item"
+              role="menuitem"
+              href={it.href}
+              data-tone={it.tone ?? ''}
+              onclick={() => (mobileOpen = false)}
+            >
+              <span class="mobile-drawer__icon" aria-hidden="true">
+                {@html ICONS[it.icon]}
+              </span>
+              <span class="mobile-drawer__text">
+                <span class="mobile-drawer__title">{it.label}</span>
+                <span class="mobile-drawer__desc">{it.desc}</span>
+              </span>
+            </a>
+          {/each}
+        </div>
+      {/each}
+    </div>
+  {/if}
 
   {#if currentProductSlug}
     <div class="product-subnav" aria-label="Product context">

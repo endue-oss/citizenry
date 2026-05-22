@@ -7,9 +7,12 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  // No `backdrop-filter` here on purpose — a parent backdrop-filter takes
+  // its own snapshot of the page content and clips inner backdrop-filters
+  // (like .nav-panel below the header) to that snapshot, which is empty
+  // at the panel's drop position. Header stays a transparent strip so the
+  // panel can blur the Hero directly.
   background: transparent;
-  backdrop-filter: blur(16px) saturate(140%);
-  -webkit-backdrop-filter: blur(16px) saturate(140%);
   border-bottom: 1px solid transparent;
   transition: border-color 0.2s ease;
 
@@ -30,7 +33,66 @@
 
     @include bp.mobile {
       padding: 0 var(--space-3);
+      // Burger sits at the far left; brand follows to its right. Override the
+      // section's space-between distribution because there's nothing on the
+      // right edge to push brand toward — let them sit naturally next to each
+      // other with a small gap.
+      justify-content: flex-start;
+      gap: var(--space-2);
     }
+  }
+
+  // Hamburger trigger — mobile only. Sits as the first child of .inner so it
+  // anchors to the left edge of the header.
+  .nav-burger {
+    display: none;
+    appearance: none;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--fg);
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.12s ease, border-color 0.12s ease;
+
+    @include bp.mobile {
+      display: inline-flex;
+    }
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: var(--border-strong);
+    }
+  }
+
+  .nav-burger__bars {
+    position: relative;
+    display: inline-block;
+    width: 16px;
+    height: 12px;
+
+    span {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 1.5px;
+      background: currentColor;
+      border-radius: 2px;
+      transition: transform 0.2s ease, opacity 0.15s ease, top 0.2s ease;
+    }
+    span:nth-child(1) { top: 0; }
+    span:nth-child(2) { top: 50%; transform: translateY(-50%); }
+    span:nth-child(3) { top: 100%; transform: translateY(-100%); }
+  }
+
+  &.mobile-open .nav-burger__bars {
+    span:nth-child(1) { top: 50%; transform: translateY(-50%) rotate(45deg); }
+    span:nth-child(2) { opacity: 0; }
+    span:nth-child(3) { top: 50%; transform: translateY(-50%) rotate(-45deg); }
   }
 
   .brand {
@@ -122,8 +184,9 @@
     background: rgba(255, 255, 255, 0.10);
     border: 1px solid var(--border);
     border-radius: var(--radius-pill);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    // No `backdrop-filter` here — its snapshot would clip the nested
+    // .nav-panel's backdrop, leaving the dropdown without a visible
+    // frosted-glass effect. The translucent fill still reads as a pill.
   }
 
   // GitHub Fork CTA — `)___)` shape. Its left side is masked into a
@@ -131,6 +194,18 @@
   // For nest depths larger than the pill radius, a second linear-gradient
   // layer extends the cut as a flat strip so the fork can tuck arbitrarily
   // deep without its top/bottom corners poking past the nav-pill's curve.
+  // Wraps the fork pill + its tooltip so the tooltip can anchor to the
+  // fork's actual bounding box (not the .nav-center right edge). The
+  // overlap-into-nav-pill margin now lives on the wrapper, leaving the
+  // fork's local coords clean for icon-centered tooltip positioning.
+  .gh-fork-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    height: var(--pill-h);
+    margin-left: calc(var(--fork-nest) * -1);
+  }
+
   .gh-fork {
     --bite-cx: calc(var(--fork-nest) - var(--pill-h) / 2);
 
@@ -142,7 +217,6 @@
     // Extra left padding clears the carved-out bite area so the icon /
     // label start to the right of the seam, not inside the cradle.
     padding: 0 12px 0 calc(12px + var(--fork-nest));
-    margin-left: calc(var(--fork-nest) * -1);
     color: var(--fg-mute);
     font-family: var(--mono);
     font-size: 0.78rem;
@@ -246,6 +320,64 @@
     }
   }
 
+  // Hover tooltip — sibling of .gh-fork inside .gh-fork-wrap. The wrapper
+  // gives us the fork's local coord space (its left:0 = the fork's left
+  // bounding edge), so we can center the tooltip on the GitHub icon at
+  // `padding-left + icon_w / 2` and have it land in the same spot no
+  // matter how wide the label/count is. Slides down from
+  // `translate: -50% -12px` to `-50% 0` on hover; `pointer-events: none`
+  // keeps the cursor on the fork.
+  .gh-fork-tooltip {
+    --icon-cx: calc(12px + var(--fork-nest) + 8px);
+
+    position: absolute;
+    top: calc(100% + 12px);
+    left: var(--icon-cx);
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 16px 9px 12px;
+    background: rgba(13, 17, 22, 0.72);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-pill);
+    color: var(--fg);
+    font-family: var(--sans);
+    font-size: 0.82rem;
+    font-weight: 500;
+    letter-spacing: -0.005em;
+    line-height: 1.2;
+    white-space: nowrap;
+    box-shadow:
+      0 14px 36px rgba(0, 0, 0, 0.55),
+      inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    pointer-events: none;
+    opacity: 0;
+    translate: -50% -12px;
+    transition:
+      opacity 0.22s ease,
+      translate 0.34s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .gh-fork:hover + .gh-fork-tooltip,
+  .gh-fork:focus-visible + .gh-fork-tooltip {
+    opacity: 1;
+    translate: -50% 0;
+  }
+
+  .gh-fork-tooltip__rocket {
+    font-size: 1.15rem;
+    line-height: 1;
+    // Subtle hover-only float so the rocket feels alive while the tooltip
+    // is on screen. Stops as the tooltip retracts.
+    animation: gh-fork-rocket-float 2.4s ease-in-out infinite;
+  }
+
+  .gh-fork-tooltip__text {
+    line-height: 1.2;
+  }
+
   .gh-fork__icon {
     width: 16px;
     height: 16px;
@@ -312,19 +444,43 @@
     left: 0;
     right: 0;
     padding: 8px;
-    // Glassy surface — low-alpha tint lets the strong backdrop blur do the
-    // heavy lifting. `isolation: isolate` keeps the blur on its own
-    // stacking context so it doesn't fight the header's own backdrop layer.
-    background: rgba(13, 17, 22, 0.42);
+    // Glassy surface — the bg uses a low-alpha vertical gradient so the
+    // panel reads as frosted regardless of whether the parent stacking
+    // context limits the actual backdrop-filter. `will-change` hints the
+    // browser to put the panel on its own compositing layer, which in
+    // Chromium often allows the backdrop to see past the parent pill.
+    background: linear-gradient(
+      180deg,
+      rgba(20, 25, 32, 0.55) 0%,
+      rgba(13, 17, 22, 0.45) 100%
+    );
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
-    isolation: isolate;
-    backdrop-filter: blur(40px) saturate(200%) brightness(1.05);
-    -webkit-backdrop-filter: blur(40px) saturate(200%) brightness(1.05);
+    backdrop-filter: blur(48px) saturate(220%) brightness(1.08) contrast(1.02);
+    -webkit-backdrop-filter: blur(48px) saturate(220%) brightness(1.08) contrast(1.02);
+    will-change: backdrop-filter, transform;
     box-shadow:
-      0 16px 48px rgba(0, 0, 0, 0.55),
-      inset 0 1px 0 rgba(255, 255, 255, 0.04);
+      0 16px 48px rgba(0, 0, 0, 0.6),
+      0 2px 8px rgba(0, 0, 0, 0.35),
+      inset 0 1px 0 rgba(255, 255, 255, 0.06),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.25);
     animation: nav-panel-in 0.16s ease-out both;
+
+    // Soft inner highlight — a subtle gradient sheet above the backdrop
+    // adds the "milky frosted glass" depth even when the underlying
+    // backdrop-filter can't reach the page content. Sits behind menu
+    // items via z-index: -1 inside the panel's own stacking context.
+    &::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background:
+        radial-gradient(120% 80% at 50% 0%, rgba(255, 255, 255, 0.06), transparent 60%),
+        radial-gradient(80% 100% at 50% 100%, rgba(80, 120, 220, 0.04), transparent 70%);
+      pointer-events: none;
+      z-index: -1;
+    }
 
     // hover bridge — keeps menu open while traversing the gap from triggers
     &::before {
@@ -416,6 +572,104 @@
   @keyframes nav-panel-in {
     from { opacity: 0; transform: translateY(-4px); }
     to   { opacity: 1; transform: translateY(0); }
+  }
+
+  // ─── Mobile drawer ────────────────────────────────────────────────
+  // Floats below the header row as an absolute overlay so opening/closing
+  // it doesn't push the page content underneath up or down. Anchored to
+  // the header's bottom edge; full-width.
+  .mobile-drawer {
+    display: none;
+
+    @include bp.mobile {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      padding: var(--space-3) var(--space-3) var(--space-4);
+      gap: var(--space-3);
+      background: rgba(13, 17, 22, 0.85);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(24px) saturate(160%);
+      -webkit-backdrop-filter: blur(24px) saturate(160%);
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.55);
+      animation: nav-panel-in 0.16s ease-out both;
+    }
+  }
+
+  .mobile-drawer__group {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .mobile-drawer__label {
+    color: var(--fg-dim);
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+  }
+
+  .mobile-drawer__item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px;
+    border-radius: var(--radius-sm);
+    color: var(--fg-mute);
+    transition: background 0.12s ease, color 0.12s ease;
+
+    &:hover, &:focus-visible {
+      background: rgba(255, 255, 255, 0.05);
+      text-decoration: none;
+      .mobile-drawer__title { color: var(--fg); }
+    }
+
+    &[data-tone="identity"]:hover .mobile-drawer__icon { color: var(--mod-identity); }
+    &[data-tone="mail"]:hover     .mobile-drawer__icon { color: var(--mod-mail); }
+    &[data-tone="vault"]:hover    .mobile-drawer__icon { color: var(--mod-vault); }
+  }
+
+  .mobile-drawer__icon {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--fg-mute);
+    transition: color 0.12s ease;
+  }
+
+  .mobile-drawer__text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .mobile-drawer__title {
+    color: var(--fg);
+    font-family: var(--sans);
+    font-size: 0.9rem;
+    font-weight: 500;
+    line-height: 1.2;
+  }
+
+  .mobile-drawer__desc {
+    color: var(--fg-mute);
+    font-family: var(--sans);
+    font-size: 0.78rem;
+    line-height: 1.35;
   }
 
   .enroll {
@@ -517,11 +771,21 @@
   to   { background-position: 200% 50%; }
 }
 
+@keyframes gh-fork-rocket-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-2px); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .site-header .gh-fork:hover::before,
   .site-header .gh-fork:hover .gh-fork__label,
-  .site-header .gh-fork:hover .gh-fork__count {
+  .site-header .gh-fork:hover .gh-fork__count,
+  .site-header .gh-fork-tooltip__rocket {
     animation: none;
     background-position: 25% 50%;
+  }
+  .site-header .gh-fork:hover + .gh-fork-tooltip {
+    transition: opacity 0.15s ease;
+    translate: -50% 0;
   }
 }

@@ -180,6 +180,29 @@ starlight-theme-select,
 .page > header.header .site-header {
   position: relative;
   top: auto;
+  /* The shared Header.scss keeps `.site-header` transparent because the
+   * marketing site relies on the Hero showing through. In docs there is
+   * no hero — handbook content scrolls up underneath the sticky bar
+   * and would bleed through the translucent nav-pill. Lock the strip
+   * to the page bg so the pill always sits over a solid surface.
+   * (No backdrop-filter on this layer — a filter here would clip the
+   * nav dropdown's own backdrop blur further down the tree.) */
+  background: var(--bg);
+}
+
+/* Starlight's `.main-frame` reserves `var(--sl-nav-height)` worth of
+ * padding-top for a FIXED header. We turned the header sticky-in-flow,
+ * so that reservation becomes a phantom gap below the bar. Aligning
+ * `--sl-nav-height` with our `--header-h` keeps the mobile TOC + sidebar
+ * offsets coherent; zeroing the main-frame padding-top removes the gap
+ * (sticky placement already provides the space). */
+:root,
+:root[data-theme='dark'],
+:root[data-theme='light'] {
+  --sl-nav-height: var(--header-h);
+}
+.page .main-frame {
+  padding-top: var(--sl-mobile-toc-height, 0px);
 }
 
 /* Remove the underline decoration from every link inside the

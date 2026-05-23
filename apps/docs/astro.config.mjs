@@ -21,6 +21,23 @@ export default defineConfig({
         replacesTitle: false,
       },
       favicon: '/favicon.svg',
+      // Pull Inter + JetBrains Mono — the same web fonts citizenry.id
+      // loads in its index.html. handbook.css's --sans / --mono token
+      // stacks declare these, but without the actual font files the
+      // citizenry.id-style Header.scss renders against the system mono
+      // fallback (which has a different baseline) and the nav-pill's
+      // hover background drifts off-center.
+      head: [
+        { tag: 'link', attrs: { rel: 'preconnect', href: 'https://fonts.googleapis.com' } },
+        { tag: 'link', attrs: { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' } },
+        {
+          tag: 'link',
+          attrs: {
+            rel: 'stylesheet',
+            href: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap',
+          },
+        },
+      ],
       // Brand is dark-only (matches citizenry.id). Hide the theme picker.
       // The Header slot is replaced wholesale with the citizenry.id
       // marketing-site header so the handbook + main site share one

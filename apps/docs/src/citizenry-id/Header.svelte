@@ -56,9 +56,12 @@
       id: 'features',
       label: 'Features',
       items: [
-        { icon: 'identity', label: 'Identity', desc: 'Verified agent ID & sign-in', href: '/identity', tone: 'identity' },
-        { icon: 'mail',     label: 'Mail',     desc: 'Programmable mail for agents', href: '/mail',     tone: 'mail' },
-        { icon: 'vault',    label: 'Vault',    desc: 'Secrets & credentials at the edge', href: '/vault', tone: 'vault' },
+        // Features point back to the marketing site — docs has no
+        // per-product landing of its own; Identity/Mail/Vault details
+        // live on citizenry.id.
+        { icon: 'identity', label: 'Identity', desc: 'Verified agent ID & sign-in', href: 'https://citizenry.id/identity', tone: 'identity' },
+        { icon: 'mail',     label: 'Mail',     desc: 'Programmable mail for agents', href: 'https://citizenry.id/mail',     tone: 'mail' },
+        { icon: 'vault',    label: 'Vault',    desc: 'Secrets & credentials at the edge', href: 'https://citizenry.id/vault', tone: 'vault' },
       ],
     },
     {

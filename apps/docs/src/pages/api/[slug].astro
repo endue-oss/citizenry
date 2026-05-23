@@ -7,6 +7,15 @@
 // sync-content.mjs. Configuration mirrors what the prior static
 // shell already shipped (modal Client + inline Test Request both
 // enabled, Powered-by-Scalar hidden via customCss).
+//
+// The page is full-bleed (no Starlight chrome) but still mounts the
+// citizenry.id-style Header so the Scalar pages share the same
+// nav-pill as the marketing site. handbook.css carries the raw
+// design tokens (--fg, --accent, --space-*, …) the Header.scss
+// expects.
+
+import Header from '../../citizenry-id/Header.svelte'
+import '../../styles/handbook.css'
 
 export function getStaticPaths() {
   return [
@@ -29,34 +38,26 @@ const { title, file } = Astro.props
       content={`OpenAPI reference for the Endue Citizenry ${title} service.`}
     />
     <link rel="icon" href="data:," />
+    <!-- Match citizenry.id: same Inter + JetBrains Mono web fonts so
+         the Header.scss nav-pill metrics line up with the marketing
+         site (otherwise the system mono fallback skews the trigger
+         button's baseline and the hover background drifts). -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    />
     <style>
-      html, body { margin: 0; padding: 0; height: 100%; }
-      .topbar {
-        position: sticky;
-        top: 0;
-        z-index: 10;
-        display: flex;
-        align-items: center;
-        gap: 24px;
-        padding: 10px 18px;
-        background: #0b0d10;
-        color: #f5f7fa;
-        font: 500 13px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        border-bottom: 1px solid #1e2227;
-      }
-      .topbar a { color: #b9c1cc; text-decoration: none; }
-      .topbar a:hover { color: #fff; }
-      .topbar a.active { color: #fff; font-weight: 600; }
-      .topbar .home { color: #fff; font-weight: 600; margin-right: auto; }
+      html, body { margin: 0; padding: 0; }
+      body { background: var(--bg, #09090b); color: var(--fg, #fafafa); }
+      /* Scalar's app container — make sure it takes the remaining viewport
+       * height after the sticky Header so it can scroll on its own. */
+      #app { min-height: calc(100vh - var(--header-h, 56px)); }
     </style>
   </head>
   <body>
-    <nav class="topbar" aria-label="API reference navigation">
-      <a class="home" href="/">← Citizenry handbook</a>
-      <a href="/api/identity/" class:list={[{ active: title === 'Identity' }]}>Identity</a>
-      <a href="/api/vault/"    class:list={[{ active: title === 'Vault' }]}>Vault</a>
-      <a href="/api/mail/"     class:list={[{ active: title === 'Mail' }]}>Mail</a>
-    </nav>
+    <Header client:load onEnroll={() => {}} />
     <div id="app"></div>
     <script is:inline src="/scalar.standalone.js"></script>
     <script type="module" is:inline define:vars={{ file, title }}>

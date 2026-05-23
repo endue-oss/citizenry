@@ -48,11 +48,46 @@ const { title, file } = Astro.props
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
     />
-    <style>
+    <!-- is:global: the Header lives in a hydrated Svelte island, so its
+         `.site-header` markup never receives Astro's scope class — scoped
+         selectors would silently miss it. These rules target global / island
+         elements only, so unscoping the block is correct. -->
+    <style is:global>
       html, body { margin: 0; padding: 0; }
-      body { background: var(--bg, #09090b); color: var(--fg, #fafafa); }
-      /* Scalar's app container — make sure it takes the remaining viewport
-       * height after the sticky Header so it can scroll on its own. */
+      /* Inherit the citizenry.id sans (Inter) on the document root so the
+       * Header wordmark renders in-brand. Without this the <a class="brand">
+       * falls back to the UA serif (Scalar scopes its own font to
+       * `.scalar-app`, so it never reached the Header). */
+      body {
+        background: var(--bg, #09090b);
+        color: var(--fg, #fafafa);
+        font-family: var(--sans);
+      }
+
+      /* Header lives in its own full-bleed document here (no Starlight
+       * `.page` wrapper), so the global `a { text-decoration: none }` reset
+       * the marketing site relies on is absent — strip the UA underline off
+       * the brand + fork links directly. Scoped to the Header so Scalar's
+       * own link styling is untouched. */
+      .site-header a,
+      .site-header a:hover { text-decoration: none; }
+
+      /* Tell Scalar a custom header of --header-h overlays the top edge of
+       * its app. Scalar then offsets its sticky sidebar + search and its
+       * content below our Header (top: --header-h, sidebar height:
+       * 100dvh - --header-h) instead of pinning them to viewport top where
+       * they collided with the logo on scroll. */
+      :root { --scalar-custom-header-height: var(--header-h, 56px); }
+
+      /* Make the (sticky) Header opaque. The shared Header.scss keeps the
+       * bar transparent for the marketing hero; here there is no hero, and
+       * Scalar content scrolls up underneath the sticky bar, so a
+       * transparent strip lets that content bleed through and overlap the
+       * logo. A solid fill blocks it. No backdrop-filter — a filter on the
+       * Header would clip the nav dropdown's own backdrop blur. */
+      .site-header { background: var(--bg, #09090b); }
+
+      /* App fills the viewport below the sticky Header. */
       #app { min-height: calc(100vh - var(--header-h, 56px)); }
     </style>
   </head>

@@ -2,7 +2,22 @@ export { identityRouter } from './router'
 export { adminIdentityRouter } from './router/admin'
 export { humansRouter, type HumanRouterVars } from './router/humans'
 export { registerRouter, type RegisterRouterVars } from './router/register'
-export { createHumanService, HumanError, type Notifier } from './service/human'
+export {
+  createHumanService,
+  HumanError,
+  DEFAULT_ALLOWED_EMAIL_DOMAINS,
+  ALLOWED_EMAIL_DOMAINS_CONFIG_KEY,
+  type Notifier,
+} from './service/human'
+export {
+  createRateLimitService,
+  PER_MINUTE_CAP,
+  PER_DAY_CAP,
+  type RateLimitService,
+  type RateLimitScope,
+  type RateLimitBucket,
+  type RateLimitDecision,
+} from './service/rate_limit'
 export {
   createApiKeyService,
   ApiKeyError,
@@ -29,6 +44,7 @@ export type {
   AgentRow,
   AgentKeyRow,
   HumanApiKeyRow,
+  RateLimitEventRow,
   AuditLogRow,
   FederationPeerRow,
   AdminRefreshTokenRow,

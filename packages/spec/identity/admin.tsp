@@ -15,6 +15,56 @@ namespace Citizenry.Identity;
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 /**
+ * Human admin row.
+ * @status draft
+ */
+model HumanAdminGetResponse {
+  id: humanId;
+  email: string;
+  display_name?: string;
+  status: "pending_verification" | "active" | "revoked";
+  created_at: iso8601;
+  updated_at: iso8601;
+}
+
+/**
+ * Human admin list / detail.
+ *
+ * Public lookup-by-email moved here from `/v1/humans?email=…` so the
+ * email enumeration oracle stays behind the operator PSK.
+ *
+ * @status draft
+ */
+@tag("Admin")
+@route("/v1/admin/humans")
+@useAuth(ServiceKeyAuth)
+interface AdminHumans {
+  /**
+   * Paginated list, optionally filtered by exact email match.
+   *
+   * Possible errors: 401, 500.
+   */
+  @summary("List humans (admin, paginated, optional email filter)")
+  @operationId("admin-human-list")
+  @get list(
+    @query email?: string,
+    @query status?: "pending_verification" | "active" | "revoked",
+    ...PaginationParams,
+  ): PaginatedList<HumanAdminGetResponse> | UnauthorizedError | InternalError;
+
+  /**
+   * Possible errors: 401, 404, 500.
+   */
+  @summary("Read a human (admin)")
+  @operationId("admin-human-read")
+  @get read(@path id: humanId):
+    | HumanAdminGetResponse
+    | UnauthorizedError
+    | NotFoundError
+    | InternalError;
+}
+
+/**
  * Agent admin row.
  * @status confirmed
  */

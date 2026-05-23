@@ -1,28 +1,36 @@
-// Human registration + API-Key surface.
+// Humans surface (RFC-0004).
 //
-//   POST /v1/humans                       → start verification flow (public)
-//   GET  /v1/humans?email=…               → public lookup by email
-//   POST /v1/humans/:id/verify            → submit code, receive first API-Key
-//   POST /v1/humans/:id/verify/resend     → request another code
-//   POST /v1/humans/:id/api-key/issue     → Bearer chk_ → mint another API-Key
-//   POST /v1/humans/:id/api-key/revoke    → Bearer chk_ → revoke a key
+//   POST /v1/humans          fresh-email registration → 202
+//   POST /v1/humans/rotate   re-mail code for any existing row → 202
+//   POST /v1/humans/verify   submit { email, code } → 201 { human_id, api_key }
 //
-// All BaseError-shaped (packages/spec/common/errors.tsp BaseError). The
-// HumanError catalog maps to specific HTTP status + ERR-P01-S01-{NNNN}
-// codes. The api Worker injects `db`, `notifier`, `pepper`, and the
-// minters via middleware before this router runs.
+// Every route is unauthenticated — the email round-trip is the
+// credential. Rate-limited per (email, IP) with 2/min + 15/day caps;
+// failures collapse to a single 401 on /verify to prevent enumeration.
+//
+// The first call mints the human's API-Key; subsequent /verify calls
+// (after /rotate) atomically revoke the previous active key and mint
+// a new one. The "one active API-Key per human" invariant is enforced
+// by a partial unique index — see migrations/0012.
 
-import { eq } from 'drizzle-orm'
 import { Hono, type Context } from 'hono'
 import type { ConfigReader } from '@citizenry/config'
 import type { Db } from '../db'
-import { human } from '../db/schema'
-import { createHumanService, HumanError, type Notifier } from '../service/human'
+import {
+  createHumanService,
+  HumanError,
+  type Notifier,
+} from '../service/human'
 import {
   createApiKeyService,
   ApiKeyError,
-  type IssuedApiKey,
 } from '../service/api_key'
+import {
+  createRateLimitService,
+  type RateLimitBucket,
+  type RateLimitScope,
+  type RateLimitService,
+} from '../service/rate_limit'
 
 const VERIFICATION_TTL_MINUTES = 30
 
@@ -35,66 +43,48 @@ export type HumanRouterVars = {
   mintApiKeyId: () => string
   mintApiKeyToken: () => string
   config: ConfigReader
-  /** Public origin of this api Worker — used to build verify magic-links. */
-  apiBaseUrl: string
-  /** Set by `apiKeyAuth` middleware on /api-key/* subroutes. */
-  actor?: { humanPrincipalId: string; apiKeyId: string; realmId: string | null }
 }
 
 type Env = { Variables: HumanRouterVars }
 
-const STATUS_BY_CODE: Record<string, number> = {
+const STATUS_BY_CODE: Record<string, 400 | 401 | 409 | 422 | 500> = {
   email_invalid: 400,
-  email_domain_not_allowed: 400,
-  email_already_active: 409,
-  email_already_pending: 409,
-  human_not_found: 404,
-  human_already_verified: 409,
-  verification_expired: 410,
-  verification_code_invalid: 401,
-  resend_too_soon: 429,
+  email_domain_not_allowed: 422,
+  email_already_in_use: 409,
+  invalid_credentials: 401,
 }
 
 const ERR_CODE_BY_CODE: Record<string, string> = {
   email_invalid: 'ERR-P01-S01-0400',
   email_domain_not_allowed: 'ERR-P01-S01-2004',
-  email_already_active: 'ERR-P01-S01-3100',
-  email_already_pending: 'ERR-P01-S01-3101',
-  human_not_found: 'ERR-P01-S01-0404',
-  human_already_verified: 'ERR-P01-S01-3102',
-  verification_expired: 'ERR-P01-S01-7200',
-  verification_code_invalid: 'ERR-P01-S01-1100',
-  resend_too_soon: 'ERR-P01-S01-7201',
+  email_already_in_use: 'ERR-P01-S01-3100',
+  invalid_credentials: 'ERR-P01-S01-1100',
 }
 
 const TITLE_BY_CODE: Record<string, string> = {
   email_invalid: 'Bad Request',
-  email_domain_not_allowed: 'Bad Request',
-  email_already_active: 'Conflict',
-  email_already_pending: 'Conflict',
-  human_not_found: 'Not Found',
-  human_already_verified: 'Conflict',
-  verification_expired: 'Gone',
-  verification_code_invalid: 'Unauthorized',
-  resend_too_soon: 'Too Many Requests',
+  email_domain_not_allowed: 'Unprocessable',
+  email_already_in_use: 'Conflict',
+  invalid_credentials: 'Unauthorized',
 }
 
-function envelope(c: Context, err: HumanError) {
-  const status = STATUS_BY_CODE[err.code] ?? 500
-  const body = {
-    title: TITLE_BY_CODE[err.code] ?? 'Internal Server Error',
-    message: err.message,
-    detail: err.detail,
-    code: ERR_CODE_BY_CODE[err.code] ?? 'ERR-P01-S01-0500',
-    method: c.req.method,
-    instance: c.req.path,
-    request_url: c.req.url,
-    timestamp: new Date().toISOString(),
-  }
-  return c.json(body, status as 400 | 401 | 404 | 409 | 410 | 429 | 500)
+function envelope(c: Context<Env>, err: HumanError) {
+  return c.json(
+    {
+      title: TITLE_BY_CODE[err.code] ?? 'Internal Server Error',
+      message: err.message,
+      detail: err.detail,
+      code: ERR_CODE_BY_CODE[err.code] ?? 'ERR-P01-S01-0500',
+      method: c.req.method,
+      instance: c.req.path,
+      request_url: c.req.url,
+      timestamp: new Date().toISOString(),
+    },
+    STATUS_BY_CODE[err.code] ?? 500,
+  )
 }
 
-function service(c: Context<Env>) {
+function svc(c: Context<Env>) {
   return createHumanService({
     db: c.var.db,
     pepper: c.var.pepper,
@@ -113,60 +103,65 @@ function apiKeySvc(c: Context<Env>) {
   })
 }
 
-async function issueAndDeliverApiKey(
-  c: Context<Env>,
-  humanPrincipalId: string,
-  recipientEmail: string,
-  displayName: string | null = null,
-  expiresAt: Date | null = null,
-): Promise<{ issued: IssuedApiKey; notify: { outbound_log_id: string; status: string } }> {
-  const issued = await apiKeySvc(c).issue({
-    humanPrincipalId,
-    displayName,
-    expiresAt,
-  })
-  const notify = await c.var.notifier.send({
-    template: 'human_api_key',
-    to: [{ mail: recipientEmail }],
-    context: {
-      token: issued.token,
-      displayName: issued.displayName,
-      expiresAt: issued.expiresAt ? issued.expiresAt.toISOString() : null,
-    },
-  })
-  return { issued, notify: { outbound_log_id: notify.outbound_log_id, status: notify.status } }
+function rateLimitSvc(c: Context<Env>): RateLimitService {
+  return createRateLimitService({ db: c.var.db })
 }
 
-const FORBIDDEN_OWNER_MISMATCH = {
-  code: 'ERR-P01-S01-0403',
-  title: 'Forbidden',
-  message: 'api-key owner does not match path id',
-}
-
-function verifyMagicLink(c: Context<Env>, humanId: string, code: string): string {
-  const base = c.var.apiBaseUrl.replace(/\/+$/, '')
-  return `${base}/v1/humans/${encodeURIComponent(humanId)}/verify?code=${encodeURIComponent(code)}`
-}
-
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
-}
-
-function htmlPage(title: string, bodyHtml: string): string {
+// CF-Connecting-IP is injected by Cloudflare on every request; the
+// header always wins because `x-forwarded-for` from the public edge
+// is untrusted (clients can spoof). Local dev / tests fall back to
+// the Hono request's runtime info.
+function clientIp(c: Context<Env>): string {
   return (
-    `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(title)}</title>` +
-    `<style>body{font-family:-apple-system,Segoe UI,sans-serif;max-width:560px;margin:48px auto;padding:24px;line-height:1.5}h1{font-size:20px}code{background:#f6f8fa;padding:2px 6px;border-radius:4px}</style>` +
-    `</head><body><h1>${escapeHtml(title)}</h1>${bodyHtml}<p style="color:#888;font-size:12px;margin-top:32px">— Endue Citizenry</p></body></html>`
+    c.req.header('cf-connecting-ip') ||
+    c.req.header('x-real-ip') ||
+    c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ||
+    'unknown'
   )
 }
 
+async function enforceRateLimit(
+  c: Context<Env>,
+  scope: RateLimitScope,
+  email: string,
+): Promise<Response | null> {
+  const rl = rateLimitSvc(c)
+  const buckets: RateLimitBucket[] = [
+    { kind: 'email', value: email },
+    { kind: 'ip', value: clientIp(c) },
+  ]
+  for (const bucket of buckets) {
+    const decision = await rl.check(bucket, scope)
+    if (!decision.allowed) {
+      c.header('Retry-After', String(decision.retryAfterSecs))
+      return c.json(
+        {
+          title: 'Too Many Requests',
+          message: `rate limit exceeded (${bucket.kind} / ${decision.reason})`,
+          code: 'ERR-P01-S01-0429',
+          method: c.req.method,
+          instance: c.req.path,
+          request_url: c.req.url,
+          timestamp: new Date().toISOString(),
+        },
+        429,
+      )
+    }
+  }
+  for (const bucket of buckets) {
+    await rl.recordHit(bucket, scope)
+  }
+  return null
+}
+
+const VERIFICATION_TTL_MS = VERIFICATION_TTL_MINUTES * 60 * 1000
+
+function expiresAtIsoFromNow(): string {
+  return new Date(Date.now() + VERIFICATION_TTL_MS).toISOString()
+}
+
 export const humansRouter = new Hono<Env>()
-  // ── 1: start ───────────────────────────────────────────
+  // ── POST /v1/humans — fresh email only ─────────────────
   .post('/v1/humans', async (c) => {
     let body: { email?: string; display_name?: string }
     try {
@@ -177,36 +172,25 @@ export const humansRouter = new Hono<Env>()
     if (typeof body.email !== 'string') {
       return envelope(c, new HumanError('email_invalid', 'email is required'))
     }
+    const email = body.email.trim().toLowerCase()
+    const rl = await enforceRateLimit(c, 'humans.start', email)
+    if (rl) return rl
 
     try {
-      const result = await service(c).start({
-        email: body.email,
+      const result = await svc(c).startCreate({
+        email,
         displayName: body.display_name,
       })
-
-      // Fire-and-await notify so the response reflects delivery
-      // status. Failures here do not roll back the row — the human
-      // can request a resend.
-      const notifyResult = await c.var.notifier.send({
+      await c.var.notifier.send({
         template: 'human_verification',
         to: [{ mail: result.human.email }],
         context: {
           code: result.code,
           expiresInMinutes: VERIFICATION_TTL_MINUTES,
-          verifyUrl: verifyMagicLink(c, result.human.principalId, result.code),
         },
       })
-
       return c.json(
-        {
-          id: result.human.principalId,
-          email: result.human.email,
-          status: result.human.status,
-          expires_at: result.verification.expiresAt.toISOString(),
-          can_resend_at: result.verification.nextResendAt.toISOString(),
-          notify_outbound_log_id: notifyResult.outbound_log_id,
-          notify_status: notifyResult.status,
-        },
+        { expires_at: result.verification.expiresAt.toISOString() },
         202,
       )
     } catch (err) {
@@ -215,299 +199,88 @@ export const humansRouter = new Hono<Env>()
     }
   })
 
-  // ── GET ?email=… : public lookup ───────────────────────
-  .get('/v1/humans', async (c) => {
-    const raw = c.req.query('email')
-    if (typeof raw !== 'string' || raw.length === 0) {
-      return envelope(c, new HumanError('email_invalid', 'email query parameter is required'))
-    }
-    const email = raw.trim().toLowerCase()
-    const rows = await c.var.db
-      .select({ id: human.principalId, status: human.status })
-      .from(human)
-      .where(eq(human.email, email))
-      .limit(1)
-    const row = rows[0]
-    if (!row) return envelope(c, new HumanError('human_not_found', 'no human for this email'))
-    return c.json({ id: row.id, status: row.status })
-  })
-
-  // ── GET magic-link variant of verify ───────────────────
-  // Same verify-and-issue logic as POST, but browser-clickable from
-  // the verification email. The API-Key is delivered only via email;
-  // the HTTP response is a plain HTML confirmation page (no token).
-  .get('/v1/humans/:id/verify', async (c) => {
-    const code = c.req.query('code')
-    if (typeof code !== 'string' || code.length === 0) {
-      return c.html(htmlPage('Missing code', '<p>The verification link is missing the <code>code</code> parameter.</p>'), 400)
-    }
+  // ── POST /v1/humans/rotate — re-mail any existing row ──
+  .post('/v1/humans/rotate', async (c) => {
+    let body: { email?: string }
     try {
-      const updated = await service(c).verify(c.req.param('id'), code)
-      await issueAndDeliverApiKey(c, updated.principalId, updated.email, 'initial', null)
-      return c.html(
-        htmlPage(
-          'Email verified',
-          `<p>You're set, <strong>${escapeHtml(updated.email)}</strong>.</p>` +
-            `<p>Your initial API key has been sent to your inbox.</p>`,
-        ),
-      )
-    } catch (err) {
-      if (err instanceof HumanError) {
-        const status = STATUS_BY_CODE[err.code] ?? 500
-        return c.html(htmlPage('Verification failed', `<p>${escapeHtml(err.message)}</p>`), status as 400 | 401 | 404 | 409 | 410 | 500)
-      }
-      if (err instanceof ApiKeyError) {
-        return c.html(
-          htmlPage('Email verified — but key issue failed', `<p>${escapeHtml(err.message)}</p><p>Use the CLI <code>POST /v1/humans/${escapeHtml(c.req.param('id'))}/api-key/issue</code> with an existing key, or contact support.</p>`),
-          500,
-        )
-      }
-      throw err
-    }
-  })
-
-  // ── 3: verify (and emit the first API-Key) ─────────────
-  .post('/v1/humans/:id/verify', async (c) => {
-    let body: { code?: string }
-    try {
-      body = (await c.req.json()) as { code?: string }
+      body = (await c.req.json()) as { email?: string }
     } catch {
-      return envelope(
-        c,
-        new HumanError('verification_code_invalid', 'request body must be valid JSON'),
-      )
+      return envelope(c, new HumanError('email_invalid', 'request body must be valid JSON'))
     }
-    if (typeof body.code !== 'string') {
-      return envelope(c, new HumanError('verification_code_invalid', 'code is required'))
+    if (typeof body.email !== 'string') {
+      return envelope(c, new HumanError('email_invalid', 'email is required'))
     }
+    const email = body.email.trim().toLowerCase()
+    const rl = await enforceRateLimit(c, 'humans.rotate', email)
+    if (rl) return rl
+
     try {
-      const updated = await service(c).verify(c.req.param('id'), body.code)
-
-      // Bootstrap the first API-Key inline. Surfaced once in the
-      // response and emailed in parallel so the human can recover it
-      // out-of-band.
-      const { issued, notify } = await issueAndDeliverApiKey(
-        c,
-        updated.principalId,
-        updated.email,
-        'initial',
-        null,
-      )
-
-      return c.json({
-        id: updated.principalId,
-        email: updated.email,
-        status: updated.status,
-        verified_at: updated.updatedAt.toISOString(),
-        api_key: {
-          api_key_id: issued.apiKeyId,
-          token: issued.token,
-          display_name: issued.displayName ?? undefined,
-          expires_at: issued.expiresAt ? issued.expiresAt.toISOString() : undefined,
-          created_at: issued.createdAt.toISOString(),
-          notify_outbound_log_id: notify.outbound_log_id,
-          notify_status: notify.status,
-        },
-      })
-    } catch (err) {
-      if (err instanceof HumanError) return envelope(c, err)
-      if (err instanceof ApiKeyError) {
-        return c.json(
-          {
-            title: 'Internal Server Error',
-            message: `verify succeeded but first api-key issue failed: ${err.message}`,
-            code: 'ERR-P01-S01-0500',
-            method: c.req.method,
-            instance: c.req.path,
-            request_url: c.req.url,
-            timestamp: new Date().toISOString(),
+      const result = await svc(c).startRotate({ email })
+      if (result) {
+        await c.var.notifier.send({
+          template: 'human_verification',
+          to: [{ mail: result.human.email }],
+          context: {
+            code: result.code,
+            expiresInMinutes: VERIFICATION_TTL_MINUTES,
           },
-          500,
-        )
+        })
       }
-      throw err
-    }
-  })
-
-  // ── 4: resend ──────────────────────────────────────────
-  .post('/v1/humans/:id/verify/resend', async (c) => {
-    try {
-      const id = c.req.param('id')
-      const humanRow = await service(c).findById(id)
-      if (!humanRow) {
-        return envelope(c, new HumanError('human_not_found', 'no human with this id'))
-      }
-      const result = await service(c).requestResend(id)
-      const notifyResult = await c.var.notifier.send({
-        template: 'human_verification',
-        to: [{ mail: humanRow.email }],
-        context: {
-          code: result.code,
-          expiresInMinutes: VERIFICATION_TTL_MINUTES,
-          verifyUrl: verifyMagicLink(c, id, result.code),
-        },
-      })
-
-      return c.json({
-        id,
-        email: humanRow.email,
-        resend_count: result.verification.resendCount,
-        can_resend_at: result.verification.nextResendAt.toISOString(),
-        expires_at: result.verification.expiresAt.toISOString(),
-        notify_outbound_log_id: notifyResult.outbound_log_id,
-        notify_status: notifyResult.status,
-      })
+      // Always-202, identical shape regardless of whether the email
+      // matched an existing row — oracle-safe.
+      return c.json(
+        { expires_at: result?.verification.expiresAt.toISOString() ?? expiresAtIsoFromNow() },
+        202,
+      )
     } catch (err) {
-      if (err instanceof HumanError) {
-        if (err.code === 'resend_too_soon' && err.detail?.can_resend_at) {
-          const next = new Date(String(err.detail.can_resend_at))
-          c.header(
-            'Retry-After',
-            Math.max(1, Math.ceil((next.getTime() - Date.now()) / 1000)).toString(),
-          )
-        }
-        return envelope(c, err)
-      }
+      // Only invalid email / domain surfaces. Unknown email → silent
+      // null inside the service, no error here.
+      if (err instanceof HumanError) return envelope(c, err)
       throw err
     }
   })
 
-  // ── 5: api-key/issue (Bearer chk_) ─────────────────────
-  // The apiKeyAuth middleware (apps/api/src/middleware/auth.ts) is
-  // mounted in front of this route; c.var.actor carries the resolved
-  // owner principal id.
-  .post('/v1/humans/:id/api-key/issue', async (c) => {
-    const id = c.req.param('id')
-    if (!c.var.actor) {
-      return c.json(
-        {
-          title: 'Unauthorized',
-          message: 'api-key required',
-          code: 'ERR-P01-S01-1040',
-          method: c.req.method,
-          instance: c.req.path,
-          request_url: c.req.url,
-          timestamp: new Date().toISOString(),
-        },
-        401,
-      )
-    }
-    if (c.var.actor.humanPrincipalId !== id) {
-      return c.json({ ...FORBIDDEN_OWNER_MISMATCH, method: c.req.method, instance: c.req.path, request_url: c.req.url, timestamp: new Date().toISOString() }, 403)
-    }
-
-    let body: { display_name?: string; expires_at?: string } = {}
-    if (c.req.header('Content-Length')) {
-      try {
-        body = (await c.req.json()) as typeof body
-      } catch {
-        return envelope(c, new HumanError('email_invalid', 'request body must be valid JSON'))
-      }
-    }
-
-    const humanRow = await service(c).findById(id)
-    if (!humanRow) {
-      return envelope(c, new HumanError('human_not_found', 'no human with this id'))
-    }
-    if (humanRow.status !== 'active') {
-      return envelope(c, new HumanError('human_already_verified', 'human is not active'))
-    }
-
-    const expiresAt = body.expires_at ? new Date(body.expires_at) : null
+  // ── POST /v1/humans/verify — submit { email, code } ────
+  .post('/v1/humans/verify', async (c) => {
+    let body: { email?: string; code?: string }
     try {
-      const { issued, notify } = await issueAndDeliverApiKey(
-        c,
-        id,
-        humanRow.email,
-        body.display_name ?? null,
-        expiresAt,
-      )
+      body = (await c.req.json()) as { email?: string; code?: string }
+    } catch {
+      return envelope(c, new HumanError('invalid_credentials', 'verification failed'))
+    }
+    if (typeof body.email !== 'string' || typeof body.code !== 'string') {
+      return envelope(c, new HumanError('invalid_credentials', 'verification failed'))
+    }
+    const email = body.email.trim().toLowerCase()
+    const rl = await enforceRateLimit(c, 'humans.verify', email)
+    if (rl) return rl
+
+    try {
+      const result = await svc(c).verify({ email, code: body.code })
+      // Code accepted → mint the new API-Key, revoking any prior
+      // active key for the owner in the same step.
+      const issued = await apiKeySvc(c).issueReplacing({
+        humanPrincipalId: result.human.principalId,
+        displayName: 'primary',
+        expiresAt: null,
+      })
       return c.json(
         {
-          api_key_id: issued.apiKeyId,
-          token: issued.token,
-          display_name: issued.displayName ?? undefined,
-          expires_at: issued.expiresAt ? issued.expiresAt.toISOString() : undefined,
-          created_at: issued.createdAt.toISOString(),
-          notify_outbound_log_id: notify.outbound_log_id,
-          notify_status: notify.status,
+          human_id: result.human.principalId,
+          api_key: issued.token,
+          expires_at: issued.expiresAt ? issued.expiresAt.toISOString() : null,
         },
         201,
       )
     } catch (err) {
+      if (err instanceof HumanError) return envelope(c, err)
       if (err instanceof ApiKeyError) {
+        // Shouldn't happen if verify succeeded — degrade to 500 so
+        // the cause is investigatable, not silently 401.
         return c.json(
           {
             title: 'Internal Server Error',
-            message: err.message,
-            detail: err.detail,
-            code: 'ERR-P01-S01-0500',
-            method: c.req.method,
-            instance: c.req.path,
-            request_url: c.req.url,
-            timestamp: new Date().toISOString(),
-          },
-          500,
-        )
-      }
-      throw err
-    }
-  })
-
-  // ── 6: api-key/revoke (Bearer chk_) ────────────────────
-  .post('/v1/humans/:id/api-key/revoke', async (c) => {
-    const id = c.req.param('id')
-    if (!c.var.actor) {
-      return c.json(
-        {
-          title: 'Unauthorized',
-          message: 'api-key required',
-          code: 'ERR-P01-S01-1040',
-          method: c.req.method,
-          instance: c.req.path,
-          request_url: c.req.url,
-          timestamp: new Date().toISOString(),
-        },
-        401,
-      )
-    }
-    if (c.var.actor.humanPrincipalId !== id) {
-      return c.json({ ...FORBIDDEN_OWNER_MISMATCH, method: c.req.method, instance: c.req.path, request_url: c.req.url, timestamp: new Date().toISOString() }, 403)
-    }
-
-    let body: { api_key_id?: string }
-    try {
-      body = (await c.req.json()) as { api_key_id?: string }
-    } catch {
-      return envelope(c, new HumanError('email_invalid', 'request body must be valid JSON'))
-    }
-    if (typeof body.api_key_id !== 'string') {
-      return envelope(c, new HumanError('email_invalid', 'api_key_id is required'))
-    }
-
-    try {
-      await apiKeySvc(c).revoke(body.api_key_id, id)
-      return c.body(null, 204)
-    } catch (err) {
-      if (err instanceof ApiKeyError) {
-        if (err.code === 'api_key_not_found') {
-          return c.json(
-            {
-              title: 'Not Found',
-              message: err.message,
-              code: 'ERR-P01-S01-0404',
-              method: c.req.method,
-              instance: c.req.path,
-              request_url: c.req.url,
-              timestamp: new Date().toISOString(),
-            },
-            404,
-          )
-        }
-        return c.json(
-          {
-            title: 'Internal Server Error',
-            message: err.message,
+            message: `verify succeeded but api-key issue failed: ${err.message}`,
             code: 'ERR-P01-S01-0500',
             method: c.req.method,
             instance: c.req.path,

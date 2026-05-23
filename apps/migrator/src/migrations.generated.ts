@@ -69,6 +69,16 @@ export const identityMigrations: readonly Migration[] = [
     checksum: "sha256-d3bac9c8735e86793e61f5ef0dd3dd1b8edc13e17ece828d25457c217a7f54a2",
     sql: "-- Retire the `enrollment_token` table. The bootstrap-token flow it\n-- powered was replaced by direct human-API-Key (`chk_…`) auth on\n-- `POST /v1/agent/register`; the table has had no writers and no\n-- readers since that change, so the rows can be dropped along with\n-- the table itself. Indexes and constraints scoped to the table are\n-- removed implicitly by the DROP TABLE.\n\nDROP TABLE IF EXISTS enrollment_token;\n",
   },
+  {
+    filename: "0012_human_api_key_one_active_per_owner.sql",
+    checksum: "sha256-7b6f8cbcdacd6780d81b6552eb77fe03d35f01fed07a11178afa1fec38331407",
+    sql: "-- Enforce \"one active API-Key per human\" (RFC-0004).\n--\n-- Step 1: data cleanup. For each owner with multiple active keys,\n-- keep the most recently created one and mark the rest revoked.\n-- Idempotent — re-running selects the same set (created_at ties are\n-- broken by api_key_id lexicographically via the ROWID alias).\n--\n-- Step 2: partial unique index. Now that there is at most one active\n-- key per owner, the DB enforces the invariant going forward.\n\n-- ── Cleanup ──────────────────────────────────────────────────────\nUPDATE human_api_key\n   SET status = 'revoked',\n       revoked_at = unixepoch() * 1000\n WHERE status = 'active'\n   AND api_key_id NOT IN (\n     SELECT api_key_id\n       FROM (\n         SELECT api_key_id,\n                ROW_NUMBER() OVER (\n                  PARTITION BY owner_human_principal_id\n                  ORDER BY created_at DESC, api_key_id DESC\n                ) AS rn\n           FROM human_api_key\n          WHERE status = 'active'\n       )\n      WHERE rn = 1\n   );\n\n-- ── Constraint ───────────────────────────────────────────────────\nCREATE UNIQUE INDEX IF NOT EXISTS human_api_key_one_active_per_owner\n    ON human_api_key (owner_human_principal_id)\n    WHERE status = 'active';\n",
+  },
+  {
+    filename: "0013_rate_limit_event.sql",
+    checksum: "sha256-5298687086b357b83a2134e8106c7f117d29f77b7b28c92a0a60ce325625ed35",
+    sql: "-- Rate-limit counter table backing the per-email + per-IP throttling\n-- on the unauth humans surface (RFC-0004). Sliding-window via\n-- `count(*) WHERE ts > now - <window>`; cleanup is opportunistic on\n-- each insert (rows older than the day window are deleted).\n--\n-- Caps (from packages/identity/src/service/rate_limit.ts):\n--   PER_MINUTE_CAP = 2\n--   PER_DAY_CAP    = 15\n-- per (bucket_kind, bucket_value, scope) tuple.\n\nCREATE TABLE IF NOT EXISTS rate_limit_event (\n    id           INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,\n    bucket_kind  TEXT    NOT NULL,\n    bucket_value TEXT    NOT NULL,\n    scope        TEXT    NOT NULL,\n    ts           INTEGER NOT NULL DEFAULT (unixepoch() * 1000),\n\n    CONSTRAINT rate_limit_event_kind_check\n        CHECK (bucket_kind IN ('email', 'ip'))\n);\n\nCREATE INDEX IF NOT EXISTS rate_limit_event_lookup_idx\n    ON rate_limit_event (bucket_kind, bucket_value, scope, ts);\n\nCREATE INDEX IF NOT EXISTS rate_limit_event_ts_idx\n    ON rate_limit_event (ts);\n",
+  },
 ] as const
 
 export const vaultMigrations: readonly Migration[] = [

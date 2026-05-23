@@ -57,6 +57,9 @@ app.route('/', identityApp)
 // humans — public self-registration with email verification. Mounted
 // at root because the routes are absolute (/v1/humans*). See
 // ADR-2026-0005 for the outbound-mail-via-mail-Worker design.
+// All three /v1/humans/* routes are unauth (email round-trip is the
+// credential). Rate-limit + enumeration defenses live inside the
+// router. RFC-0004.
 const humansApp = new Hono<{ Bindings: Bindings; Variables: HumanRouterVars }>()
   .use('*', identityDb)
   .use('*', configReader)
@@ -67,12 +70,8 @@ const humansApp = new Hono<{ Bindings: Bindings; Variables: HumanRouterVars }>()
     c.set('mintVerificationId', newHumanVerificationId)
     c.set('mintApiKeyId', newHumanApiKeyId)
     c.set('mintApiKeyToken', newApiKeyToken)
-    c.set('apiBaseUrl', c.env.API_BASE_URL || `https://${c.env.ISSUER_HOST}`)
     await next()
   })
-  // Bearer chk_ guard for /api-key/* subroutes. Other /v1/humans/*
-  // routes (create, verify, resend, find) stay unauthenticated.
-  .use('/v1/humans/:id/api-key/*', apiKeyAuth)
   .route('/', humansRouter)
 app.route('/', humansApp)
 

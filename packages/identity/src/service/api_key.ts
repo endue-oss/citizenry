@@ -102,6 +102,55 @@ async function hashToken(raw: string, pepper: Uint8Array): Promise<Uint8Array> {
 export function createApiKeyService(deps: ApiKeyServiceDeps) {
   const now = deps.now ?? Date.now
 
+  async function doIssue(input: {
+    humanPrincipalId: string
+    displayName?: string | null
+    expiresAt?: Date | null
+  }): Promise<IssuedApiKey> {
+    const ownerRow = await deps.db
+      .select()
+      .from(human)
+      .where(eq(human.principalId, input.humanPrincipalId))
+      .limit(1)
+    const owner = ownerRow[0]
+    if (!owner) {
+      throw new ApiKeyError('human_not_active', 'human not found')
+    }
+    if (owner.status !== 'active') {
+      throw new ApiKeyError('human_not_active', 'human is not verified', {
+        status: owner.status,
+      })
+    }
+
+    const token = deps.mintToken()
+    const tokenHash = await hashToken(token, deps.pepper)
+    const apiKeyId = deps.mintApiKeyId()
+    const createdAt = new Date(now())
+
+    const [row] = await deps.db
+      .insert(humanApiKey)
+      .values({
+        apiKeyId,
+        tokenHash,
+        ownerHumanPrincipalId: owner.principalId,
+        displayName: input.displayName ?? null,
+        status: 'active',
+        expiresAt: input.expiresAt ?? null,
+        createdAt,
+      })
+      .returning()
+    if (!row) throw new Error('human_api_key insert returned no row')
+
+    return {
+      token,
+      apiKeyId: row.apiKeyId,
+      ownerHumanPrincipalId: row.ownerHumanPrincipalId,
+      displayName: row.displayName,
+      expiresAt: row.expiresAt,
+      createdAt: row.createdAt,
+    }
+  }
+
   return {
     /**
      * Mint a fresh API-Key for the given (verified) human. The raw
@@ -112,48 +161,33 @@ export function createApiKeyService(deps: ApiKeyServiceDeps) {
       displayName?: string | null
       expiresAt?: Date | null
     }): Promise<IssuedApiKey> {
-      const ownerRow = await deps.db
-        .select()
-        .from(human)
-        .where(eq(human.principalId, input.humanPrincipalId))
-        .limit(1)
-      const owner = ownerRow[0]
-      if (!owner) {
-        throw new ApiKeyError('human_not_active', 'human not found')
-      }
-      if (owner.status !== 'active') {
-        throw new ApiKeyError('human_not_active', 'human is not verified', {
-          status: owner.status,
-        })
-      }
+      return doIssue(input)
+    },
 
-      const token = deps.mintToken()
-      const tokenHash = await hashToken(token, deps.pepper)
-      const apiKeyId = deps.mintApiKeyId()
-      const createdAt = new Date(now())
-
-      const [row] = await deps.db
-        .insert(humanApiKey)
-        .values({
-          apiKeyId,
-          tokenHash,
-          ownerHumanPrincipalId: owner.principalId,
-          displayName: input.displayName ?? null,
-          status: 'active',
-          expiresAt: input.expiresAt ?? null,
-          createdAt,
-        })
-        .returning()
-      if (!row) throw new Error('human_api_key insert returned no row')
-
-      return {
-        token,
-        apiKeyId: row.apiKeyId,
-        ownerHumanPrincipalId: row.ownerHumanPrincipalId,
-        displayName: row.displayName,
-        expiresAt: row.expiresAt,
-        createdAt: row.createdAt,
-      }
+    /**
+     * Issue + atomically revoke any other active key for the same
+     * owner. This enforces the "single active API-Key per human"
+     * invariant required by the `/v1/humans/verify` rotation flow
+     * (RFC-0004). A partial unique index on (owner) WHERE
+     * status='active' is the DB-level guarantee; the revoke-then-
+     * insert sequence here is the application-level fast path.
+     */
+    async issueReplacing(input: {
+      humanPrincipalId: string
+      displayName?: string | null
+      expiresAt?: Date | null
+    }): Promise<IssuedApiKey> {
+      const tNow = new Date(now())
+      await deps.db
+        .update(humanApiKey)
+        .set({ status: 'revoked', revokedAt: tNow })
+        .where(
+          and(
+            eq(humanApiKey.ownerHumanPrincipalId, input.humanPrincipalId),
+            eq(humanApiKey.status, 'active'),
+          ),
+        )
+      return doIssue(input)
     },
 
     /**

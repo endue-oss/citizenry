@@ -342,6 +342,40 @@ export const adminRefreshToken = sqliteTable(
   }),
 )
 
+// ── rate_limit_event (RFC-0004) ──────────────────────────────
+// Sliding-window counter for unauth POSTs on the humans surface
+// (`/v1/humans`, `/v1/humans/rotate`, `/v1/humans/verify`). Rows are
+// indexed by bucket (email or IP) + scope + timestamp so the rate
+// limiter can `count(*) WHERE ts > now - window` cheaply.
+//
+// Stale rows are pruned opportunistically by the rate-limit service
+// on each insert (rows older than the longest window).
+export const rateLimitEvent = sqliteTable(
+  'rate_limit_event',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    bucketKind: text('bucket_kind').notNull(),     // 'email' | 'ip'
+    bucketValue: text('bucket_value').notNull(),
+    scope: text('scope').notNull(),                // 'humans.start' | 'humans.rotate' | 'humans.verify'
+    ts: integer('ts', { mode: 'timestamp_ms' })
+      .notNull()
+      .default(sql`(unixepoch() * 1000)`),
+  },
+  (t) => ({
+    lookupIdx: index('rate_limit_event_lookup_idx').on(
+      t.bucketKind,
+      t.bucketValue,
+      t.scope,
+      t.ts,
+    ),
+    tsIdx: index('rate_limit_event_ts_idx').on(t.ts),
+    kindChk: check(
+      'rate_limit_event_kind_check',
+      sql`${t.bucketKind} IN ('email', 'ip')`,
+    ),
+  }),
+)
+
 // ── audit_log ────────────────────────────────────────────────
 // INSERT-only, no FKs (preserved permanently after entity deletion).
 export const auditLog = sqliteTable(
@@ -379,6 +413,7 @@ export const schema = {
   agentKey,
   humanApiKey,
   jtiReplay,
+  rateLimitEvent,
   auditLog,
   federationPeer,
   adminRefreshToken,
@@ -394,6 +429,7 @@ export type HumanEmailVerificationRow = typeof humanEmailVerification.$inferSele
 export type AgentRow = typeof agent.$inferSelect
 export type AgentKeyRow = typeof agentKey.$inferSelect
 export type HumanApiKeyRow = typeof humanApiKey.$inferSelect
+export type RateLimitEventRow = typeof rateLimitEvent.$inferSelect
 export type AuditLogRow = typeof auditLog.$inferSelect
 export type FederationPeerRow = typeof federationPeer.$inferSelect
 export type AdminRefreshTokenRow = typeof adminRefreshToken.$inferSelect

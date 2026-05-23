@@ -12,27 +12,38 @@ namespace Citizenry.Identity;
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // Human self-registration with email verification
 //
-// Flow (see ADR-2026-0005):
-//   1. POST /v1/humans                  — start, code sent via mail Worker
-//   2. POST /v1/humans/:id/verify       — submit 6-digit code; first API-Key is issued + emailed
-//   3. POST /v1/humans/:id/verify/resend — re-request code (rate-limited)
-//   4. GET  /v1/humans?email=…          — public lookup by email
-//   5. POST /v1/humans/:id/api-key/issue   — Bearer chk_ → mint additional API-Key, delivered via email
-//   6. POST /v1/humans/:id/api-key/revoke  — Bearer chk_ → revoke an API-Key
+// Three endpoints; nothing else.
 //
-// /humans + /verify + /verify/resend + GET are unauthenticated — the
-// email round-trip is the credential. /api-key/* require an existing
-// Bearer chk_ API-Key whose owner matches the path id.
+//   1. POST /v1/humans          { email, display_name? }
+//        → 202; mails a 6-digit code. Fresh-email only — 409 on
+//          existing pending or active rows.
+//
+//   2. POST /v1/humans/rotate   { email }
+//        → 202; mails a fresh code for an *active* human so they can
+//          mint a replacement API-Key. Always 202 (oracle-safe).
+//
+//   3. POST /v1/humans/verify   { email, code }
+//        → 201 { human_id, api_key }. Consumes the most recent
+//          verification row matching `email`; flips the human to
+//          `active` (if first verify) AND mints exactly one new
+//          API-Key, revoking any other active key for the owner in
+//          the same transaction. The raw `chk_<…>` token is surfaced
+//          once in this response; it is never emailed.
+//
+// All three are unauthenticated — the email round-trip is the
+// credential. Rate-limited per email + per IP (2/min, 15/day).
+//
+// Removed in this iteration (see RFC-0004):
+//   • POST /v1/humans/{id}/verify, .../verify/resend
+//   • POST /v1/humans/{id}/api-key/{issue,revoke}
+//   • GET  /v1/humans?email=…  (moved to /_admin/v1/humans)
+//   • GET  /v1/humans/{id}/verify  magic-link variant
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 /**
- * Human registration request (1).
- *
- * The server normalises `email` to lowercase and trims whitespace.
- * Duplicate-email handling:
- *   - active human exists → 409 (human_email_already_active)
- *   - pending verification alive → 409 (human_email_already_pending)
- *   - pending but expired → silently reaped and a fresh code is sent
+ * Human registration request — fresh email only. If a row already
+ * exists (pending or active), respond 409; rotation lives at
+ * `POST /v1/humans/rotate`.
  *
  * @status draft
  */
@@ -45,126 +56,68 @@ model HumanCreateRequest {
 }
 
 /**
- * Human registration response (1) — the row is in
- * `pending_verification` status. The recipient must call
- * `/verify` with the code before the row becomes usable.
+ * Human registration response — a verification email is on its way.
+ * The response is intentionally thin: no human id, no notify-status,
+ * no can_resend_at. The next step is always `/v1/humans/verify`.
  *
  * @status draft
  */
 model HumanCreateResponse {
-  id: humanId;
-  email: string;
-  status: "pending_verification";
-
-  /** Absolute deadline (created_at + 30 min). */
+  /** Absolute deadline of the verification window (created_at + 30 min). */
   expires_at: iso8601;
-
-  /** Earliest moment at which `/verify/resend` will succeed. */
-  can_resend_at: iso8601;
-
-  /** Audit row id of the dispatched verification email. */
-  notify_outbound_log_id: string;
-  /** Send status — `sent` / `failed` / `invalid_request` / `queued`. */
-  notify_status: string;
 }
 
 /**
- * Submit the 6-digit verification code.
+ * Rotation trigger — re-mails a verification code to the active
+ * human so they can replace their API-Key. Returns 202 with the
+ * same shape regardless of whether the email maps to a verified
+ * row (oracle-safe). If the email is unknown, the call is silently
+ * a no-op; the email is never sent.
+ *
+ * @status draft
+ */
+model HumanRotateRequest {
+  /** RFC 5322 addr-spec. Normalised to lowercase server-side. */
+  email: string;
+}
+
+/**
+ * Always-202 response for rotate triggers.
+ * @status draft
+ */
+model HumanRotateResponse {
+  /** Absolute deadline of the verification window (created_at + 30 min). */
+  expires_at: iso8601;
+}
+
+/**
+ * Submit the 6-digit verification code along with the email it was
+ * mailed to. Path carries no id; the server resolves by email so the
+ * `hu_<ULID>` never appears in URL logs.
+ *
  * @status draft
  */
 model HumanVerifyRequest {
+  /** Same email the code was mailed to. */
+  email: string;
   /** 6-digit numeric code from the verification email. */
   code: string;
 }
 
 /**
- * Response after successful verification — the human is now `active`,
- * and the server has issued a first API-Key (`chk_<…>`). The raw token
- * is surfaced **once** in the response body and emailed in parallel;
- * subsequent issuances require `Authorization: Bearer chk_<…>`.
+ * Successful verification result. Returns the human's id and a
+ * freshly-minted API-Key. Any prior active API-Key for the same
+ * owner is revoked in the same transaction (single active key per
+ * human invariant).
  *
  * @status draft
  */
 model HumanVerifyResponse {
-  id: humanId;
-  email: string;
-  status: "active";
-  verified_at: iso8601;
-
-  /** First API-Key bundle — surfaced once. */
-  api_key: ApiKeyIssued;
-}
-
-/**
- * Response after a resend request.
- * @status draft
- */
-model HumanResendResponse {
-  id: humanId;
-  email: string;
-
-  /** How many times the code has been re-sent (excludes the initial). */
-  resend_count: int32;
-
-  /** Earliest moment the next resend will succeed. */
-  can_resend_at: iso8601;
-
-  /** The 30-min hard expiry — unchanged by resends. */
-  expires_at: iso8601;
-
-  notify_outbound_log_id: string;
-  notify_status: string;
-}
-
-/**
- * Public lookup by email — returns the minimum needed to drive the
- * `/verify` flow from a CLI that lost the `hu_<ULID>`. The email is
- * normalised to lowercase server-side; no body, no auth.
- *
- * @status draft
- */
-model HumanFindResponse {
-  id: humanId;
-  status: "pending_verification" | "active";
-}
-
-// ── API-Key models ──────────────────────────────────────
-
-/**
- * Optional metadata accepted when issuing an API-Key.
- * @status draft
- */
-model HumanApiKeyIssueRequest {
-  /** Human-readable label (e.g. "scout-bot laptop"). */
-  display_name?: string;
-
-  /** Absolute expiry (ISO-8601). Omit for never-expires. */
-  expires_at?: iso8601;
-}
-
-/**
- * Issuance envelope. The raw `token` field is surfaced once — only the
- * peppered SHA-256 lives on the server. Persist the body or rely on the
- * mailed copy.
- *
- * @status draft
- */
-model ApiKeyIssued {
-  api_key_id: string;
-  /** `chk_<…>` — surfaced once. */
-  token: string;
-  display_name?: string;
-  expires_at?: iso8601;
-  created_at: iso8601;
-
-  notify_outbound_log_id?: string;
-  notify_status?: string;
-}
-
-/** @status draft */
-model HumanApiKeyRevokeRequest {
-  /** `hak_<…>` — the row id of the key to revoke. */
-  api_key_id: string;
+  human_id: humanId;
+  /** `chk_<…>` — surfaced exactly once. */
+  api_key: string;
+  /** API-Key absolute expiry. `null` when the key has no expiry. */
+  expires_at: iso8601 | null;
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -176,12 +129,11 @@ model HumanApiKeyRevokeRequest {
 @useAuth(NoAuth)
 interface Humans {
   /**
-   * Start a human registration. Dispatches a 6-digit code to `email`
-   * via the mail Worker (`/_internal/notify` template
-   * `human_verification`). Always returns 202 — the response's
-   * `notify_status` carries the outcome of the dispatch.
+   * Start a human registration. Fresh-email only — pending or
+   * active rows raise 409.
    *
-   * Possible errors: 400, 409 (email conflict), 500.
+   * Possible errors: 400 (bad email), 409 (email already in use),
+   * 422 (domain not in allow-list), 429 (rate-limited), 500.
    */
   @summary("Start human registration with email verification")
   @operationId("human-create")
@@ -192,110 +144,48 @@ interface Humans {
       }
     | BadRequestError
     | ConflictError
-    | InternalError;
-
-  /**
-   * Look up a human by email. Returns `{ id, status }` only — no
-   * timing info or display name — so an attacker probing for valid
-   * addresses learns the minimum.
-   *
-   * @status draft
-   */
-  @summary("Look up a human by email")
-  @operationId("human-find")
-  @get find(@query email: string):
-    | HumanFindResponse
-    | BadRequestError
-    | NotFoundError
-    | InternalError;
-
-  /**
-   * Submit the verification code. On success flips
-   * `human.status='active'` AND issues a first API-Key, returning the
-   * raw `chk_<…>` token exactly once in the response (and emailing it
-   * in parallel).
-   *
-   * Possible errors: 401 (code invalid), 404 (id unknown), 409 (already
-   * verified), 410 (window expired), 500.
-   */
-  @summary("Submit verification code and receive the first API-Key")
-  @operationId("human-verify")
-  @route("{id}/verify")
-  @post verify(@path id: humanId, @body body: HumanVerifyRequest):
-    | HumanVerifyResponse
-    | UnauthorizedError
-    | NotFoundError
-    | ConflictError
-    | GoneError
-    | InternalError;
-
-  /**
-   * Request a fresh verification code. Rate-limited by an arithmetic
-   * backoff schedule (1 → 2 → 3 → … → 60 minutes between sends). The
-   * absolute 30-min expiry is *not* extended; it stays anchored to
-   * the original `expires_at`.
-   *
-   * Possible errors: 404, 409, 410, 429 (with `Retry-After`), 500.
-   */
-  @summary("Re-issue verification code")
-  @operationId("human-verify-resend")
-  @route("{id}/verify/resend")
-  @post resend(@path id: humanId):
-    | HumanResendResponse
-    | NotFoundError
-    | ConflictError
-    | GoneError
+    | UnprocessableError
     | RateLimitedError
     | InternalError;
-}
 
-@tag("Humans / API-Key")
-@route("/v1/humans/{id}/api-key")
-@useAuth(ApiKeyBearerAuth)
-interface HumansApiKey {
   /**
-   * Mint a fresh API-Key for `{id}`. The caller must present a Bearer
-   * `chk_<…>` whose owner matches the path id; cross-issuance is 403.
-   * The raw token is surfaced once in the response and emailed in
-   * parallel.
+   * Mail a fresh verification code so an active human can mint a
+   * replacement API-Key. Always 202; unknown emails silently drop.
    *
-   * Possible errors: 401 (api-key invalid / revoked / expired), 403
-   * (owner mismatch), 404, 500.
-   *
-   * @status draft
+   * Possible errors: 400 (bad email), 429 (rate-limited), 500.
    */
-  @summary("Issue a new API-Key for the human")
-  @operationId("human-api-key-issue")
-  @route("issue")
-  @post issue(@path id: humanId, @body body: HumanApiKeyIssueRequest):
+  @summary("Trigger an API-Key rotation email")
+  @operationId("human-rotate")
+  @route("rotate")
+  @post rotate(@body body: HumanRotateRequest):
     | {
-        @statusCode statusCode: 201;
-        @body body: ApiKeyIssued;
+        @statusCode statusCode: 202;
+        @body body: HumanRotateResponse;
       }
-    | UnauthorizedError
-    | ForbiddenError
-    | NotFoundError
+    | BadRequestError
+    | RateLimitedError
     | InternalError;
 
   /**
-   * Revoke an API-Key by its row id. Idempotent — revoking an already
-   * revoked key returns 204. The bearer must be an active key of the
-   * same human; you can revoke any of your own keys (including the one
-   * you authenticated with).
+   * Submit a verification code. On success the human is `active` and
+   * the response carries exactly one API-Key (any prior active key
+   * for the owner is revoked atomically).
    *
-   * Possible errors: 401, 403, 404, 500.
+   * All failure modes (no such email / no pending verification / wrong
+   * code / expired window) collapse into a single 401 with code
+   * `ERR-P01-S01-1100` to prevent enumeration.
    *
-   * @status draft
+   * Possible errors: 401, 429, 500.
    */
-  @summary("Revoke an API-Key")
-  @operationId("human-api-key-revoke")
-  @route("revoke")
-  @post revoke(@path id: humanId, @body body: HumanApiKeyRevokeRequest):
+  @summary("Submit code; mint or rotate the human's API-Key")
+  @operationId("human-verify")
+  @route("verify")
+  @post verify(@body body: HumanVerifyRequest):
     | {
-        @statusCode statusCode: 204;
+        @statusCode statusCode: 201;
+        @body body: HumanVerifyResponse;
       }
     | UnauthorizedError
-    | ForbiddenError
-    | NotFoundError
+    | RateLimitedError
     | InternalError;
 }

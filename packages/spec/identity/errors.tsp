@@ -73,20 +73,11 @@ enum IdentityErrorCode {
   key_not_active: "ERR-P01-S01-3001",
   /** revoked agent called a self-service route */
   agent_revoked: "ERR-P01-S01-3002",
-  /** A verified human already owns the supplied email (409) */
-  human_email_already_active: "ERR-P01-S01-3100",
-  /** A pending registration for the supplied email is still alive (409) */
-  human_email_already_pending: "ERR-P01-S01-3101",
-  /** Attempt to verify a human that is already verified (409) */
-  human_already_verified: "ERR-P01-S01-3102",
+  /** A row for the supplied email already exists (409) — POST /v1/humans
+   *  is fresh-email-only; existing rows rotate via POST /v1/humans/rotate. */
+  human_email_already_in_use: "ERR-P01-S01-3100",
 
   // ── 4xxx External dependencies ───────────────────────
   /** Postgres query failure */
   db_failure: "ERR-P01-S01-4001",
-
-  // ── 7xxx Domain-specific ─────────────────────────────
-  /** Human email-verification window (30 min) has elapsed (410) */
-  human_verification_expired: "ERR-P01-S01-7200",
-  /** Resend requested before the arithmetic backoff cleared (429) */
-  human_resend_too_soon: "ERR-P01-S01-7201",
 }

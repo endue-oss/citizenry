@@ -89,6 +89,22 @@ const { title, file } = Astro.props
 
       /* App fills the viewport below the sticky Header. */
       #app { min-height: calc(100vh - var(--header-h, 56px)); }
+
+      /* Full-bleed API layout: Scalar spans the whole width, so drop the
+       * marketing site's 1120px max-width on the Header inner and let it
+       * span full width too. Its existing 24px (--space-4) side padding
+       * then lines the logo + Human/Agent CTA up with Scalar's own 24px
+       * content gutter, instead of hugging the edges (or floating in a
+       * narrow centered column adrift from the full-bleed content). */
+      .site-header .inner { max-width: none; }
+
+      /* Tame stray horizontal scroll. Scalar already wraps its own wide
+       * content (tables, code samples) in internal overflow-x:auto boxes,
+       * and its search overlay paints a 100vw fixed backdrop — none of
+       * which the page itself needs to scroll sideways for. `clip` (not
+       * `hidden`) doesn't create a scroll container, so the sticky Header
+       * and Scalar's sticky sidebar still pin correctly. */
+      html { overflow-x: clip; }
     </style>
   </head>
   <body>

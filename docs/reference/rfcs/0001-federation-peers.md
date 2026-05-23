@@ -354,7 +354,7 @@ view, with no new authorization concept.
 
 ## References
 
-- `docs/error-codes/guideline.md` - error-code format used by the codes above.
+- `docs/reference/error-codes/guideline.md` - error-code format used by the codes above.
 - `packages/identity/src/db/schema.ts` - `tenant` table this RFC extends.
 - `packages/spec/identity/admin.tsp` - existing admin auth pattern (PSK).
 - `packages/spec/identity/main.tsp` - namespace this RFC adds endpoints to.

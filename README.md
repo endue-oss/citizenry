@@ -149,7 +149,7 @@ Here is what that means in practice:
   modules sneaked in. Every release we have already made stays
   Apache 2.0 forever.
 - **Public RFC process for big changes.** Anyone can read; anyone can
-  propose. ([`docs/rfcs/`](./docs/rfcs/))
+  propose. ([`docs/reference/rfcs/`](./docs/reference/rfcs/))
 - **Trademark only on the name itself**, narrowly. Forks may use the
   name to describe what they are; they may not claim to *be* official
   Endue Citizenry. ([`TRADEMARKS.md`](./TRADEMARKS.md))
@@ -193,8 +193,8 @@ pnpm typecheck
 | Full deploy guide | [`docs/deploy.md`](./docs/deploy.md) |
 | How to contribute | [`CONTRIBUTING.md`](./CONTRIBUTING.md) |
 | Project governance | [`GOVERNANCE.md`](./GOVERNANCE.md) |
-| Proposals (RFCs) | [`docs/rfcs/`](./docs/rfcs/) |
-| Past decisions (ADRs) | [`docs/adr/`](./docs/adr/) |
+| Proposals (RFCs) | [`docs/reference/rfcs/`](./docs/reference/rfcs/) |
+| Past decisions (ADRs) | [`docs/reference/adr/`](./docs/reference/adr/) |
 | Code of Conduct | [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md) |
 | Report a security issue | [`SECURITY.md`](./SECURITY.md) |
 | Trademark policy | [`TRADEMARKS.md`](./TRADEMARKS.md) |

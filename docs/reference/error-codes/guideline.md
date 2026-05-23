@@ -2,7 +2,7 @@
 
 > Endue Citizenry's structured error code convention.
 > Every code raised by a citizenry service MUST follow this guideline and have
-> a corresponding documentation file under `docs/error-codes/`.
+> a corresponding documentation file under `docs/reference/error-codes/`.
 
 **Status:** stable as of ADR-2026-0001.
 **Standard:** [RFC 9457 - Problem Details for HTTP APIs](https://www.rfc-editor.org/rfc/rfc9457) (supersedes RFC 7807).
@@ -130,8 +130,8 @@ Details. The required fields:
 ## 7. Per-code documentation
 
 Every code declared in the catalog MUST have a Markdown file at
-`docs/error-codes/{code}.md` derived from
-[`templates/error-code.md`](../../templates/error-code.md).
+`docs/reference/error-codes/{code}.md` derived from
+[`templates/error-code.md`](../../../templates/error-code.md).
 
 Required sections: front-matter, *Summary*, *When this is raised*, *What to
 do*, *Server-side cause*, *Example response*, *Related codes*, *Changelog*.
@@ -153,7 +153,7 @@ The file is the single source of truth for:
    sentence; expand in *When this is raised*.
 4. **Wire it in code** - the service raises `HttpError` with the new code.
    No code may appear in source without a doc file.
-5. **PR** includes both the new `docs/error-codes/*.md` and the code change.
+5. **PR** includes both the new `docs/reference/error-codes/*.md` and the code change.
    CI verifies the regex, category↔HTTP status, and presence of the doc.
 
 ## 9. Deprecating a code
@@ -174,4 +174,4 @@ Codes are **never deleted** and **never re-meant**. To retire one:
 - [RFC 9457 - Problem Details for HTTP APIs](https://www.rfc-editor.org/rfc/rfc9457)
 - [RFC 7807 - predecessor of 9457](https://www.rfc-editor.org/rfc/rfc7807)
 - [ADR-2026-0001](../adr/2026-0001.md) - Adoption of this scheme.
-- [`templates/error-code.md`](../../templates/error-code.md) - Doc template.
+- [`templates/error-code.md`](../../../templates/error-code.md) - Doc template.

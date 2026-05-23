@@ -37,10 +37,11 @@ packages/
   vault/        vault domain - D1 (citizenry-vault)
 
 docs/
-  adr/          accepted architectural decisions
-  rfcs/         proposed specification changes
-  error-codes/  per-code public catalog pages
-  deploy.md     adopter deployment walkthrough
+  deploy.md       adopter deployment walkthrough
+  reference/
+    adr/          accepted architectural decisions
+    rfcs/         proposed specification changes
+    error-codes/  per-code public catalog pages
 
 scripts/ci/
   provision.mjs          list-or-create D1 databases via Cloudflare REST API
@@ -97,9 +98,9 @@ colo-local). Changes propagate after the TTL elapses; no redeploy.
 
 | Task | Read first |
 |---|---|
-| Add a deploy step or change Cloudflare resources | [`docs/adr/2026-0002.md`](./docs/adr/2026-0002.md) - why deploy works this way |
-| Mint or document an error code | [`docs/error-codes/guideline.md`](./docs/error-codes/guideline.md) - scheme, slug registry, HTTP status table |
-| Propose a specification change | [`docs/rfcs/README.md`](./docs/rfcs/README.md) - RFC process |
+| Add a deploy step or change Cloudflare resources | [`docs/reference/adr/2026-0002.md`](./docs/reference/adr/2026-0002.md) - why deploy works this way |
+| Mint or document an error code | [`docs/reference/error-codes/guideline.md`](./docs/reference/error-codes/guideline.md) - scheme, slug registry, HTTP status table |
+| Propose a specification change | [`docs/reference/rfcs/README.md`](./docs/reference/rfcs/README.md) - RFC process |
 | Write code or open a PR | [`CONTRIBUTING.md`](./CONTRIBUTING.md) - DCO sign-off, licensing |
 | Adopter-side fork-and-deploy | [`docs/deploy.md`](./docs/deploy.md) |
 | Project governance | [`GOVERNANCE.md`](./GOVERNANCE.md) |
@@ -108,7 +109,7 @@ colo-local). Changes propagate after the TTL elapses; no redeploy.
 | Trademark policy | [`TRADEMARKS.md`](./TRADEMARKS.md) |
 
 Accepted ADRs are the canonical source for "why is the codebase shaped
-this way." Browse [`docs/adr/`](./docs/adr/) before proposing
+this way." Browse [`docs/reference/adr/`](./docs/reference/adr/) before proposing
 architectural changes.
 
 ## Commits
@@ -138,5 +139,5 @@ There is no local provisioning step.
 Production deploys run through `.github/workflows/deploy.yml`. The
 committed `wrangler.toml` files always carry placeholder D1 IDs;
 resolution happens in CI. **Never commit a real `database_id`** - see
-[`docs/adr/2026-0002.md`](./docs/adr/2026-0002.md) for the full
+[`docs/reference/adr/2026-0002.md`](./docs/reference/adr/2026-0002.md) for the full
 rationale.

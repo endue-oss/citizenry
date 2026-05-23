@@ -3,7 +3,7 @@
 > Substantial changes to the Endue Citizenry **specification** - wire
 > protocol, public types, error contracts, conformance requirements - go
 > through the **RFC (Request for Comments)** process defined in
-> [`GOVERNANCE.md` §4](../../GOVERNANCE.md#4-specification-changes-rfc-process).
+> [`GOVERNANCE.md` §4](../../../GOVERNANCE.md#4-specification-changes-rfc-process).
 
 This directory is the canonical home of those documents.
 
@@ -24,7 +24,7 @@ RFC and may be merged by Spec Editors directly.
 
 > **RFC vs ADR.** RFCs change what *external integrators* see; ADRs record
 > *internal* decisions. If your change affects only how citizenry's source
-> code is organised, write an ADR ([`docs/adr/`](../adr/)) instead.
+> code is organised, write an ADR ([`docs/reference/adr/`](../adr/)) instead.
 
 ---
 
@@ -71,8 +71,8 @@ the RFC's front-matter.
 
 ## Authoring an RFC
 
-1. **Scaffold** the file with [`/docs create rfc "<title>"`](../../templates/rfc.md)
-   (or copy [`templates/rfc.md`](../../templates/rfc.md) by hand).
+1. **Scaffold** the file with [`/docs create rfc "<title>"`](../../../templates/rfc.md)
+   (or copy [`templates/rfc.md`](../../../templates/rfc.md) by hand).
 2. **Fill in** every section. Examples in *Guide-level explanation* are
    mandatory; "I couldn't think of any drawbacks" is acceptable but signals
    reviewers to push back.
@@ -159,8 +159,8 @@ Per `GOVERNANCE.md` §4.3:
 
 ## References
 
-- [`GOVERNANCE.md` §4](../../GOVERNANCE.md) - full RFC process.
-- [`templates/rfc.md`](../../templates/rfc.md) - RFC template.
-- [`docs/adr/`](../adr/) - Architecture Decision Records (internal).
+- [`GOVERNANCE.md` §4](../../../GOVERNANCE.md) - full RFC process.
+- [`templates/rfc.md`](../../../templates/rfc.md) - RFC template.
+- [`docs/reference/adr/`](../adr/) - Architecture Decision Records (internal).
 - [Rust RFC template](https://github.com/rust-lang/rfcs/blob/master/0000-template.md) - prior art.
 - [Ember RFC process](https://github.com/emberjs/rfcs) - prior art.

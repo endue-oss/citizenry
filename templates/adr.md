@@ -17,7 +17,7 @@ tags: []
 ## Context and problem statement
 
 <Why is this decision in front of us right now? What constraint or pain
-point triggered it? Keep the framing tight — one or two paragraphs that a
+point triggered it? Keep the framing tight - one or two paragraphs that a
 new maintainer can read cold.>
 
 ## Decision drivers
@@ -31,9 +31,9 @@ whether the decision is still valid.>
 
 ## Considered options
 
-1. **<Option A>** — <one-line gloss>
-2. **<Option B>** — <one-line gloss>
-3. **<Option C>** — <one-line gloss>
+1. **<Option A>** - <one-line gloss>
+2. **<Option B>** - <one-line gloss>
+3. **<Option C>** - <one-line gloss>
 
 ### Pros and cons
 

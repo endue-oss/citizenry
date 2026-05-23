@@ -1,7 +1,7 @@
 # Citizenry RFCs
 
-> Substantial changes to the Endue Citizenry **specification** — wire
-> protocol, public types, error contracts, conformance requirements — go
+> Substantial changes to the Endue Citizenry **specification** - wire
+> protocol, public types, error contracts, conformance requirements - go
 > through the **RFC (Request for Comments)** process defined in
 > [`GOVERNANCE.md` §4](../../GOVERNANCE.md#4-specification-changes-rfc-process).
 
@@ -58,7 +58,7 @@ the RFC's front-matter.
 ## Numbering and filenames
 
 - IDs are **continuous integers**, zero-padded to 4 digits: `0001`, `0002`, …
-  No year prefix — RFC identifiers are permanent external references.
+  No year prefix - RFC identifiers are permanent external references.
 - Filenames: `<NNNN>-<kebab-case-title>.md`, e.g.
   `0042-tenant-scoped-issuer-keys.md`.
 - IDs are allocated **at PR open time**, not at draft time. To allocate the
@@ -132,7 +132,7 @@ Per `GOVERNANCE.md` §4.3:
 
 ### Active (`draft` / `proposed` / `final_comment_period`)
 
-- [`0001`](./0001-federation-peers.md) — Federation between Citizenry
+- [`0001`](./0001-federation-peers.md) - Federation between Citizenry
   instances via peer ↔ tenant mapping. (`draft`)
 
 ### Accepted
@@ -159,8 +159,8 @@ Per `GOVERNANCE.md` §4.3:
 
 ## References
 
-- [`GOVERNANCE.md` §4](../../GOVERNANCE.md) — full RFC process.
-- [`templates/rfc.md`](../../templates/rfc.md) — RFC template.
-- [`docs/adr/`](../adr/) — Architecture Decision Records (internal).
-- [Rust RFC template](https://github.com/rust-lang/rfcs/blob/master/0000-template.md) — prior art.
-- [Ember RFC process](https://github.com/emberjs/rfcs) — prior art.
+- [`GOVERNANCE.md` §4](../../GOVERNANCE.md) - full RFC process.
+- [`templates/rfc.md`](../../templates/rfc.md) - RFC template.
+- [`docs/adr/`](../adr/) - Architecture Decision Records (internal).
+- [Rust RFC template](https://github.com/rust-lang/rfcs/blob/master/0000-template.md) - prior art.
+- [Ember RFC process](https://github.com/emberjs/rfcs) - prior art.

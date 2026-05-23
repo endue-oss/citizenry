@@ -24,7 +24,7 @@ tags:
 A self-hosted Citizenry deployment is sovereign by default. This RFC proposes a
 minimum-viable *federation* surface that lets two Citizenry instances establish
 mutual trust: each instance discovers the other's `did:web` issuer, verifies
-the other's `JWKS`, and — on a successful two-way handshake — materializes a
+the other's `JWKS`, and - on a successful two-way handshake - materializes a
 **federated tenant** locally. Admins of either side can then add or remove the
 federated peer at any time, with revocation reflected on both sides.
 
@@ -43,25 +43,25 @@ With federation:
 
 - Operators run *one click* to add another Citizenry instance.
 - Instance B treats A as a fully-typed `tenant` row inside its existing
-  `kind='federated'` namespace — every audit, membership, and policy gate that
+  `kind='federated'` namespace - every audit, membership, and policy gate that
   already works on tenants automatically works on federated peers.
 - Either operator can revoke the connection unilaterally; revocation
   propagates within one handshake round.
 
-This unlocks the wider Endue product line — Salon (P02), future products —
+This unlocks the wider Endue product line - Salon (P02), future products -
 where citizenship issued by one instance is consumed by another.
 
 ## Guide-level explanation
 
 ### Glossary
 
-- **Peer** — another Citizenry instance, identified by its `did:web:<issuer>`
+- **Peer** - another Citizenry instance, identified by its `did:web:<issuer>`
   and accessible at `https://<issuer>/.well-known/citizenry-peer`. The local
   representation of a peer lives in `identity.federation_peer`.
-- **Federated tenant** — a `tenant` row with `kind='federated'`, linked 1-to-1
+- **Federated tenant** - a `tenant` row with `kind='federated'`, linked 1-to-1
   to a `federation_peer` row. Treated by the rest of the identity domain as a
   normal tenant; membership and audit work unchanged.
-- **Handshake** — the two-message protocol that converts a discovered peer
+- **Handshake** - the two-message protocol that converts a discovered peer
   into a `trusted` row on both sides.
 
 ### Operator walkthrough
@@ -126,11 +126,11 @@ invited ──admin POST─→ pending ──peer confirm OK─→ trusted ⇄ s
 
 | from \ to  | invited | pending | trusted | suspended | revoked |
 |---|---|---|---|---|---|
-| invited    | —       | ✓ (peer ack via confirm) | — | — | ✓ (timeout / fail) |
-| pending    | —       | — | ✓ (admin confirm or auto) | — | ✓ (admin reject) |
-| trusted    | —       | — | — | ✓ (admin suspend) | ✓ (admin revoke) |
-| suspended  | —       | — | ✓ (admin resume) | — | ✓ (admin revoke) |
-| revoked    | —       | — | — | — | — (terminal) |
+| invited    | -       | ✓ (peer ack via confirm) | - | - | ✓ (timeout / fail) |
+| pending    | -       | - | ✓ (admin confirm or auto) | - | ✓ (admin reject) |
+| trusted    | -       | - | - | ✓ (admin suspend) | ✓ (admin revoke) |
+| suspended  | -       | - | ✓ (admin resume) | - | ✓ (admin revoke) |
+| revoked    | -       | - | - | - | - (terminal) |
 
 A revoked row is never re-used; a new federation with the same peer creates
 a new `fdp_*` row.
@@ -188,7 +188,7 @@ Bob verifies:
 2. `from_issuer` resolves to `did:web:alice.citizenry.example`, JWKS fetched
    from that issuer's `.well-known/jwks.json` matches the JWS `kid`.
 3. `to_issuer` equals Bob's configured issuer.
-4. `jti` (= `nonce`) not previously seen — INSERT into `jti_replay`.
+4. `jti` (= `nonce`) not previously seen - INSERT into `jti_replay`.
 5. `exp - iat ≤ 600s`.
 
 On success Bob INSERTs `federation_peer(state='pending')` and synchronously
@@ -263,17 +263,17 @@ which side is parent on each operation).
 
 | Code | HTTP | Class |
 |---|---|---|
-| `ERR-P01-FED-1001` | 401 | auth — federation JWS signature invalid |
-| `ERR-P01-FED-1002` | 401 | auth — `from_issuer` mismatch (DID does not match presenter) |
-| `ERR-P01-FED-1003` | 401 | auth — replay (`jti`/`nonce` already used) |
-| `ERR-P01-FED-2001` | 422 | schema — invalid issuer URL |
-| `ERR-P01-FED-3001` | 404 | business — federation peer not found |
-| `ERR-P01-FED-3002` | 409 | business — peer already exists in non-revoked state |
-| `ERR-P01-FED-3003` | 409 | business — peer state does not allow this transition |
-| `ERR-P01-FED-4001` | 502 | external — peer discovery (.well-known/citizenry-peer) failed |
-| `ERR-P01-FED-4002` | 502 | external — peer JWKS fetch failed |
-| `ERR-P01-FED-4003` | 502 | external — peer handshake returned non-2xx |
-| `ERR-P01-FED-5001` | 500 | invariant — nonce mismatch on confirm |
+| `ERR-P01-FED-1001` | 401 | auth - federation JWS signature invalid |
+| `ERR-P01-FED-1002` | 401 | auth - `from_issuer` mismatch (DID does not match presenter) |
+| `ERR-P01-FED-1003` | 401 | auth - replay (`jti`/`nonce` already used) |
+| `ERR-P01-FED-2001` | 422 | schema - invalid issuer URL |
+| `ERR-P01-FED-3001` | 404 | business - federation peer not found |
+| `ERR-P01-FED-3002` | 409 | business - peer already exists in non-revoked state |
+| `ERR-P01-FED-3003` | 409 | business - peer state does not allow this transition |
+| `ERR-P01-FED-4001` | 502 | external - peer discovery (.well-known/citizenry-peer) failed |
+| `ERR-P01-FED-4002` | 502 | external - peer JWKS fetch failed |
+| `ERR-P01-FED-4003` | 502 | external - peer handshake returned non-2xx |
+| `ERR-P01-FED-5001` | 500 | invariant - nonce mismatch on confirm |
 
 ### Threat model deltas
 
@@ -323,9 +323,9 @@ view, with no new authorization concept.
 
 ## Prior art
 
-- [RFC 9457 — Problem Details](https://www.rfc-editor.org/rfc/rfc9457) (error
+- [RFC 9457 - Problem Details](https://www.rfc-editor.org/rfc/rfc9457) (error
   envelope shape).
-- [RFC 8037 — Ed25519 for JOSE](https://www.rfc-editor.org/rfc/rfc8037)
+- [RFC 8037 - Ed25519 for JOSE](https://www.rfc-editor.org/rfc/rfc8037)
   (signing).
 - [W3C DID Core 1.0](https://www.w3.org/TR/did-core/) + `did:web`
   (issuer resolution).
@@ -338,9 +338,9 @@ view, with no new authorization concept.
 
 - [ ] Should `policies.auto_accept` be exposed as an admin-mutable setting,
       and where (env var, KV, or a dedicated table)?
-- [ ] JWKS rotation between peers — push notification, or pure polling? The
+- [ ] JWKS rotation between peers - push notification, or pure polling? The
       MVP polls on every handshake.
-- [ ] Federated principals — when do we materialize a `principal` row for an
+- [ ] Federated principals - when do we materialize a `principal` row for an
       agent from a peer? Deferred to RFC-0002.
 
 ## Future possibilities
@@ -354,7 +354,7 @@ view, with no new authorization concept.
 
 ## References
 
-- `docs/error-codes/guideline.md` — error-code format used by the codes above.
-- `packages/identity/src/db/schema.ts` — `tenant` table this RFC extends.
-- `packages/spec/identity/admin.tsp` — existing admin auth pattern (PSK).
-- `packages/spec/identity/main.tsp` — namespace this RFC adds endpoints to.
+- `docs/error-codes/guideline.md` - error-code format used by the codes above.
+- `packages/identity/src/db/schema.ts` - `tenant` table this RFC extends.
+- `packages/spec/identity/admin.tsp` - existing admin auth pattern (PSK).
+- `packages/spec/identity/main.tsp` - namespace this RFC adds endpoints to.

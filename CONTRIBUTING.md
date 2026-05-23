@@ -89,11 +89,11 @@ By making a contribution to this project, I certify that:
 
 ## 2. Filing Issues
 
-- **Bugs** — Use the bug report template. Include reproduction steps,
+- **Bugs** - Use the bug report template. Include reproduction steps,
   expected vs actual behavior, and version information.
-- **Feature requests** — Open a discussion first if the change is
+- **Feature requests** - Open a discussion first if the change is
   substantial; small features can go directly to issues.
-- **Security vulnerabilities** — **Do not file public issues for
+- **Security vulnerabilities** - **Do not file public issues for
   security vulnerabilities.** See `SECURITY.md` for disclosure
   process.
 

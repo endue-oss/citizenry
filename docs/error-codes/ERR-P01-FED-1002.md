@@ -10,7 +10,7 @@ related:
   - ERR-P01-FED-1001
 ---
 
-# `ERR-P01-FED-1002` — Federation issuer mismatch
+# `ERR-P01-FED-1002` - Federation issuer mismatch
 
 ## Summary
 
@@ -20,7 +20,7 @@ not match the identity Citizenry expected for that request.
 ## When this is raised
 
 - A handshake is received whose `to_issuer` is not this Citizenry instance's
-  configured issuer URL — the JWS was minted for someone else.
+  configured issuer URL - the JWS was minted for someone else.
 - A response/ack JWS arrives during outbound handshake whose `from_issuer`
   is not the peer this instance is talking to (e.g., an attacker reflecting
   another peer's reply).
@@ -38,7 +38,7 @@ not match the identity Citizenry expected for that request.
 
 ## Server-side cause
 
-- Raised by: `packages/identity/src/service/federation/jws.ts` —
+- Raised by: `packages/identity/src/service/federation/jws.ts` -
   `verifyHandshakeJws`.
 - Guard: `to_issuer !== selfIssuer` or
   `expectedFromIssuer && from_issuer !== expectedFromIssuer`.
@@ -62,8 +62,8 @@ not match the identity Citizenry expected for that request.
 
 ## Related codes
 
-- [`ERR-P01-FED-1001`](./ERR-P01-FED-1001.md) — generic JWS verify failure.
+- [`ERR-P01-FED-1001`](./ERR-P01-FED-1001.md) - generic JWS verify failure.
 
 ## Changelog
 
-- 0.1.0 — introduced as part of RFC-0001.
+- 0.1.0 - introduced as part of RFC-0001.

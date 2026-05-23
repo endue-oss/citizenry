@@ -1,6 +1,6 @@
 # Trademark Policy
 
-**Version 1.0 — Effective 2026**
+**Version 1.0 - Effective 2026**
 
 This document describes the trademark policy for the **Endue Citizenry**
 project ("the Project"). The source code of the Project is licensed under
@@ -145,7 +145,7 @@ the integrity of the Marks.
 ### 4.1 What you may do
 
 - Offer hosted, managed, or platform-integrated versions of the Project.
-- Describe the service truthfully (e.g., *"Acme Identity Service —
+- Describe the service truthfully (e.g., *"Acme Identity Service -
   powered by Endue Citizenry"*, *"Compatible with Endue Citizenry"*).
 - Reference the Project in marketing materials, documentation, and
   technical descriptions.

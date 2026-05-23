@@ -11,7 +11,7 @@ related:
   - ERR-P01-FED-3003
 ---
 
-# `ERR-P01-FED-3002` — Federation peer already exists
+# `ERR-P01-FED-3002` - Federation peer already exists
 
 ## Summary
 
@@ -35,7 +35,7 @@ already has a non-revoked `federation_peer` row.
 
 ## Server-side cause
 
-- Raised by: `packages/identity/src/service/federation/index.ts` — `addPeer`.
+- Raised by: `packages/identity/src/service/federation/index.ts` - `addPeer`.
 - Guard: `repo.findActiveByIssuer(issuer)` returned a non-revoked row.
 
 ## Example response
@@ -60,10 +60,10 @@ already has a non-revoked `federation_peer` row.
 
 ## Related codes
 
-- [`ERR-P01-FED-3001`](./ERR-P01-FED-3001.md) — peer not found.
-- [`ERR-P01-FED-3003`](./ERR-P01-FED-3003.md) — peer state transition not
+- [`ERR-P01-FED-3001`](./ERR-P01-FED-3001.md) - peer not found.
+- [`ERR-P01-FED-3003`](./ERR-P01-FED-3003.md) - peer state transition not
   allowed.
 
 ## Changelog
 
-- 0.1.0 — introduced as part of RFC-0001.
+- 0.1.0 - introduced as part of RFC-0001.

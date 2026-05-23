@@ -1,4 +1,4 @@
-# Endue Citizenry — Agent guide
+# Endue Citizenry - Agent guide
 
 Operational guide for agents (Claude Code, etc.) working in this
 repository. Human contributors should start with
@@ -25,16 +25,16 @@ repository artifact. When in doubt, write English.
 
 ```
 apps/
-  api/          public API Worker (citizenry-api)        — D1 vault + D1 identity, mounts /_admin/* under SERVICE_KEY
-  admin-api/    admin API Worker (citizenry-admin-api)   — HTTP proxy to api /_admin/* (SERVICE_KEY)
+  api/          public API Worker (citizenry-api)        - D1 vault + D1 identity, mounts /_admin/* under SERVICE_KEY
+  admin-api/    admin API Worker (citizenry-admin-api)   - HTTP proxy to api /_admin/* (SERVICE_KEY)
   mcp/          MCP gateway Worker (citizenry-mcp)
-  migrator/     migration Worker (citizenry-migrator)    — bearer-guarded /apply against both D1 databases
+  migrator/     migration Worker (citizenry-migrator)    - bearer-guarded /apply against both D1 databases
   admin-web/    admin SvelteKit → Cloudflare Pages (ops-only console; agents use api/mcp directly)
 
 packages/
   spec/         TypeSpec → OpenAPI 3 + zod + types (internal source of truth)
-  identity/     auth domain — D1 (citizenry-identity)
-  vault/        vault domain — D1 (citizenry-vault)
+  identity/     auth domain - D1 (citizenry-identity)
+  vault/        vault domain - D1 (citizenry-vault)
 
 docs/
   adr/          accepted architectural decisions
@@ -49,7 +49,7 @@ scripts/ci/
   deploy-pages.sh        wrangler pages deploy for the SvelteKit Pages apps
 
 templates/
-  adr.md, rfc.md, error-code.md — scaffolds used by the `/docs create` skill
+  adr.md, rfc.md, error-code.md - scaffolds used by the `/docs create` skill
 
 .github/workflows/
   ci.yml        typecheck + lint + tests on PR
@@ -58,7 +58,7 @@ templates/
 
 ## Secrets model
 
-Two Worker secrets are auto-managed — operators never need to touch them:
+Two Worker secrets are auto-managed - operators never need to touch them:
 
 | Secret              | Source of truth                              | Used by                |
 | ------------------- | -------------------------------------------- | ---------------------- |
@@ -85,7 +85,7 @@ Runtime config (operator-managed, set via admin-api `PUT
 | `admin.password`                          | `apps/admin-api` | Bootstrap-seeded; rotate via admin-api or by re-deploying with `ADMIN_PASSWORD`. |
 | `mail.outbound.resend.api_key`            | `apps/mail`  | Activates Resend (priority 2). |
 | `mail.outbound.aws_ses.access_key_id`     | `apps/mail`  | Activates SES (priority 3) when paired with `secret_access_key`. |
-| `mail.outbound.aws_ses.secret_access_key` | `apps/mail`  | — |
+| `mail.outbound.aws_ses.secret_access_key` | `apps/mail`  | - |
 | `mail.outbound.aws_ses.region`            | `apps/mail`  | Optional, defaults to `us-east-1`. |
 | `mail.outbound.aws_ses.session_token`     | `apps/mail`  | Optional, for STS assumed-role / temporary credentials. |
 | `identity.allowed_email_domains`          | `apps/api` (humans flow) | JSON array of lowercase hosts permitted on `POST /v1/humans`. Defaults baked into `packages/identity/src/service/human.ts` (`DEFAULT_ALLOWED_EMAIL_DOMAINS`) if the key is unset. |
@@ -97,10 +97,10 @@ colo-local). Changes propagate after the TTL elapses; no redeploy.
 
 | Task | Read first |
 |---|---|
-| Add a deploy step or change Cloudflare resources | [`docs/adr/2026-0002.md`](./docs/adr/2026-0002.md) — why deploy works this way |
-| Mint or document an error code | [`docs/error-codes/guideline.md`](./docs/error-codes/guideline.md) — scheme, slug registry, HTTP status table |
-| Propose a specification change | [`docs/rfcs/README.md`](./docs/rfcs/README.md) — RFC process |
-| Write code or open a PR | [`CONTRIBUTING.md`](./CONTRIBUTING.md) — DCO sign-off, licensing |
+| Add a deploy step or change Cloudflare resources | [`docs/adr/2026-0002.md`](./docs/adr/2026-0002.md) - why deploy works this way |
+| Mint or document an error code | [`docs/error-codes/guideline.md`](./docs/error-codes/guideline.md) - scheme, slug registry, HTTP status table |
+| Propose a specification change | [`docs/rfcs/README.md`](./docs/rfcs/README.md) - RFC process |
+| Write code or open a PR | [`CONTRIBUTING.md`](./CONTRIBUTING.md) - DCO sign-off, licensing |
 | Adopter-side fork-and-deploy | [`docs/deploy.md`](./docs/deploy.md) |
 | Project governance | [`GOVERNANCE.md`](./GOVERNANCE.md) |
 | Code of conduct | [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md) |
@@ -137,6 +137,6 @@ There is no local provisioning step.
 
 Production deploys run through `.github/workflows/deploy.yml`. The
 committed `wrangler.toml` files always carry placeholder D1 IDs;
-resolution happens in CI. **Never commit a real `database_id`** — see
+resolution happens in CI. **Never commit a real `database_id`** - see
 [`docs/adr/2026-0002.md`](./docs/adr/2026-0002.md) for the full
 rationale.

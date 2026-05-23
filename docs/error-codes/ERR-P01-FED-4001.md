@@ -11,7 +11,7 @@ related:
   - ERR-P01-FED-4003
 ---
 
-# `ERR-P01-FED-4001` — Peer discovery failed
+# `ERR-P01-FED-4001` - Peer discovery failed
 
 ## Summary
 
@@ -41,7 +41,7 @@ not pass the structural checks (`protocol_version`, `issuer`,
 
 ## Server-side cause
 
-- Raised by: `packages/identity/src/service/federation/discovery.ts` —
+- Raised by: `packages/identity/src/service/federation/discovery.ts` -
   `fetchPeerDiscovery`.
 - Guard: `fetch` non-OK, non-JSON body, or missing/invalid fields.
 
@@ -64,9 +64,9 @@ not pass the structural checks (`protocol_version`, `issuer`,
 
 ## Related codes
 
-- [`ERR-P01-FED-4002`](./ERR-P01-FED-4002.md) — peer JWKS fetch failed.
-- [`ERR-P01-FED-4003`](./ERR-P01-FED-4003.md) — peer handshake remote error.
+- [`ERR-P01-FED-4002`](./ERR-P01-FED-4002.md) - peer JWKS fetch failed.
+- [`ERR-P01-FED-4003`](./ERR-P01-FED-4003.md) - peer handshake remote error.
 
 ## Changelog
 
-- 0.1.0 — introduced as part of RFC-0001.
+- 0.1.0 - introduced as part of RFC-0001.

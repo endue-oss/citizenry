@@ -26,7 +26,7 @@ security vulnerabilities.**
 
 Report vulnerabilities privately via one of the following:
 
-- **Preferred — GitHub Private Vulnerability Reporting:**
+- **Preferred - GitHub Private Vulnerability Reporting:**
   Use the "Report a vulnerability" button in the repository's Security
   tab. This routes directly to the security response team.
 - **Email:** `team@endue.ai`
@@ -46,15 +46,15 @@ Report vulnerabilities privately via one of the following:
 
 ## Our Response Process
 
-1. **Acknowledge** — We acknowledge receipt within **3 business days**.
-2. **Triage** — We confirm the issue and assess severity (CVSS) within
+1. **Acknowledge** - We acknowledge receipt within **3 business days**.
+2. **Triage** - We confirm the issue and assess severity (CVSS) within
    **10 business days**.
-3. **Fix** — We develop a fix in a private branch.
-4. **Coordinate** — For high-severity issues, we may coordinate
+3. **Fix** - We develop a fix in a private branch.
+4. **Coordinate** - For high-severity issues, we may coordinate
    disclosure with downstream packagers, hosting partners, and
    certified implementations.
-5. **Release** — We release a patched version and publish an advisory.
-6. **Credit** — Reporters are credited in the advisory unless they
+5. **Release** - We release a patched version and publish an advisory.
+6. **Credit** - Reporters are credited in the advisory unless they
    request otherwise.
 
 ### Target timelines by severity

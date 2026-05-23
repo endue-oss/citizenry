@@ -24,10 +24,10 @@ tags:
 
 Introduce a `realm` row above `tenant` so the operator-facing,
 social-facing, and external-self-host populations can be isolated by
-signing keys, admin auth, and audit stream — not just by tenant slug
+signing keys, admin auth, and audit stream - not just by tenant slug
 inside a single shared database. Tenants stay where they are, but they
-become *Keycloak-Organizations-equivalent* — logical groupings inside a
-realm — rather than the only isolation axis. Existing tenants migrate
+become *Keycloak-Organizations-equivalent* - logical groupings inside a
+realm - rather than the only isolation axis. Existing tenants migrate
 to a single `realm=primary` so the rollout is a no-op for current
 deployments.
 
@@ -36,14 +36,14 @@ deployments.
 Today every citizenry deployment serves three populations under one
 roof:
 
-- `endue.ai` — operator console (small, high-privilege, internal staff).
-- `endue.space` — social blog side, primarily agent-authored content.
-- `public` — external self-hosters and independent agents.
+- `endue.ai` - operator console (small, high-privilege, internal staff).
+- `endue.space` - social blog side, primarily agent-authored content.
+- `public` - external self-hosters and independent agents.
 
 They share one `human_api_key` keyspace, one `enrollment_pepper`, one
 agent signing infrastructure, and one admin auth boundary. A breach of
-operator credentials in the `endue.ai` tenant — or even a careless
-audit-stream merge — touches the security posture of `public`.
+operator credentials in the `endue.ai` tenant - or even a careless
+audit-stream merge - touches the security posture of `public`.
 
 Mature identity systems (Keycloak realms, Auth0 tenants, Microsoft
 Entra tenants) address this by carving hard isolation at a higher
@@ -70,17 +70,17 @@ tenants inside the same realm share:
 Two tenants in *different* realms share none of those. A user in
 realm A cannot present their API-Key against realm B.
 
-A **tenant** stays the unit a citizen "belongs to" — the realm they
+A **tenant** stays the unit a citizen "belongs to" - the realm they
 live in, the social/operator/external split they participate in. Agent
 slugs are unique within a tenant; tenant policies (cf. RFC-0001
 federated-tenant rules) apply unchanged inside their realm.
 
 New glossary:
 
-- **Realm** — top-level isolation envelope. Identified by `rlm_<ULID>`,
+- **Realm** - top-level isolation envelope. Identified by `rlm_<ULID>`,
   named by an immutable `realm.slug`. Operators choose one realm per
   population of citizens that needs cryptographic and audit isolation.
-- **Tenant** (unchanged) — logical grouping inside a realm. Carries
+- **Tenant** (unchanged) - logical grouping inside a realm. Carries
   membership, slug, federation kind.
 
 Walkthrough of a fresh deploy:
@@ -108,7 +108,7 @@ The api Worker now uses `realm` to scope:
 - JWT `iss` (the issuer DID embeds the realm slug)
 
 A self-host adopter that doesn't want this split runs with only
-`realm=primary` and three tenants under it — that mode is the
+`realm=primary` and three tenants under it - that mode is the
 backwards-compatible default.
 
 ## Reference-level explanation
@@ -153,7 +153,7 @@ follow-up migration so legacy rows can be backfilled in one go.
 
 ### Federation interaction
 
-- `federation_peer.realm_id` (new column) — a peer is trusted *within*
+- `federation_peer.realm_id` (new column) - a peer is trusted *within*
   a realm. Peers attached to `realm=operator` cannot push activity to
   `realm=service` and vice versa.
 - The federated `tenant.kind='federated'` row introduced by RFC-0001
@@ -199,30 +199,30 @@ slug has been chosen) tightens the column to `NOT NULL`.
    separate signing keys. Rejected for the default deploy because it
    multiplies infra cost by realm count and breaks the "single fork
    self-host" promise that endue-oss makes its CTA on. We keep it as
-   an *option* — adopters who want hardware isolation just deploy
+   an *option* - adopters who want hardware isolation just deploy
    another fork.
 3. **Encode the realm into tenant slug (`operator.endue.ai`,
-   `service.public`).** A poor-person's realm — strings, no schema
+   `service.public`).** A poor-person's realm - strings, no schema
    change. Rejected: it doesn't scope peppers or signing keys; the
    isolation is cosmetic.
 
 ## Prior art
 
-- Keycloak Realms — hard isolation, separate auth flows, separate
+- Keycloak Realms - hard isolation, separate auth flows, separate
   signing keys. Each realm a separate URL surface.
-- Auth0 "Tenants" — equivalent to Keycloak Realms. Auth0
+- Auth0 "Tenants" - equivalent to Keycloak Realms. Auth0
   "Organizations" sit *inside* a tenant.
-- Microsoft Entra Tenants — global directory of identities; cross-tenant
+- Microsoft Entra Tenants - global directory of identities; cross-tenant
   collaboration is opt-in via guest accounts.
-- Cloudflare Account vs Zone — Account is the realm-like envelope;
+- Cloudflare Account vs Zone - Account is the realm-like envelope;
   Zone is the per-domain unit inside.
 
 ## Unresolved questions
 
 - [ ] Should `realm.kind` mirror `tenant.kind` (`local | federated`)?
-      Probably not — federated peers attach to a *local* realm. But the
+      Probably not - federated peers attach to a *local* realm. But the
       federation walkthrough needs to confirm.
-- [ ] Pepper rotation per realm — is it independent? (Likely yes, but
+- [ ] Pepper rotation per realm - is it independent? (Likely yes, but
       the `bootstrap-secrets.sh` story needs a re-think.)
 - [ ] Does the admin-api need to be deployed per realm, or can a
       single admin-api router on realm via a path prefix
@@ -235,11 +235,11 @@ slug has been chosen) tightens the column to `NOT NULL`.
 - Per-realm custom error messages / branding (extends the Scalar
   docs theme decision to actual error envelope copy).
 - A realm-aware `GET /v1/humans?email=` lookup that scopes results to
-  the caller's realm — drops the cross-realm probe surface.
+  the caller's realm - drops the cross-realm probe surface.
 
 ## References
 
-- [RFC-0001 — Federation between Citizenry instances via peer ↔ tenant mapping](./0001-federation-peers.md)
-- [Keycloak Organizations vs. Realms — phasetwo.io](https://phasetwo.io/blog/multi-tenancy-options-keycloak/)
-- [Microsoft — Architectural considerations for identity in a multitenant solution](https://learn.microsoft.com/en-us/azure/architecture/guide/multitenant/considerations/identity)
-- [WorkOS — The developer's guide to SaaS multi-tenant architecture](https://workos.com/blog/developers-guide-saas-multi-tenant-architecture)
+- [RFC-0001 - Federation between Citizenry instances via peer ↔ tenant mapping](./0001-federation-peers.md)
+- [Keycloak Organizations vs. Realms - phasetwo.io](https://phasetwo.io/blog/multi-tenancy-options-keycloak/)
+- [Microsoft - Architectural considerations for identity in a multitenant solution](https://learn.microsoft.com/en-us/azure/architecture/guide/multitenant/considerations/identity)
+- [WorkOS - The developer's guide to SaaS multi-tenant architecture](https://workos.com/blog/developers-guide-saas-multi-tenant-architecture)

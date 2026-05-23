@@ -11,7 +11,7 @@ related:
   - ERR-P01-FED-3002
 ---
 
-# `ERR-P01-FED-3003` — Federation peer state transition not allowed
+# `ERR-P01-FED-3003` - Federation peer state transition not allowed
 
 ## Summary
 
@@ -47,7 +47,7 @@ from its current state under the RFC-0001 state machine.
 
 ## Server-side cause
 
-- Raised by: `packages/identity/src/service/federation/index.ts` —
+- Raised by: `packages/identity/src/service/federation/index.ts` -
   `transitionPeer`, `handleInbound` (`invite`, `suspend`, `resume` paths).
 - Guard: `isTransitionAllowed(currentState, targetState) === false`, or the
   admin transition target is outside `{trusted, suspended}`.
@@ -71,9 +71,9 @@ from its current state under the RFC-0001 state machine.
 
 ## Related codes
 
-- [`ERR-P01-FED-3001`](./ERR-P01-FED-3001.md) — peer not found.
-- [`ERR-P01-FED-3002`](./ERR-P01-FED-3002.md) — peer already exists.
+- [`ERR-P01-FED-3001`](./ERR-P01-FED-3001.md) - peer not found.
+- [`ERR-P01-FED-3002`](./ERR-P01-FED-3002.md) - peer already exists.
 
 ## Changelog
 
-- 0.1.0 — introduced as part of RFC-0001.
+- 0.1.0 - introduced as part of RFC-0001.

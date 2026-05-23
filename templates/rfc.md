@@ -29,7 +29,7 @@ unlock? What is the expected outcome?
 
 This section justifies the cost of changing the protocol. A reviewer who
 disagrees with the motivation will reject the RFC no matter how good the
-design is — make it strong.>
+design is - make it strong.>
 
 ## Guide-level explanation
 
@@ -38,7 +38,7 @@ it to a new contributor or integrator. Include:
 
 - New terminology, framed as a glossary entry.
 - A walkthrough of how the change is used (request/response example,
-  CLI session, code snippet — whichever is appropriate).
+  CLI session, code snippet - whichever is appropriate).
 - Discuss what existing developers need to do differently.
 
 Treat this section as "what the docs would say." Examples are mandatory.>
@@ -67,7 +67,7 @@ section alone.>
 - Confusion with existing terminology.
 - Security/privacy regressions.
 
-If you cannot name any, write "I couldn't think of any drawbacks — please
+If you cannot name any, write "I couldn't think of any drawbacks - please
 challenge me." Reviewers will provide some.>
 
 ## Rationale and alternatives
@@ -88,7 +88,7 @@ The strongest RFCs explicitly list 2–3 rejected alternatives.>
 - Comparable OSS projects (Rust, Ember, Kubernetes, etc.).
 - Academic papers (if relevant).
 
-Cite specific URLs. If you searched and found nothing, say so — it tells
+Cite specific URLs. If you searched and found nothing, say so - it tells
 reviewers you looked.>
 
 ## Unresolved questions

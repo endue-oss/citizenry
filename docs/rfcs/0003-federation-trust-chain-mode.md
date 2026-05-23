@@ -28,7 +28,7 @@ record each other as `federation_peer` rows. This RFC keeps that
 working model as the default but defines a small **PeerTrustResolver**
 port behind the existing `fetchPeerJwks` call so a future
 implementation can swap bilateral discovery for **OpenID Federation
-1.0** trust chains — transitive trust via signed entity statements
+1.0** trust chains - transitive trust via signed entity statements
 anchored at a shared Trust Anchor. No protocol change today, only an
 interface abstraction and a documented migration target.
 
@@ -84,7 +84,7 @@ Configuration:
 ```
 
 When `trust_mode=trust_chain`, the admin "add peer" flow no longer
-requires manual JWKS exchange — the operator types the peer's entity
+requires manual JWKS exchange - the operator types the peer's entity
 URL and the resolver verifies the chain against a trust anchor.
 
 ## Reference-level explanation
@@ -100,7 +100,7 @@ export type ResolvedPeerKeys = {
   /** Wall-clock expiry of this resolution; resolvers MAY return a soft
    *  expiry to trigger refresh-ahead. */
   expiresAt: Date
-  /** Resolution mode that produced this set — observability hint. */
+  /** Resolution mode that produced this set - observability hint. */
   mode: 'bilateral' | 'trust_chain'
   /** When mode='trust_chain', the metadata policy resolved from the
    *  chain. Bilateral mode returns null. */
@@ -118,7 +118,7 @@ export interface PeerTrustResolver {
 present, `fetchPeerJwks(...)` calls become `peerTrustResolver.resolve(
 issuer).jwks`. When absent (the today path), the existing inlined
 fetch logic is wrapped in the default `BilateralResolver`. This keeps
-the change additive — no caller needs to know the difference.
+the change additive - no caller needs to know the difference.
 
 ### State machine deltas
 
@@ -146,7 +146,7 @@ invalid, etc.) with the resolver mode appended to the error detail.
 - **YAGNI risk.** Adopter scale doesn't warrant this today. Adding
   abstraction "just in case" pays interest forever. Counter: the
   abstraction is one interface, one default impl, zero behaviour
-  change — the interest payment is roughly zero.
+  change - the interest payment is roughly zero.
 - **Wire-format gap.** OpenID Federation Entity Configurations are
   not the same shape as the `/.well-known/citizenry-peer` document
   RFC-0001 defined. A future migration would need to publish *both*
@@ -170,9 +170,9 @@ invalid, etc.) with the resolver mode appended to the error detail.
 ## Prior art
 
 - [OpenID Federation 1.0](https://openid.net/specs/openid-federation-1_0.html)
-- [connect2id — OpenID Federation 1.0 and the trust chain explained](https://connect2id.com/learn/openid-federation)
-- [ActivityPub federation](https://www.w3.org/TR/activitypub/) — pure bilateral, no trust chain. Our default mode matches it.
-- [Matrix federation](https://matrix-org.github.io/synapse/latest/federate.html) — bilateral with DNS-anchored discovery.
+- [connect2id - OpenID Federation 1.0 and the trust chain explained](https://connect2id.com/learn/openid-federation)
+- [ActivityPub federation](https://www.w3.org/TR/activitypub/) - pure bilateral, no trust chain. Our default mode matches it.
+- [Matrix federation](https://matrix-org.github.io/synapse/latest/federate.html) - bilateral with DNS-anchored discovery.
 
 ## Unresolved questions
 
@@ -182,7 +182,7 @@ invalid, etc.) with the resolver mode appended to the error detail.
 - [ ] When (and how) does an admin switch `trust_mode`? If migration
       is irreversible, we need a one-way door; if reversible, both
       modes must keep state.
-- [ ] Trust-anchor key rotation — does the bilateral mode of the
+- [ ] Trust-anchor key rotation - does the bilateral mode of the
       adjacent anchor still serve as a fallback?
 
 ## Future possibilities
@@ -196,6 +196,6 @@ invalid, etc.) with the resolver mode appended to the error detail.
 
 ## References
 
-- [RFC-0001 — Federation between Citizenry instances via peer ↔ tenant mapping](./0001-federation-peers.md)
-- [RFC-0002 — Realm layer above tenant](./0002-realm-layer-above-tenant.md)
+- [RFC-0001 - Federation between Citizenry instances via peer ↔ tenant mapping](./0001-federation-peers.md)
+- [RFC-0002 - Realm layer above tenant](./0002-realm-layer-above-tenant.md)
 - [OpenID Federation 1.0 spec](https://openid.net/specs/openid-federation-1_0.html)

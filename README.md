@@ -5,7 +5,7 @@
 # Endue Citizenry
 
 
-**Citizenship for AI agents — yours to run.**
+**Citizenship for AI agents - yours to run.**
 
 Give your AI agents a citizenship so they can act on their own.
 
@@ -23,7 +23,7 @@ Run it yourself on Cloudflare. Fully open source. No strings attached.
 
 ## What it is
 
-Citizenry is an **identity provider** for AI agents — one you stand
+Citizenry is an **identity provider** for AI agents - one you stand
 up yourself. You issue the identities, you sign them with your own
 keys, you decide who counts as a citizen. No middleman.
 
@@ -37,12 +37,12 @@ Stand it up on Cloudflare in about five minutes.
 
 About five minutes after you start, your instance is live:
 
-- A **public DID document** at `/.well-known/did.json` — where other systems look up who you are
+- A **public DID document** at `/.well-known/did.json` - where other systems look up who you are
 - A **JWKS endpoint** anyone can fetch to verify the identities you sign
 - An **admin console** for onboarding humans, issuing identities, and rotating your signing keys
 - A **public agent surface** so agents can present their identity to other tools they visit
 - A **migrations runner** that keeps the schema in shape on every deploy
-- **Federation** — your instance can recognize and trust other citizenries on terms you choose
+- **Federation** - your instance can recognize and trust other citizenries on terms you choose
 
 Cloudflare hosts everything. The free tier is enough to get started.
 
@@ -54,24 +54,24 @@ Three clicks, five minutes, no terminal.
 
 ### Step 1
 
-[![Step 1 — Fork this repo](https://img.shields.io/badge/Step%201-Fork%20this%20repo-2563eb?style=for-the-badge&logo=github&logoColor=white)](https://github.com/endue-oss/citizenry/fork)
+[![Step 1 - Fork this repo](https://img.shields.io/badge/Step%201-Fork%20this%20repo-2563eb?style=for-the-badge&logo=github&logoColor=white)](https://github.com/endue-oss/citizenry/fork)
 
 Creates your own copy under your GitHub account. You'll also get
 GitHub's "Sync fork" button for pulling future upstream updates.
 
 ### Step 2
 
-[![Step 2 — Add Cloudflare secrets](https://img.shields.io/badge/Step%202-Add%20Cloudflare%20secrets-f38020?style=for-the-badge&logo=cloudflare&logoColor=white)](https://github.com/YOUR_USERNAME/citizenry/settings/secrets/actions/new)
+[![Step 2 - Add Cloudflare secrets](https://img.shields.io/badge/Step%202-Add%20Cloudflare%20secrets-f38020?style=for-the-badge&logo=cloudflare&logoColor=white)](https://github.com/YOUR_USERNAME/citizenry/settings/secrets/actions/new)
 
 In your new repo, *Settings → Secrets and variables → Actions → New
 repository secret*. Add two:
 
-- `CLOUDFLARE_API_TOKEN` — scoped token. [Scoping guide](./docs/deploy.md#step-2-create-a-scoped-cloudflare-api-token).
-- `CLOUDFLARE_ACCOUNT_ID` — from your Cloudflare dashboard sidebar.
+- `CLOUDFLARE_API_TOKEN` - scoped token. [Scoping guide](./docs/deploy.md#step-2-create-a-scoped-cloudflare-api-token).
+- `CLOUDFLARE_ACCOUNT_ID` - from your Cloudflare dashboard sidebar.
 
 ### Step 3
 
-[![Step 3 — Run deploy](https://img.shields.io/badge/Step%203-Run%20deploy-22c55e?style=for-the-badge&logo=githubactions&logoColor=white)](https://github.com/YOUR_USERNAME/citizenry/actions/workflows/deploy.yml)
+[![Step 3 - Run deploy](https://img.shields.io/badge/Step%203-Run%20deploy-22c55e?style=for-the-badge&logo=githubactions&logoColor=white)](https://github.com/YOUR_USERNAME/citizenry/actions/workflows/deploy.yml)
 
 In your new repo, *Actions → Deploy to Cloudflare → Run workflow*.
 Or push any commit to `main`.
@@ -81,7 +81,7 @@ Or push any commit to `main`.
 > navigate within your new repo.
 
 A handful of things come up on your Cloudflare account: a few small
-services, an admin console, and two databases — all set up for you
+services, an admin console, and two databases - all set up for you
 during the deploy.
 Full walkthrough in [`docs/deploy.md`](./docs/deploy.md).
 
@@ -111,7 +111,7 @@ Full walkthrough in [`docs/deploy.md`](./docs/deploy.md).
 
 Identity should not be rented.
 
-AI agents are showing up everywhere right now — millions of them,
+AI agents are showing up everywhere right now - millions of them,
 talking to apps and to each other. The default answer is "let some
 big company sign them in for you." That turns identity into a toll
 gate. Toll gates get charged for, or shut down, or both.
@@ -120,7 +120,7 @@ Citizenry exists so that **anyone can run their own identity
 provider**: your team, your community, your weekend project.
 
 And no instance stands above another. Two citizenries can recognize
-each other the way two countries do — by reading each other's JWKS,
+each other the way two countries do - by reading each other's JWKS,
 on terms each side sets. There is no central authority, no Endue
 server in the middle. Just the open spec we share, and the keys you
 control.
@@ -128,11 +128,11 @@ control.
 ## Real open source, not the fake kind
 
 We love open source. It is the reason most of the software you use
-exists. We want this project to outlive any company — including ours.
+exists. We want this project to outlive any company - including ours.
 Here is what that means in practice:
 
 - **Apache License 2.0 for the code.** A real, OSI-approved open
-  source license — not a workalike. You can use it, change it, share
+  source license - not a workalike. You can use it, change it, share
   it, host it as a service, and make money from it.
   ([`LICENSE`](./LICENSE))
 - **CC-BY-SA 4.0 for the specification.** If you build on the
@@ -140,7 +140,7 @@ Here is what that means in practice:
   ([`packages/spec/LICENSE`](./packages/spec/LICENSE))
 - **No paperwork that signs your rights away.** Contributors keep
   their copyright. We use only the
-  [Developer Certificate of Origin](https://developercertificate.org/) —
+  [Developer Certificate of Origin](https://developercertificate.org/) -
   the one-line sign-off the Linux kernel uses.
   ([`CONTRIBUTING.md`](./CONTRIBUTING.md))
 - **No bait-and-switch later.** Apache 2.0 is what we shipped, and
@@ -184,7 +184,7 @@ pnpm dev          # spec build → all apps in parallel
 pnpm typecheck
 ```
 
-`wrangler dev` runs locally — no Cloudflare account needed.
+`wrangler dev` runs locally - no Cloudflare account needed.
 
 ## Documentation
 

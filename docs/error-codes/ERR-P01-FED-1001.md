@@ -11,7 +11,7 @@ related:
   - ERR-P01-FED-1003
 ---
 
-# `ERR-P01-FED-1001` — Federation JWS verify failed
+# `ERR-P01-FED-1001` - Federation JWS verify failed
 
 ## Summary
 
@@ -35,7 +35,7 @@ against the peer's JWKS, or one of the structural payload claims (`alg`,
 
 - Sign with an Ed25519 key listed in your instance's
   `/.well-known/jwks.json`. Most JOSE libraries require you to pass the
-  algorithm explicitly — make sure it is `"EdDSA"`.
+  algorithm explicitly - make sure it is `"EdDSA"`.
 - Re-issue the handshake with `iat = now`, `exp ≤ now + 600`, fresh 32-byte
   base64url `nonce`, and a `purpose` from `FederationPurpose`.
 - If the receiver cannot fetch your JWKS, also confirm that
@@ -43,7 +43,7 @@ against the peer's JWKS, or one of the structural payload claims (`alg`,
 
 ## Server-side cause
 
-- Raised by: `packages/identity/src/service/federation/jws.ts` —
+- Raised by: `packages/identity/src/service/federation/jws.ts` -
   `verifyHandshakeJws`.
 - Guard: every step from `verifier()` call to nonce shape check throws
   `FED.jwsVerifyFailed(...)` with a precise reason in `detail.kind`.
@@ -67,10 +67,10 @@ against the peer's JWKS, or one of the structural payload claims (`alg`,
 
 ## Related codes
 
-- [`ERR-P01-FED-1002`](./ERR-P01-FED-1002.md) — `from_issuer` does not match
+- [`ERR-P01-FED-1002`](./ERR-P01-FED-1002.md) - `from_issuer` does not match
   the presenting peer.
-- [`ERR-P01-FED-1003`](./ERR-P01-FED-1003.md) — nonce replay.
+- [`ERR-P01-FED-1003`](./ERR-P01-FED-1003.md) - nonce replay.
 
 ## Changelog
 
-- 0.1.0 — introduced as part of RFC-0001.
+- 0.1.0 - introduced as part of RFC-0001.

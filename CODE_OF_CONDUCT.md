@@ -2,9 +2,9 @@
 
 The **Endue Citizenry** project adopts the
 [Contributor Covenant, version 2.1](https://www.contributor-covenant.org/version/2/1/code_of_conduct/)
-as its Code of Conduct. All participants in project spaces — including
+as its Code of Conduct. All participants in project spaces - including
 GitHub repositories, issue trackers, pull requests, discussions, chat
-channels, and in-person or virtual events — are expected to follow it.
+channels, and in-person or virtual events - are expected to follow it.
 
 The full text is available at:
 

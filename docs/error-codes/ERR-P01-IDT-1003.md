@@ -10,7 +10,7 @@ related:
   - ERR-P01-IDT-1001
 ---
 
-# `ERR-P01-IDT-1003` — JWT expired
+# `ERR-P01-IDT-1003` - JWT expired
 
 ## Summary
 
@@ -20,7 +20,7 @@ The JWT's `exp` (expiration) claim is in the past, or the claim is missing.
 
 - The token's `payload.exp` (epoch seconds) is less than or equal to the
   server's current wall-clock time.
-- The token has no `exp` claim at all — Citizenry refuses to verify tokens
+- The token has no `exp` claim at all - Citizenry refuses to verify tokens
   that do not bind themselves to a lifetime.
 - Clock skew is **not** absorbed by Citizenry; clients should mint tokens
   with a comfortable margin (recommended: `exp = now + 600`).
@@ -35,7 +35,7 @@ The JWT's `exp` (expiration) claim is in the past, or the claim is missing.
 
 ## Server-side cause
 
-- Raised by: `packages/identity/src/auth.ts` — `verifyAgentJwt` step (6).
+- Raised by: `packages/identity/src/auth.ts` - `verifyAgentJwt` step (6).
 - Guard: `if (!payload.exp || payload.exp <= now) throw new AuthError(...)`.
 
 ## Example response
@@ -57,9 +57,9 @@ The JWT's `exp` (expiration) claim is in the past, or the claim is missing.
 
 ## Related codes
 
-- [`ERR-P01-IDT-1001`](./ERR-P01-IDT-1001.md) — JWT alg mismatch (earlier
+- [`ERR-P01-IDT-1001`](./ERR-P01-IDT-1001.md) - JWT alg mismatch (earlier
   step in the same verifier).
 
 ## Changelog
 
-- 0.1.0 — introduced.
+- 0.1.0 - introduced.

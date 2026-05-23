@@ -10,7 +10,7 @@ related:
   - ERR-P01-FED-3002
 ---
 
-# `ERR-P01-FED-3001` — Federation peer not found
+# `ERR-P01-FED-3001` - Federation peer not found
 
 ## Summary
 
@@ -18,7 +18,7 @@ The federation peer id referenced by an admin operation does not exist.
 
 ## When this is raised
 
-- `GET /v1/admin/federation/peers/:id` — no `federation_peer` row with the
+- `GET /v1/admin/federation/peers/:id` - no `federation_peer` row with the
   given `fdp_*` id.
 - `POST /v1/admin/federation/peers/:id/transition` or `/jwks-refresh` for
   an unknown id.
@@ -30,12 +30,12 @@ The federation peer id referenced by an admin operation does not exist.
 ## What to do
 
 - Verify the `fdp_*` id with `GET /v1/admin/federation/peers`.
-- If you expected the peer to exist, check whether it was revoked — revoked
+- If you expected the peer to exist, check whether it was revoked - revoked
   rows still respond to read operations until pruning.
 
 ## Server-side cause
 
-- Raised by: `packages/identity/src/service/federation/index.ts` —
+- Raised by: `packages/identity/src/service/federation/index.ts` -
   `getPeer`, `transitionPeer`, `revokePeer`, `refreshJwks`, `handleInbound`.
 - Guard: `repo.findById(id)` returned `undefined`, or
   `repo.findActiveByIssuer(from_issuer)` did during an inbound non-invite
@@ -59,8 +59,8 @@ The federation peer id referenced by an admin operation does not exist.
 
 ## Related codes
 
-- [`ERR-P01-FED-3002`](./ERR-P01-FED-3002.md) — peer already exists.
+- [`ERR-P01-FED-3002`](./ERR-P01-FED-3002.md) - peer already exists.
 
 ## Changelog
 
-- 0.1.0 — introduced as part of RFC-0001.
+- 0.1.0 - introduced as part of RFC-0001.

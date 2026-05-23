@@ -1,6 +1,6 @@
 # Governance
 
-**Version 1.0 — Effective 2026**
+**Version 1.0 - Effective 2026**
 
 This document describes how the **Endue Citizenry** project is governed:
 who makes decisions, how changes to the specification and code are
@@ -18,16 +18,16 @@ Citizenry specification, brand, and conformance program.
 
 The Project consists of:
 
-- **Specification** (`packages/spec/`) — TypeSpec sources defining the
+- **Specification** (`packages/spec/`) - TypeSpec sources defining the
   Endue Citizenry protocol, types, and APIs. Licensed under
   CC-BY-SA 4.0.
-- **Reference implementation** — Apps and packages implementing the
+- **Reference implementation** - Apps and packages implementing the
   specification. Licensed under Apache License 2.0.
-- **Conformance test suite** (`packages/conformance/` once introduced) —
+- **Conformance test suite** (`packages/conformance/` once introduced) -
   Tests that determine whether an implementation is conformant.
   Licensed under Apache License 2.0; the conformance mark is governed
   separately (see Section 5).
-- **Marks** — The Endue and Endue Citizenry trademarks. See
+- **Marks** - The Endue and Endue Citizenry trademarks. See
   `TRADEMARKS.md`.
 
 ---
@@ -127,18 +127,18 @@ RFC and may be merged by Spec Editors directly.
 
 ### 4.2 RFC lifecycle
 
-1. **Draft** — Author opens a PR adding `rfcs/NNNN-short-title.md`
+1. **Draft** - Author opens a PR adding `rfcs/NNNN-short-title.md`
    based on the RFC template. Discussion happens in the PR.
-2. **Final Comment Period (FCP)** — When a Spec Editor judges that
+2. **Final Comment Period (FCP)** - When a Spec Editor judges that
    discussion has converged, they propose FCP. The RFC enters a
    minimum 10-day FCP, announced in the project's official channels.
-3. **Decision** — At the end of FCP, the RFC is either:
-   - **Accepted** — Merged into `rfcs/`, becomes part of the
+3. **Decision** - At the end of FCP, the RFC is either:
+   - **Accepted** - Merged into `rfcs/`, becomes part of the
      specification roadmap.
-   - **Rejected** — Closed with a written rationale.
-   - **Postponed** — Closed with a note that the idea is valuable but
+   - **Rejected** - Closed with a written rationale.
+   - **Postponed** - Closed with a note that the idea is valuable but
      not for this iteration.
-4. **Implementation** — Accepted RFCs are tracked to implementation,
+4. **Implementation** - Accepted RFCs are tracked to implementation,
    with implementing PRs referencing the RFC number.
 
 ### 4.3 Decision authority for RFCs
@@ -153,9 +153,9 @@ RFC and may be merged by Spec Editors directly.
 
 The specification follows semantic versioning at the protocol level:
 
-- **Major** — Breaking changes (Steering Committee approval required).
-- **Minor** — Backwards-compatible additions.
-- **Patch** — Editorial fixes and clarifications.
+- **Major** - Breaking changes (Steering Committee approval required).
+- **Minor** - Backwards-compatible additions.
+- **Patch** - Editorial fixes and clarifications.
 
 The reference implementation versions independently but must indicate
 which specification version it implements.
@@ -206,11 +206,11 @@ Section 3.2.
 
 The Project aims to make decisions in this order of preference:
 
-1. **Lazy consensus** — If a proposal is made and no one objects within
+1. **Lazy consensus** - If a proposal is made and no one objects within
    a reasonable time, it is accepted.
-2. **Explicit consensus** — Maintainers or Spec Editors signal
+2. **Explicit consensus** - Maintainers or Spec Editors signal
    agreement; objections are resolved through discussion.
-3. **Steering Committee vote** — Used when consensus cannot be reached
+3. **Steering Committee vote** - Used when consensus cannot be reached
    or when the matter is reserved for the Committee (governance
    changes, trademark policy, conformance program changes, breaking
    spec changes).
@@ -236,13 +236,13 @@ Steering Committee approval, as these touch rights held by the Sponsor.
 The Project is committed to broadening community participation over
 time. The intended evolution:
 
-- **Year 0–1 (2026)** — Steering Committee composed of Endue
+- **Year 0–1 (2026)** - Steering Committee composed of Endue
   representatives. Maintainers and Spec Editors appointed based on
   contribution.
-- **Year 1–2** — At least 2 community-elected seats added to the
+- **Year 1–2** - At least 2 community-elected seats added to the
   Steering Committee. Spec Editor pool expanded to include non-Endue
   contributors.
-- **Year 2+** — Evaluate transition to a neutral foundation
+- **Year 2+** - Evaluate transition to a neutral foundation
   (e.g., CNCF, Linux Foundation) for code and specification governance,
   with the trademark and conformance program remaining with Endue or
   transferred under terms protecting brand integrity (Kubernetes/CNCF

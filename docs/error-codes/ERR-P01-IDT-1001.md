@@ -11,7 +11,7 @@ related:
   - ERR-P01-IDT-1004
 ---
 
-# `ERR-P01-IDT-1001` — JWT alg mismatch
+# `ERR-P01-IDT-1001` - JWT alg mismatch
 
 ## Summary
 
@@ -23,7 +23,7 @@ The JWS header's `alg` claim is not the EdDSA algorithm required by Citizenry.
   declares `alg` other than the string `"EdDSA"`.
 - Includes the absence of `alg` entirely (treated as a mismatch, not as
   unsigned) and any of `RS256`, `HS256`, `ES256`, `none`, etc.
-- Raised before the signature is even loaded — no key lookup occurs.
+- Raised before the signature is even loaded - no key lookup occurs.
 
 ## What to do
 
@@ -36,7 +36,7 @@ The JWS header's `alg` claim is not the EdDSA algorithm required by Citizenry.
 
 ## Server-side cause
 
-- Raised by: `packages/identity/src/auth.ts` — `verifyAgentJwt` step (2).
+- Raised by: `packages/identity/src/auth.ts` - `verifyAgentJwt` step (2).
 - Guard: `if (header.alg !== 'EdDSA') throw new AuthError(...)`.
 
 ## Example response
@@ -57,10 +57,10 @@ The JWS header's `alg` claim is not the EdDSA algorithm required by Citizenry.
 
 ## Related codes
 
-- [`ERR-P01-IDT-1003`](./ERR-P01-IDT-1003.md) — JWT expired (a later step in
+- [`ERR-P01-IDT-1003`](./ERR-P01-IDT-1003.md) - JWT expired (a later step in
   the same verifier).
-- `ERR-P01-IDT-1004` — JWT `kid` not present in issuer JWKS.
+- `ERR-P01-IDT-1004` - JWT `kid` not present in issuer JWKS.
 
 ## Changelog
 
-- 0.1.0 — introduced.
+- 0.1.0 - introduced.

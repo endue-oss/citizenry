@@ -5,7 +5,7 @@
 > a corresponding documentation file under `docs/error-codes/`.
 
 **Status:** stable as of ADR-2026-0001.
-**Standard:** [RFC 9457 — Problem Details for HTTP APIs](https://www.rfc-editor.org/rfc/rfc9457) (supersedes RFC 7807).
+**Standard:** [RFC 9457 - Problem Details for HTTP APIs](https://www.rfc-editor.org/rfc/rfc9457) (supersedes RFC 7807).
 
 ---
 
@@ -14,7 +14,7 @@
 ```
 ERR-P##-XXX-NNNN
 
-  ERR         literal prefix — grep-friendly
+  ERR         literal prefix - grep-friendly
   P##         Product, 2-digit numeric
   XXX         Service, 3–4 uppercase letters
   NNNN        Sequence, 4-digit (thousands digit encodes the category)
@@ -38,14 +38,14 @@ short human name.
 | `P03` | (reserved) | Future product. |
 
 A new product code is allocated by Steering Committee decision (per
-`GOVERNANCE.md` §6). Codes are append-only — never reuse.
+`GOVERNANCE.md` §6). Codes are append-only - never reuse.
 
 ## 3. Service slug registry (`XXX`)
 
 Service slugs are 3–4 uppercase letters, scoped per product. They are
 self-describing so a code can be read without a lookup table.
 
-### P01 — citizenry-id
+### P01 - citizenry-id
 
 | Slug | Service |
 |---|---|
@@ -56,7 +56,7 @@ self-describing so a code can be read without a lookup table.
 | `TNT` | tenant |
 | `FED` | federation |
 
-### P02 — endue-salon
+### P02 - endue-salon
 
 | Slug | Service |
 |---|---|
@@ -71,7 +71,7 @@ service MUST update this table.
 ## 4. Category (thousands digit of `NNNN`)
 
 The thousands digit of the sequence encodes the error class. Every code in a
-given class is restricted to a fixed set of HTTP status codes — enforced by CI.
+given class is restricted to a fixed set of HTTP status codes - enforced by CI.
 
 | Class | Meaning | Allowed HTTP status |
 |---|---|---|
@@ -91,7 +91,7 @@ given class is restricted to a fixed set of HTTP status codes — enforced by CI
 ## 5. Sequence (`NNNN` lower three digits)
 
 Within a `Product × Service × Category`, sequence numbers are append-only and
-allocated by PR. No reuse — a deprecated code stays in the table with status
+allocated by PR. No reuse - a deprecated code stays in the table with status
 `deprecated` and is never re-issued for a different meaning.
 
 Recommended allocation: start at `001` per category, increment by 1 per
@@ -121,7 +121,7 @@ Details. The required fields:
 ```
 
 - `type` MUST resolve to `https://citizenry.id/errors/{code}` (this docs site).
-- `code` and `type` MUST be paired — `code` is the short identifier, `type` is
+- `code` and `type` MUST be paired - `code` is the short identifier, `type` is
   the canonical URI required by RFC 9457.
 - `status` MUST match the `Allowed HTTP status` table for the code's category.
 
@@ -146,12 +146,12 @@ The file is the single source of truth for:
 
 ## 8. Adding a new code
 
-1. **Decide the slot** — Product, Service, Category, next Sequence within
+1. **Decide the slot** - Product, Service, Category, next Sequence within
    that bucket.
 2. **Run** `/docs create error-code ERR-P##-XXX-NNNN` to scaffold the doc.
 3. **Fill in** every section of the template. Make the *Summary* one short
    sentence; expand in *When this is raised*.
-4. **Wire it in code** — the service raises `HttpError` with the new code.
+4. **Wire it in code** - the service raises `HttpError` with the new code.
    No code may appear in source without a doc file.
 5. **PR** includes both the new `docs/error-codes/*.md` and the code change.
    CI verifies the regex, category↔HTTP status, and presence of the doc.
@@ -171,7 +171,7 @@ Codes are **never deleted** and **never re-meant**. To retire one:
 
 ## 10. References
 
-- [RFC 9457 — Problem Details for HTTP APIs](https://www.rfc-editor.org/rfc/rfc9457)
-- [RFC 7807 — predecessor of 9457](https://www.rfc-editor.org/rfc/rfc7807)
-- [ADR-2026-0001](../adr/2026-0001.md) — Adoption of this scheme.
-- [`templates/error-code.md`](../../templates/error-code.md) — Doc template.
+- [RFC 9457 - Problem Details for HTTP APIs](https://www.rfc-editor.org/rfc/rfc9457)
+- [RFC 7807 - predecessor of 9457](https://www.rfc-editor.org/rfc/rfc7807)
+- [ADR-2026-0001](../adr/2026-0001.md) - Adoption of this scheme.
+- [`templates/error-code.md`](../../templates/error-code.md) - Doc template.

@@ -1,7 +1,7 @@
 # Deploy your own citizenry
 
 A start-to-finish guide for running citizenry on Cloudflare. No prior
-DevOps experience is assumed — if you can fork a repo on GitHub and
+DevOps experience is assumed - if you can fork a repo on GitHub and
 click through a dashboard, you can complete this guide.
 
 **You will end up with:**
@@ -22,13 +22,13 @@ card needed. No external database, no servers to rent.
 ## Table of contents
 
 1. [Before you begin](#before-you-begin)
-2. [Step 1 — Fork the repository](#step-1--fork-the-repository)
-3. [Step 2 — Create a Cloudflare API token](#step-2--create-a-cloudflare-api-token)
-4. [Step 3 — Find your Cloudflare Account ID](#step-3--find-your-cloudflare-account-id)
-5. [Step 4 — Add the two required secrets to your fork](#step-4--add-the-two-required-secrets-to-your-fork)
-6. [Step 5 — Run the deploy workflow](#step-5--run-the-deploy-workflow)
-7. [Step 6 — Retrieve the admin password](#step-6--retrieve-the-admin-password)
-8. [Step 7 — Sign in to the admin console](#step-7--sign-in-to-the-admin-console)
+2. [Step 1 - Fork the repository](#step-1--fork-the-repository)
+3. [Step 2 - Create a Cloudflare API token](#step-2--create-a-cloudflare-api-token)
+4. [Step 3 - Find your Cloudflare Account ID](#step-3--find-your-cloudflare-account-id)
+5. [Step 4 - Add the two required secrets to your fork](#step-4--add-the-two-required-secrets-to-your-fork)
+6. [Step 5 - Run the deploy workflow](#step-5--run-the-deploy-workflow)
+7. [Step 6 - Retrieve the admin password](#step-6--retrieve-the-admin-password)
+8. [Step 7 - Sign in to the admin console](#step-7--sign-in-to-the-admin-console)
 9. [Day-to-day operations](#day-to-day-operations)
 10. [Optional: enable outbound and inbound mail](#optional-enable-outbound-and-inbound-mail)
 11. [Optional: use your own domain names](#optional-use-your-own-domain-names)
@@ -47,15 +47,15 @@ You need three things, all free:
    [dash.cloudflare.com/sign-up](https://dash.cloudflare.com/sign-up).
    You do **not** need to add a payment method or buy a domain to
    complete this guide.
-3. **A web browser.** That's it — you do not need a local development
+3. **A web browser.** That's it - you do not need a local development
    environment, `wrangler`, `node`, or `pnpm` to deploy. (Those are
    only needed if you later want to inspect data from a terminal,
    which is covered in [Day-to-day operations](#day-to-day-operations).)
 
 **Helpful but not required:**
 
-- [GitHub CLI (`gh`)](https://cli.github.com/) — for one-line forking.
-- [Wrangler](https://developers.cloudflare.com/workers/wrangler/install-and-update/) —
+- [GitHub CLI (`gh`)](https://cli.github.com/) - for one-line forking.
+- [Wrangler](https://developers.cloudflare.com/workers/wrangler/install-and-update/) -
   Cloudflare's command-line tool, used for reading database rows after
   deploy.
 
@@ -64,13 +64,13 @@ You need three things, all free:
 
 ---
 
-## Step 1 — Fork the repository
+## Step 1 - Fork the repository
 
 Forking creates **your own copy** of the project on GitHub. All
 subsequent steps happen on your fork; the upstream repository is
 untouched.
 
-### Option A — GitHub website (recommended)
+### Option A - GitHub website (recommended)
 
 1. Open the upstream repository in your browser.
 2. Click the **Fork** button in the top-right corner.
@@ -78,7 +78,7 @@ untouched.
 
 You now have `https://github.com/<your-username>/citizenry`.
 
-### Option B — GitHub CLI
+### Option B - GitHub CLI
 
 ```bash
 gh repo fork <upstream>/citizenry --clone
@@ -92,11 +92,11 @@ cd citizenry
 
 ---
 
-## Step 2 — Create a Cloudflare API token
+## Step 2 - Create a Cloudflare API token
 
 The GitHub Actions workflow uses this token to provision databases
 and deploy Workers on your behalf. The token is scoped to **only**
-what the workflow needs — it cannot, for example, change your
+what the workflow needs - it cannot, for example, change your
 billing settings.
 
 1. Sign in at [dash.cloudflare.com](https://dash.cloudflare.com).
@@ -120,13 +120,13 @@ billing settings.
 8. Click **Continue to summary**, then **Create Token**.
 9. **Copy the token now.** Cloudflare will not show it again.
 
-> **What if I lose the token?** No catastrophe — just create a new
+> **What if I lose the token?** No catastrophe - just create a new
 > one and update the GitHub secret in [Step 4](#step-4--add-the-two-required-secrets-to-your-fork).
 > The old token can be revoked from the same page.
 
 ---
 
-## Step 3 — Find your Cloudflare Account ID
+## Step 3 - Find your Cloudflare Account ID
 
 1. Go back to [dash.cloudflare.com](https://dash.cloudflare.com).
 2. Pick any account from the left sidebar (or the only one you have).
@@ -136,7 +136,7 @@ billing settings.
 
 ---
 
-## Step 4 — Add the two required secrets to your fork
+## Step 4 - Add the two required secrets to your fork
 
 GitHub Secrets are encrypted values your workflow can read. They are
 never exposed in logs or to forks of your fork.
@@ -158,7 +158,7 @@ secret on first run.
 
 ---
 
-## Step 5 — Run the deploy workflow
+## Step 5 - Run the deploy workflow
 
 The workflow is named **Deploy to Cloudflare** and lives at
 `.github/workflows/deploy.yml`.
@@ -167,10 +167,10 @@ The workflow is named **Deploy to Cloudflare** and lives at
 
 You have two equivalent options:
 
-- **Option A — manual.** In your fork: **Actions** tab → choose
+- **Option A - manual.** In your fork: **Actions** tab → choose
   *Deploy to Cloudflare* in the left sidebar → click **Run workflow**
   (top-right) → leave `main` selected → **Run workflow**.
-- **Option B — push.** Make any change on `main` (the README is fine)
+- **Option B - push.** Make any change on `main` (the README is fine)
   and push. The workflow runs automatically.
 
 ### What success looks like
@@ -202,7 +202,7 @@ Service prefix: `citizenry`  ·  Subdomain: `your-handle.workers.dev`
 | citizenry-docs      | Pages  | citizenry-docs.pages.dev                          |
 ```
 
-Copy this table somewhere — those are the URLs you'll use from now
+Copy this table somewhere - those are the URLs you'll use from now
 on. (You can always re-read it from any deploy run's summary.)
 
 ### What the workflow did
@@ -225,14 +225,14 @@ secrets are only rotated if you change the matching GitHub secret.
 
 ---
 
-## Step 6 — Retrieve the admin password
+## Step 6 - Retrieve the admin password
 
 On first deploy the workflow generates a 32-character random
 passphrase and writes it to the `citizenry-config` database. It is
 deliberately **never printed in workflow logs**. There are two ways
 to retrieve it.
 
-### Option A — Cloudflare dashboard (no tools needed)
+### Option A - Cloudflare dashboard (no tools needed)
 
 1. [dash.cloudflare.com](https://dash.cloudflare.com) → **Workers
    & Pages** → **D1** in the left sidebar.
@@ -244,11 +244,11 @@ to retrieve it.
    SELECT config_value FROM config WHERE config_key = 'admin.password';
    ```
 
-5. The cell value is JSON-encoded — the literal contents include the
+5. The cell value is JSON-encoded - the literal contents include the
    surrounding double-quotes (e.g. `"abcd1234…"`). The actual password
    is everything **between** the quotes.
 
-### Option B — Wrangler (command line)
+### Option B - Wrangler (command line)
 
 If you have [Wrangler](https://developers.cloudflare.com/workers/wrangler/install-and-update/)
 installed and authenticated with `wrangler login`:
@@ -276,23 +276,23 @@ later, change the secret and redeploy, or use the admin config API
 
 ---
 
-## Step 7 — Sign in to the admin console
+## Step 7 - Sign in to the admin console
 
 The admin console is a static site at `citizenry-admin-web.pages.dev`
-(or `<your-prefix>-admin-web.pages.dev` if you customized the prefix —
+(or `<your-prefix>-admin-web.pages.dev` if you customized the prefix -
 see [Reference → Renaming the deployment](#renaming-the-deployment)).
 
 1. Open `https://citizenry-admin-web.pages.dev` in a browser.
 2. Sign in with:
    - **Admin ID:** `admin` (unless you set the `ADMIN_ID` variable in
-     your fork — see [Reference](#secrets-and-variables)).
+     your fork - see [Reference](#secrets-and-variables)).
    - **Password:** the value you retrieved in Step 6.
 3. The console is read-mostly: agent rosters, identity records,
-   config keys, mail queue. Operator-only — agents themselves use
+   config keys, mail queue. Operator-only - agents themselves use
    the public API or MCP gateway, not this UI.
 
 If you see a login error, the most common cause is leaving the
-JSON-encoding quotes in the password — strip them. See
+JSON-encoding quotes in the password - strip them. See
 [Troubleshooting](#troubleshooting).
 
 > **What about end-user accounts?** There aren't any. citizenry is
@@ -368,7 +368,7 @@ wrangler d1 execute citizenry-config-db --remote \
 A separate `destroy.yml` workflow exists for cleanly removing every
 Worker, Pages site, and D1 database the deploy created. Run it from
 the **Actions** tab when you're done experimenting. It requires
-manual confirmation — see the workflow file for the input form.
+manual confirmation - see the workflow file for the input form.
 
 ---
 
@@ -376,11 +376,11 @@ manual confirmation — see the workflow file for the input form.
 
 The `citizenry-mail` worker deploys unconditionally, but it does
 nothing useful until you connect it to a real mail path. Skip this
-section entirely if you don't need mail — `GET /_health` still
+section entirely if you don't need mail - `GET /_health` still
 responds, outbound goes to the log-only sender, and inbound never
 fires because no MX records point at Cloudflare.
 
-### Outbound — pick a provider
+### Outbound - pick a provider
 
 The mail worker tries providers in this order and uses the first that
 is configured:
@@ -395,7 +395,7 @@ is configured:
    `deliveryStatus='queued'` but nothing is sent.
 
 Provider credentials live in `citizenry-config` and can be set
-through the admin API at any time — no redeploy required:
+through the admin API at any time - no redeploy required:
 
 ```bash
 # Resend
@@ -422,11 +422,11 @@ curl -X PUT https://<admin-api>/v1/admin/config/mail.outbound.aws_ses.secret_acc
 Changes propagate after the 5-minute config-cache TTL. To disable a
 provider, `DELETE` the same key.
 
-### Inbound — Cloudflare Email Routing
+### Inbound - Cloudflare Email Routing
 
 1. Dashboard → **Email → Email Routing** for the zone that matches
    your `MAIL_DOMAIN` GitHub variable (e.g. `mail.example.com`).
-2. Enable Email Routing. Cloudflare auto-suggests three MX records —
+2. Enable Email Routing. Cloudflare auto-suggests three MX records -
    add them to your zone.
 3. Create one routing rule:
    - **Match:** `*@<your-mail-domain>` (catch-all).
@@ -435,7 +435,7 @@ provider, `DELETE` the same key.
    against `identity.agent.slug`; unknown recipients are dropped
    silently (see [`apps/mail/src/inbound/handler.ts`](../apps/mail/src/inbound/handler.ts)).
 
-No `wrangler.toml` block is needed — the routing rule lives only in
+No `wrangler.toml` block is needed - the routing rule lives only in
 Cloudflare's configuration and survives redeploys.
 
 ---
@@ -491,7 +491,7 @@ place.
 | ---------------------- | ------- | --------------------------------------------------------------------------- |
 | `citizenry-api`        | Worker  | `DB_IDENTITY`, `DB_VAULT`, `DB_CONFIG` (all D1)                             |
 | `citizenry-admin-api`  | Worker  | `DB_IDENTITY` (refresh tokens), `DB_CONFIG`, API service binding            |
-| `citizenry-mcp`        | Worker  | —                                                                           |
+| `citizenry-mcp`        | Worker  | -                                                                           |
 | `citizenry-mail`       | Worker  | `DB_IDENTITY`, `DB_MAIL`, `DB_CONFIG`, MAIL binding                         |
 | `citizenry-migrator`   | Worker  | `DB_IDENTITY`, `DB_VAULT`, `DB_MAIL`, `DB_CONFIG` (bearer-guarded `/apply`) |
 | `citizenry-admin-web`  | Pages   | Static SvelteKit admin console (ops-only)                                   |
@@ -499,14 +499,14 @@ place.
 
 ### Storage
 
-- **D1 `citizenry-identity`** — identity domain. Migrations:
+- **D1 `citizenry-identity`** - identity domain. Migrations:
   `packages/identity/migrations/*.sql`. Also hosts the auto-managed
   internal secrets in the `_config` table.
-- **D1 `citizenry-vault`** — vault domain. Migrations:
+- **D1 `citizenry-vault`** - vault domain. Migrations:
   `packages/vault/migrations/*.sql`.
-- **D1 `citizenry-mail`** — mail domain. Migrations:
+- **D1 `citizenry-mail`** - mail domain. Migrations:
   `packages/mail/migrations/*.sql`.
-- **D1 `citizenry-config`** — runtime control-plane key/value store
+- **D1 `citizenry-config`** - runtime control-plane key/value store
   for operator-managed settings. Written through admin-api
   (`/_admin/v1/admin/config/*`), read by data-plane code via
   `packages/config` with a 5-minute colo-local TTL cache. Migrations:
@@ -542,7 +542,7 @@ fork.
 | `CLOUDFLARE_API_TOKEN`  | API token from Step 2.                   |
 | `CLOUDFLARE_ACCOUNT_ID` | Account ID from Step 3.                  |
 
-**Optional secrets** — the workflow generates a random value on
+**Optional secrets** - the workflow generates a random value on
 first deploy if these are unset, persists it in D1, and pushes it to
 the matching Worker secret on every redeploy. Set one only if you
 want to **pin or rotate** the value from your repository.
@@ -556,7 +556,7 @@ want to **pin or rotate** the value from your repository.
 | `MIGRATOR_TOKEN`       | Worker secret on `citizenry-migrator`        | Bearer for the `/apply` route on the migrator |
 | `ADMIN_PASSWORD`       | `citizenry-config.admin.password`            | `admin-api` (sign-in check)                  |
 
-**Optional variables** (the **Variables** tab — not secrets — they
+**Optional variables** (the **Variables** tab - not secrets - they
 are written into `wrangler.toml` `[vars]` at deploy time):
 
 | Name             | Purpose                                                                  | Example                            |
@@ -573,7 +573,7 @@ are written into `wrangler.toml` `[vars]` at deploy time):
 Set the `SERVICE_PREFIX` GitHub variable to anything other than the
 default. Every Worker and Pages project name becomes
 `<prefix>-<service>`, and every URL follows suit. The workflow
-summary always prints the resolved names — use it as your map.
+summary always prints the resolved names - use it as your map.
 
 ### Adding D1 migrations later
 
@@ -593,25 +593,25 @@ pnpm dev   # builds spec, then runs all apps in parallel
 
 `wrangler dev` uses miniflare's local D1 and ignores the production
 `database_id`. The committed `local-dev-placeholder` works as-is for
-offline development. There is no local provisioning step — local
+offline development. There is no local provisioning step - local
 work never touches your Cloudflare account.
 
 ### Glossary
 
-- **Worker** — Cloudflare's serverless function runtime. One worker
+- **Worker** - Cloudflare's serverless function runtime. One worker
   per "app" in this repo.
-- **Pages** — Cloudflare's static-site product. The admin console
+- **Pages** - Cloudflare's static-site product. The admin console
   and docs handbook are Pages projects.
-- **D1** — Cloudflare's serverless SQLite. All four databases run
+- **D1** - Cloudflare's serverless SQLite. All four databases run
   here.
-- **`workers.dev` subdomain** — the free `*.workers.dev` host
+- **`workers.dev` subdomain** - the free `*.workers.dev` host
   Cloudflare gives every account. Workers are reachable at
   `<worker-name>.<your-handle>.workers.dev` by default.
-- **Wrangler** — Cloudflare's command-line tool. The deploy
+- **Wrangler** - Cloudflare's command-line tool. The deploy
   workflow uses it under the hood; you only need it locally for
   inspection commands.
-- **MCP** — Model Context Protocol. The `mcp` worker exposes the API
+- **MCP** - Model Context Protocol. The `mcp` worker exposes the API
   as MCP tools so agents can connect with one URL.
-- **DCO sign-off** — see [`CONTRIBUTING.md`](../CONTRIBUTING.md). Only
+- **DCO sign-off** - see [`CONTRIBUTING.md`](../CONTRIBUTING.md). Only
   required if you intend to send pull requests upstream; you can
   deploy your own fork without it.

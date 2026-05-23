@@ -1,6 +1,6 @@
 ---
 code: ERR-P##-XXX-NNNN
-title: <short title — match `BaseError.title`>
+title: <short title - match `BaseError.title`>
 http_status: 4xx
 category: <auth | schema | business | external | invariant | domain | transport | fallback>
 since: 0.x.0
@@ -10,7 +10,7 @@ related:
   - ERR-...
 ---
 
-# `{{code}}` — {{title}}
+# `{{code}}` - {{title}}
 
 ## Summary
 
@@ -19,7 +19,7 @@ related:
 ## When this is raised
 
 <Bullet list of the exact conditions under which the server emits this code.
-Be precise — name claims, fields, states. The list should let a reader
+Be precise - name claims, fields, states. The list should let a reader
 predict whether a given request will produce this code.>
 
 - ...
@@ -58,8 +58,8 @@ guard. Lets future maintainers find it.>
 
 ## Related codes
 
-- [`ERR-…`](./ERR-….md) — <one-line relation>
+- [`ERR-…`](./ERR-….md) - <one-line relation>
 
 ## Changelog
 
-- {{since}} — introduced.
+- {{since}} - introduced.

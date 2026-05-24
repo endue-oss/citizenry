@@ -1,7 +1,7 @@
 // Resend and log-only outbound providers.
 //
-// Used when the higher-priority Cloudflare binding is unavailable.
-// Selection priority lives in ./index.ts (pickSender).
+// Ordering and fallback between providers live in ./index.ts
+// (buildSender) and ./fallback.ts (FallbackSender).
 
 import type { MailSender, OutboundMessage } from '@citizenry/mail'
 

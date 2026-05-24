@@ -89,6 +89,10 @@ Runtime config (operator-managed, set via admin-api `PUT
 | `mail.outbound.aws_ses.secret_access_key` | `apps/mail`  | - |
 | `mail.outbound.aws_ses.region`            | `apps/mail`  | Optional, defaults to `us-east-1`. |
 | `mail.outbound.aws_ses.session_token`     | `apps/mail`  | Optional, for STS assumed-role / temporary credentials. |
+| `mail.outbound.google.client_email`       | `apps/mail`  | Activates Google Workspace (Gmail API) when paired with `private_key` + `sender`. Service account address (JWT issuer). |
+| `mail.outbound.google.private_key`        | `apps/mail`  | Service account PEM (PKCS#8). Signs the RS256 assertion. |
+| `mail.outbound.google.sender`             | `apps/mail`  | Workspace user to impersonate (JWT `sub`) — needs `gmail.send` domain-wide delegation in the Google Admin console. |
+| `mail.outbound.priority`                  | `apps/mail`  | JSON array ordering the providers (`cloudflare`/`resend`/`aws_ses`/`google`). Send tries them in order, falling back to the next on failure; Log-only is the always-on terminal. Defaults to in-code order if unset. |
 | `identity.allowed_email_domains`          | `apps/api` (humans flow) | JSON array of lowercase hosts permitted on `POST /v1/humans`. Defaults baked into `packages/identity/src/service/human.ts` (`DEFAULT_ALLOWED_EMAIL_DOMAINS`) if the key is unset. |
 
 Reads are wrapped by `packages/config`'s `withTtlCache` (5-min

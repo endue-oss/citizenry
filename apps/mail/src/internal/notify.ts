@@ -27,7 +27,7 @@ import {
 } from '@citizenry/mail'
 import type { Bindings } from '../env'
 import { configReader, type ConfigVars } from '../db'
-import { pickSender } from '../outbound'
+import { buildSender } from '../outbound'
 import { mintId } from '../ids'
 
 type InternalVars = ConfigVars
@@ -89,7 +89,7 @@ export const internalRouter = new Hono<{
       )
     }
 
-    const sender = await pickSender(c.env, c.var.config)
+    const sender = await buildSender(c.env, c.var.config)
     const db = drizzle(c.env.DB_MAIL, { schema: mailSchema })
     const caller = c.req.header('X-Caller') ?? null
 

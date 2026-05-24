@@ -43,6 +43,6 @@ enum MailErrorCode {
   from_required: "ERR-P01-S02-2002",
 
   // ── 4xxx External dependencies ───────────────────────
-  /** Outbound provider (CF Mail / Resend / SES) returned an error */
+  /** Outbound provider (CF Mail / Resend / SES / Google) returned an error */
   send_failed: "ERR-P01-S02-4001",
 }

@@ -20,7 +20,7 @@ import { mailDb, configReader, type MailVars, type ConfigVars } from './db'
 import { bearerAuth, type AuthVars } from './middleware/auth'
 import { handleInboundMail } from './inbound/handler'
 import { internalRouter } from './internal/notify'
-import { pickSender } from './outbound'
+import { buildSender } from './outbound'
 import { mintId } from './ids'
 
 const app = new Hono<{ Bindings: Bindings }>()
@@ -69,7 +69,7 @@ const mountedRouter = new Hono<{
   .use('*', mailDb)
   .use('*', configReader)
   .use('*', async (c, next) => {
-    c.set('sender', await pickSender(c.env, c.var.config))
+    c.set('sender', await buildSender(c.env, c.var.config))
     c.set('mintId', mintId)
     // accountId is set by bearerAuth — re-bind under the router's expected key.
     c.set('accountId', c.var.accountId)

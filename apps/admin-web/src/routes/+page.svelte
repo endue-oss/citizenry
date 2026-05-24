@@ -34,7 +34,6 @@
   const placeholders = [
     { label: 'Humans', value: '—', hint: '/v1/admin/humans (wired — see /humans page)' },
     { label: 'Agents', value: '—', hint: '/v1/admin/agents (wired — see /agents page)' },
-    { label: 'Enrollments', value: '—', hint: '/v1/admin/enrollments (stub)' },
     { label: 'Vault entries', value: '—', hint: '/v1/admin/vault/entries (stub)' },
   ]
 </script>
@@ -43,10 +42,24 @@
 
 <main class="page">
   <section class="hero">
-    <div>
-      <h2>Welcome back</h2>
-      <p>Operate the Citizenry control plane — identity, mail, vault, and gateway health at a glance.</p>
+    <img class="logo" src="/logo.svg" alt="Citizenry — an Endue product" width="80" height="80" />
+    <div class="brand">
+      <h2 class="wordmark">Citizenry</h2>
+      <p class="by-endue">by <span class="endue-mark">Endue</span></p>
     </div>
+    <a
+      class="help"
+      href="https://github.com/endue-oss/citizenry"
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="View on GitHub"
+      title="View on GitHub"
+    >
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
+        <path d="M12 .5C5.37.5 0 5.78 0 12.29c0 5.21 3.44 9.63 8.21 11.19.6.11.82-.25.82-.56 0-.28-.01-1.02-.02-2-3.34.71-4.04-1.58-4.04-1.58-.55-1.37-1.34-1.74-1.34-1.74-1.09-.73.08-.71.08-.71 1.2.08 1.84 1.21 1.84 1.21 1.07 1.79 2.81 1.27 3.49.97.11-.76.42-1.27.76-1.56-2.67-.3-5.47-1.31-5.47-5.84 0-1.29.47-2.35 1.24-3.18-.12-.3-.54-1.51.12-3.15 0 0 1.01-.32 3.3 1.21a11.6 11.6 0 0 1 3-.4c1.02 0 2.05.13 3 .4 2.29-1.53 3.3-1.21 3.3-1.21.66 1.64.24 2.85.12 3.15.77.83 1.24 1.89 1.24 3.18 0 4.54-2.81 5.54-5.49 5.83.43.37.81 1.1.81 2.22 0 1.6-.01 2.89-.01 3.28 0 .31.21.68.83.56A12.01 12.01 0 0 0 24 12.29C24 5.78 18.63.5 12 .5z" />
+      </svg>
+      <span>View on GitHub</span>
+    </a>
   </section>
 
   <section class="card panel session">
@@ -113,16 +126,98 @@
     gap: $space-6;
   }
 
-  .hero h2 {
-    font-size: $font-size-2xl;
-    font-weight: $font-weight-semibold;
-    margin-bottom: $space-1;
-    letter-spacing: $letter-spacing-tight;
+  .hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: $space-3;
+    padding: $space-8 $space-4 $space-4;
   }
-  .hero p {
-    color: var(--muted-foreground);
+  .hero .logo {
+    display: block;
+    width: 80px;
+    height: 80px;
+    // Endue's light — a soft aura that gently breathes.
+    filter: drop-shadow(0 0 22px color-mix(in oklch, var(--primary) 55%, transparent));
+    animation: aura 5s ease-in-out infinite;
+  }
+  @keyframes aura {
+    0%, 100% { filter: drop-shadow(0 0 16px color-mix(in oklch, var(--primary) 40%, transparent)); }
+    50%      { filter: drop-shadow(0 0 30px color-mix(in oklch, var(--primary) 70%, transparent)); }
+  }
+  .hero .brand {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $space-1;
+  }
+  .hero .brand {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+  // The product name is imbued with Endue's iridescent light. End colors
+  // match so the drifting gradient loops seamlessly (no snap at cycle end).
+  .hero .wordmark {
+    font-size: $font-size-3xl;
+    font-weight: $font-weight-semibold;
+    letter-spacing: $letter-spacing-tight;
+    line-height: 1.1;
+    background: linear-gradient(
+      100deg,
+      #a78bfa,
+      #818cf8,
+      #e9d5ff,
+      #f0abfc,
+      #a78bfa
+    );
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: imbue 9s linear infinite;
+  }
+  @keyframes imbue {
+    to { background-position: -200% center; }
+  }
+  // Restrained attribution beneath the imbued wordmark.
+  .hero .by-endue {
+    margin: 0;
     font-size: $font-size-sm;
-    max-width: 56ch;
+    color: var(--muted-foreground);
+    letter-spacing: 0.01em;
+
+    .endue-mark {
+      color: var(--foreground);
+      font-weight: $font-weight-medium;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero .logo,
+    .hero .wordmark { animation: none; }
+  }
+  .hero .help {
+    display: inline-flex;
+    align-items: center;
+    gap: $space-2;
+    margin-top: $space-1;
+    padding: $space-2 $space-3;
+    font-size: $font-size-sm;
+    color: var(--muted-foreground);
+    border: 1px solid var(--border);
+    border-radius: $radius-full;
+    text-decoration: none;
+    transition: color $transition-fast, border-color $transition-fast,
+      background $transition-fast;
+
+    &:hover {
+      color: var(--foreground);
+      border-color: var(--ring);
+      background: var(--accent);
+    }
   }
 
   .stats {

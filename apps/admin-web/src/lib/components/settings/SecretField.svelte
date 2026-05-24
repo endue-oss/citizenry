@@ -15,6 +15,8 @@
     placeholder?: string
     /** When true the input is type=password; otherwise type=text. */
     secret?: boolean
+    /** Hide the set/unset status pill in the header. */
+    hideStatus?: boolean
     /** Optional callback fired after a successful save/clear so a
      *  parent page can refresh derived state (e.g. "effective sender"). */
     onChange?: (stored: string | null) => void
@@ -26,6 +28,7 @@
     hint,
     placeholder,
     secret = false,
+    hideStatus = false,
     onChange,
   }: Props = $props()
 
@@ -142,12 +145,14 @@
       </label>
       <code class="ckey">{configKey}</code>
     </div>
-    {#if loading}
-      <StatusBadge tone="muted">loading</StatusBadge>
-    {:else if stored}
-      <StatusBadge tone="success" dot>set</StatusBadge>
-    {:else}
-      <StatusBadge tone="muted">unset</StatusBadge>
+    {#if !hideStatus}
+      {#if loading}
+        <StatusBadge tone="muted">loading</StatusBadge>
+      {:else if stored}
+        <StatusBadge tone="success" dot>set</StatusBadge>
+      {:else}
+        <StatusBadge tone="muted">unset</StatusBadge>
+      {/if}
     {/if}
   </div>
 

@@ -45,9 +45,10 @@
 
 <section class="card" aria-labelledby="auth-title">
   <div class="brand">
-    <img class="logo" src="/logo.svg" alt="" width="64" height="64" />
-    <h1 id="auth-title" class="title">Citizenry</h1>
-    <p class="subtitle">Admin control plane</p>
+    <img class="logo" src="/logo.svg" alt="" width="80" height="80" />
+    <h1 id="auth-title" class="wordmark">Citizenry</h1>
+    <p class="by-endue">by <span class="endue-mark">Endue</span></p>
+    <p class="subtitle">for Admin</p>
   </div>
 
   <form class="form" onsubmit={onSubmit} aria-live="polite">
@@ -122,19 +123,63 @@
 
   .logo {
     display: block;
-    width: 64px;
-    height: 64px;
+    width: 80px;
+    height: 80px;
+    // Endue's light — a soft aura that gently breathes.
+    filter: drop-shadow(0 0 22px color-mix(in oklch, var(--primary) 55%, transparent));
+    animation: aura 5s ease-in-out infinite;
+  }
+  @keyframes aura {
+    0%, 100% { filter: drop-shadow(0 0 16px color-mix(in oklch, var(--primary) 40%, transparent)); }
+    50%      { filter: drop-shadow(0 0 30px color-mix(in oklch, var(--primary) 70%, transparent)); }
   }
 
-  .title {
-    font-size: $font-size-xl;
+  // The product name is imbued with Endue's iridescent light. End colors
+  // match so the drifting gradient loops seamlessly (no snap at cycle end).
+  .wordmark {
+    font-size: $font-size-3xl;
     font-weight: $font-weight-semibold;
     letter-spacing: $letter-spacing-tight;
+    line-height: 1.1;
+    background: linear-gradient(
+      100deg,
+      #a78bfa,
+      #818cf8,
+      #e9d5ff,
+      #f0abfc,
+      #a78bfa
+    );
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: imbue 9s linear infinite;
+  }
+  @keyframes imbue {
+    to { background-position: -200% center; }
+  }
+
+  // Restrained attribution beneath the imbued wordmark.
+  .by-endue {
+    margin: 0;
+    font-size: $font-size-sm;
+    color: var(--muted-foreground);
+    letter-spacing: 0.01em;
+
+    .endue-mark {
+      color: var(--foreground);
+      font-weight: $font-weight-medium;
+    }
   }
 
   .subtitle {
     font-size: $font-size-sm;
     color: var(--muted-foreground);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .logo,
+    .wordmark { animation: none; }
   }
 
   .form {

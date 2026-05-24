@@ -67,23 +67,21 @@ async function readString(config: ConfigReader, key: string): Promise<string | n
 }
 
 /**
- * Resolve the configured priority order. Unknown / duplicate ids are
- * dropped; any known provider missing from the stored list is appended
- * in the default order, so a partial config still covers everything.
+ * Resolve the enabled provider order. The stored list is the set of
+ * *enabled* providers, in priority order — a provider omitted from it is
+ * disabled and skipped even when its credentials are present. Unknown /
+ * duplicate ids are dropped. When the key is unset, every known provider
+ * is enabled in the default order (back-compatible default).
  */
 export async function readPriority(config: ConfigReader): Promise<ProviderId[]> {
   const entry = await config.get<unknown>(PRIORITY_KEY)
-  const order: ProviderId[] = []
   const raw = entry?.value
-  if (Array.isArray(raw)) {
-    for (const v of raw) {
-      if (typeof v === 'string' && KNOWN_PROVIDERS.has(v) && !order.includes(v as ProviderId)) {
-        order.push(v as ProviderId)
-      }
+  if (!Array.isArray(raw)) return [...DEFAULT_PRIORITY]
+  const order: ProviderId[] = []
+  for (const v of raw) {
+    if (typeof v === 'string' && KNOWN_PROVIDERS.has(v) && !order.includes(v as ProviderId)) {
+      order.push(v as ProviderId)
     }
-  }
-  for (const id of DEFAULT_PRIORITY) {
-    if (!order.includes(id)) order.push(id)
   }
   return order
 }

@@ -71,6 +71,8 @@
   }
 
   // ── priority ordering ──────────────────────────────────────────────
+  // `order` is the list of *enabled* providers, in priority order. A
+  // provider not in it is disabled. NOT-SET providers can't be enabled.
 
   let order = $state<ProviderId[]>([...DEFAULT_ORDER])
   let savedOrder = $state<ProviderId[]>([...DEFAULT_ORDER])
@@ -82,19 +84,34 @@
 
   const dirty = $derived(JSON.stringify(order) !== JSON.stringify(savedOrder))
 
+  /** Can this provider be enabled? NOT-SET (active === false) can't. */
+  function eligible(id: ProviderId): boolean {
+    return providerActive(id) !== false
+  }
+
+  /** Enabled + eligible providers — the numbered, ordered priority chain. */
+  const ranked = $derived(order.filter((id) => eligible(id)))
+  /** Configured but toggled off — can be switched back on. */
+  const disabledList = $derived(
+    DEFAULT_ORDER.filter((id) => !ranked.includes(id) && eligible(id)),
+  )
+  /** Not-yet-configured — toggle locked until credentials are set. */
+  const notSetList = $derived(DEFAULT_ORDER.filter((id) => !eligible(id)))
+
   /** First provider we can confirm is credentialed (Cloudflare excluded). */
   const firstReadableActive = $derived(
-    order.find((id) => providerActive(id) === true) ?? null,
+    ranked.find((id) => providerActive(id) === true) ?? null,
   )
   /** Does an unknown-state Cloudflare sit ahead of the first live provider? */
   const cloudflareMayPreempt = $derived.by(() => {
-    for (const id of order) {
+    for (const id of ranked) {
       if (id === 'cloudflare') return true
       if (providerActive(id) === true) return false
     }
     return false
   })
 
+  /** Sanitize a stored array to known, de-duplicated ids (no auto-append). */
   function sanitize(raw: unknown): ProviderId[] {
     const next: ProviderId[] = []
     if (Array.isArray(raw)) {
@@ -104,7 +121,6 @@
         }
       }
     }
-    for (const id of DEFAULT_ORDER) if (!next.includes(id)) next.push(id)
     return next
   }
 
@@ -116,7 +132,10 @@
           if (err instanceof AdminApiError && err.status === 404) return null
           throw err
         })
-      const loaded = sanitize(entry?.value)
+      // Unset key → all providers enabled in default order.
+      const loaded = entry && Array.isArray(entry.value)
+        ? sanitize(entry.value)
+        : [...DEFAULT_ORDER]
       order = loaded
       savedOrder = [...loaded]
     } catch (err) {
@@ -125,6 +144,13 @@
       loading = false
     }
   })
+
+  /** Enable/disable a provider. NOT-SET providers can't be enabled. */
+  function toggle(id: ProviderId) {
+    if (!eligible(id)) return
+    order = order.includes(id) ? order.filter((x) => x !== id) : [...order, id]
+    flash = false
+  }
 
   function move(id: ProviderId, to: number) {
     const from = order.indexOf(id)
@@ -136,12 +162,20 @@
     flash = false
   }
 
+  /** Move within the ranked list by one step (uses ranked adjacency). */
+  function nudge(id: ProviderId, dir: -1 | 1) {
+    const i = ranked.indexOf(id)
+    const j = i + dir
+    if (i < 0 || j < 0 || j >= ranked.length) return
+    move(id, order.indexOf(ranked[j]))
+  }
+
   function onDragStart(id: ProviderId) {
     dragId = id
   }
   function onDragOver(event: DragEvent, overId: ProviderId) {
     event.preventDefault()
-    if (!dragId || dragId === overId) return
+    if (!dragId || dragId === overId || !eligible(overId)) return
     move(dragId, order.indexOf(overId))
   }
   function onDragEnd() {
@@ -185,17 +219,18 @@
 <div class="stack">
   <SettingsCard
     title="Provider priority"
-    description="Drag a row (or use ↑/↓) to reorder. On send, citizenry-mail walks
-                 this list and falls back to the next provider whenever one errors.
-                 Log-only is the always-on final fallback and never fails."
+    description="Toggle a provider on to add it to the chain, then drag (or ↑/↓) to
+                 set its priority. Disabled and not-yet-configured providers sit
+                 below the line. On send, citizenry-mail walks the ranked list and
+                 falls back to the next on failure; Log-only is the always-on final
+                 fallback and never fails."
     status={badgePriority}
   >
     {#if loading}
       <p class="muted">Loading…</p>
     {:else}
       <ul class="rank">
-        {#each order as id, i (id)}
-          {@const active = providerActive(id)}
+        {#each ranked as id, i (id)}
           <li
             class="row"
             class:dragging={dragId === id}
@@ -210,33 +245,46 @@
               <span class="name">{META[id].name}</span>
               <span class="hint">{META[id].hint}</span>
             </span>
-            <span class="state">
-              {#if active === true}
-                <StatusBadge tone="success" dot>active</StatusBadge>
-              {:else if active === false}
-                <StatusBadge tone="muted">not set</StatusBadge>
-              {:else}
-                <StatusBadge tone="info">binding</StatusBadge>
-              {/if}
-            </span>
+            {@render providerState(id)}
+            {@render toggleSwitch(id)}
             <span class="nudge">
               <button
                 type="button"
                 aria-label="Move {META[id].name} up"
                 disabled={i === 0 || applying}
-                onclick={() => move(id, i - 1)}
+                onclick={() => nudge(id, -1)}
               >↑</button>
               <button
                 type="button"
                 aria-label="Move {META[id].name} down"
-                disabled={i === order.length - 1 || applying}
-                onclick={() => move(id, i + 1)}
+                disabled={i === ranked.length - 1 || applying}
+                onclick={() => nudge(id, 1)}
               >↓</button>
             </span>
           </li>
         {/each}
+
+        {#if disabledList.length > 0}
+          {#if ranked.length > 0}
+            <li class="divider" aria-hidden="true"></li>
+          {/if}
+          {#each disabledList as id (id)}
+            {@render benchedRow(id)}
+          {/each}
+        {/if}
+
+        {#if notSetList.length > 0}
+          {#if ranked.length > 0 || disabledList.length > 0}
+            <li class="divider" aria-hidden="true"></li>
+          {/if}
+          {#each notSetList as id (id)}
+            {@render benchedRow(id)}
+          {/each}
+        {/if}
+
+        <li class="divider" aria-hidden="true"></li>
         <li class="row terminal">
-          <span class="grip" aria-hidden="true">·</span>
+          <span class="grip placeholder" aria-hidden="true">·</span>
           <span class="pos">last</span>
           <span class="body">
             <span class="name">Log-only</span>
@@ -429,6 +477,48 @@
   {/if}
 {/snippet}
 
+{#snippet benchedRow(id: ProviderId)}
+  <li class="row benched">
+    <span class="grip placeholder" aria-hidden="true">·</span>
+    <span class="pos"></span>
+    <span class="body">
+      <span class="name">{META[id].name}</span>
+      <span class="hint">{META[id].hint}</span>
+    </span>
+    {@render providerState(id)}
+    {@render toggleSwitch(id)}
+    <span class="nudge"></span>
+  </li>
+{/snippet}
+
+{#snippet providerState(id: ProviderId)}
+  {@const a = providerActive(id)}
+  {#if a === true}
+    <StatusBadge tone="success" dot>active</StatusBadge>
+  {:else if a === false}
+    <StatusBadge tone="muted">not set</StatusBadge>
+  {:else}
+    <StatusBadge tone="info">binding</StatusBadge>
+  {/if}
+{/snippet}
+
+{#snippet toggleSwitch(id: ProviderId)}
+  {@const on = order.includes(id) && eligible(id)}
+  <button
+    type="button"
+    role="switch"
+    aria-checked={on}
+    class="switch"
+    class:on
+    disabled={!eligible(id) || applying}
+    aria-label="{on ? 'Disable' : 'Enable'} {META[id].name}"
+    title={eligible(id) ? (on ? 'Enabled' : 'Disabled') : 'Set credentials to enable'}
+    onclick={() => toggle(id)}
+  >
+    <span class="knob"></span>
+  </button>
+{/snippet}
+
 {#snippet chevron()}
   <svg
     class="chev"
@@ -479,6 +569,14 @@
     &:hover { border-color: var(--ring); }
     &.dragging { opacity: 0.55; cursor: grabbing; }
 
+    // Disabled / not-yet-configured providers — not draggable.
+    &.benched {
+      cursor: default;
+      background: transparent;
+      opacity: 0.75;
+      &:hover { border-color: var(--border); }
+    }
+
     &.terminal {
       cursor: default;
       background: transparent;
@@ -488,11 +586,21 @@
     }
   }
 
+  // Separates the ranked chain / benched providers / Log-only.
+  .divider {
+    height: 0;
+    margin: $space-1 0;
+    border-top: 1px dashed var(--border);
+    list-style: none;
+  }
+
   .grip {
     color: var(--muted-foreground);
     font-size: $font-size-base;
     line-height: 1;
     user-select: none;
+
+    &.placeholder { opacity: 0.5; cursor: default; }
   }
   .pos {
     min-width: 2.4em;
@@ -509,6 +617,35 @@
     .hint { font-size: $font-size-xs; color: var(--muted-foreground); }
   }
   .state { flex-shrink: 0; }
+
+  // active / inactive toggle
+  .switch {
+    flex-shrink: 0;
+    width: 36px;
+    height: 20px;
+    padding: 2px;
+    border-radius: $radius-full;
+    border: 1px solid var(--border);
+    background: var(--muted);
+    cursor: pointer;
+    transition: background $transition-fast, border-color $transition-fast;
+
+    .knob {
+      display: block;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--muted-foreground);
+      transition: transform $transition-fast, background $transition-fast;
+    }
+
+    &.on {
+      background: var(--primary);
+      border-color: var(--primary);
+      .knob { background: var(--primary-foreground); transform: translateX(16px); }
+    }
+    &:disabled { opacity: 0.4; cursor: not-allowed; }
+  }
 
   .nudge {
     display: inline-flex;

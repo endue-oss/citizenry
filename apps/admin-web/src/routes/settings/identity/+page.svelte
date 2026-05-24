@@ -2,12 +2,11 @@
   // Identity settings — email domain allow-list governing which hosts
   // may start a human registration (POST /v1/humans).
   //
-  // Two-card layout:
-  //   1. "Currently allowed" — read-only summary of whatever is in
-  //      effect right now (override list OR in-code defaults).
-  //   2. "Override" — editable list. Saving writes
-  //      `identity.allowed_email_domains` to the config D1; clearing
-  //      it reverts to the defaults.
+  // Single-card model: a built-in default list is always allowed. Admins
+  // layer their own domains on top — only those custom additions are
+  // editable and rendered in a distinct colour. Saving writes the full
+  // (defaults + custom) set to `identity.allowed_email_domains`; removing
+  // every custom entry deletes the override so the pure defaults apply.
 
   import { onMount } from 'svelte'
   import PageHeader from '$lib/components/settings/PageHeader.svelte'
@@ -20,21 +19,24 @@
   // Mirror of packages/identity/src/service/human.ts
   // DEFAULT_ALLOWED_EMAIL_DOMAINS — kept in sync manually for now;
   // small enough that drift is easy to notice in code review.
-  type DomainGroup = { label: string; domains: string[] }
-  const DEFAULT_GROUPS: DomainGroup[] = [
-    { label: 'Google', domains: ['gmail.com', 'googlemail.com'] },
-    {
-      label: 'Microsoft',
-      domains: ['outlook.com', 'hotmail.com', 'live.com', 'msn.com', 'microsoft.com'],
-    },
-    { label: 'Apple', domains: ['icloud.com', 'me.com', 'mac.com'] },
-    { label: 'Yahoo', domains: ['yahoo.com', 'yahoo.co.kr'] },
-    {
-      label: 'Korean portals',
-      domains: ['naver.com', 'kakao.com', 'daum.net', 'hanmail.net', 'nate.com'],
-    },
+  const DEFAULTS = [
+    // Korea
+    'naver.com', 'kakao.com', 'daum.net', 'hanmail.net', 'nate.com',
+    // China — top 5
+    'qq.com', 'foxmail.com', '163.com', '126.com', 'yeah.net',
+    'sina.com', 'sina.cn', 'sohu.com', 'aliyun.com',
+    // Global 50M+
+    'gmail.com', 'googlemail.com',
+    'icloud.com', 'me.com', 'mac.com',
+    'outlook.com', 'hotmail.com', 'live.com', 'msn.com',
+    'yahoo.com', 'ymail.com', 'rocketmail.com',
+    'yahoo.co.jp', 'yahoo.co.kr', 'yahoo.fr', 'yahoo.co.uk',
+    'yahoo.de', 'yahoo.com.br', 'yahoo.com.mx',
+    'proton.me', 'protonmail.com', 'pm.me',
+    'mail.ru', 'list.ru', 'bk.ru', 'inbox.ru',
+    'yandex.com', 'yandex.ru', 'ya.ru',
   ]
-  const DEFAULTS = DEFAULT_GROUPS.flatMap((g) => g.domains)
+  const DEFAULT_SET = new Set(DEFAULTS)
 
   type ConfigEntry = {
     id: string
@@ -47,8 +49,8 @@
   let loading = $state(true)
   /** null = no override row exists; defaults apply. */
   let override = $state<string[] | null>(null)
-  /** Editable buffer. Mirrors override (or defaults) until the user edits. */
-  let working = $state<string[]>([])
+  /** Editable buffer of custom (non-default) domains only. */
+  let custom = $state<string[]>([])
   let updatedAt = $state<string | null>(null)
   let updatedBy = $state<string | null>(null)
 
@@ -60,33 +62,35 @@
 
   // ── derived ────────────────────────────────────────────────────────
 
-  /** What's actually enforced server-side right now. */
-  const effective = $derived(override ?? DEFAULTS)
-  const usingDefaults = $derived(override === null)
+  /** Custom domains currently persisted (effective minus the defaults). */
+  const persistedCustom = $derived(
+    (override ?? []).filter((d) => !DEFAULT_SET.has(d)),
+  )
 
-  /** Working buffer differs from the persisted state? */
+  /** Working buffer differs from the persisted custom set? */
   const dirty = $derived.by(() => {
-    const base = override ?? []  // when defaults, baseline for dirty check is "no override"
-    if (override === null && working.length === 0) return false
-    if (working.length !== base.length) return true
-    const a = [...working].sort()
-    const b = [...base].sort()
+    if (custom.length !== persistedCustom.length) return true
+    const a = [...custom].sort()
+    const b = [...persistedCustom].sort()
     return a.some((d, i) => d !== b[i])
   })
+
+  const totalCount = $derived(DEFAULTS.length + custom.length)
 
   // ── validators ─────────────────────────────────────────────────────
 
   const DOMAIN_RE = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+$/
 
-  function validate(value: string, scope: string[]): string | null {
+  function validate(value: string): string | null {
     const v = value.trim().toLowerCase()
     if (!v) return 'Enter a domain'
     if (!DOMAIN_RE.test(v)) return 'Invalid domain'
-    if (scope.includes(v)) return 'Already in list'
+    if (DEFAULT_SET.has(v)) return 'Already allowed by default'
+    if (custom.includes(v)) return 'Already added'
     return null
   }
 
-  // ── load / save / reset ────────────────────────────────────────────
+  // ── load / save ────────────────────────────────────────────────────
 
   async function load() {
     loading = true
@@ -103,12 +107,12 @@
           .filter((d): d is string => typeof d === 'string')
           .map((d) => d.trim().toLowerCase())
         override = list
-        working = [...list]
+        custom = list.filter((d) => !DEFAULT_SET.has(d))
         updatedAt = entry.updated_at
         updatedBy = entry.updated_by
       } else {
         override = null
-        working = []
+        custom = []
         updatedAt = null
         updatedBy = null
       }
@@ -121,48 +125,54 @@
 
   onMount(load)
 
-  function customizeFromDefaults() {
-    working = [...DEFAULTS]
-    flash = null
-    saveError = null
-    // mark dirty by ensuring override stays null but working has content
-  }
-
   function add(event: SubmitEvent) {
     event.preventDefault()
-    const err = validate(input, working)
+    const err = validate(input)
     if (err) {
       inputError = err
       return
     }
-    working = [...working, input.trim().toLowerCase()]
+    custom = [...custom, input.trim().toLowerCase()]
     input = ''
     inputError = null
+    flash = null
   }
 
   function remove(d: string) {
-    working = working.filter((x) => x !== d)
+    custom = custom.filter((x) => x !== d)
+    flash = null
   }
 
   async function save() {
-    if (saving) return
+    if (saving || !dirty) return
     saving = true
     saveError = null
     flash = null
     try {
+      if (custom.length === 0) {
+        // No custom additions left — drop the override entirely so the
+        // in-code defaults apply on their own.
+        await adminApi.call(`/v1/admin/config/${ALLOWED_KEY}`, {
+          method: 'DELETE',
+        })
+        override = null
+        custom = []
+        updatedAt = null
+        updatedBy = null
+        flash = 'reset'
+        return
+      }
+      const value = [...DEFAULTS, ...custom]
       const entry = await adminApi.call<ConfigEntry>(
         `/v1/admin/config/${ALLOWED_KEY}`,
-        {
-          method: 'PUT',
-          json: { value: working, updated_by: 'admin-web' },
-        },
+        { method: 'PUT', json: { value, updated_by: 'admin-web' } },
       )
       if (Array.isArray(entry.value)) {
         const list = (entry.value as unknown[])
           .filter((d): d is string => typeof d === 'string')
           .map((d) => d.toLowerCase())
         override = list
-        working = [...list]
+        custom = list.filter((d) => !DEFAULT_SET.has(d))
       }
       updatedAt = entry.updated_at
       updatedBy = entry.updated_by
@@ -174,111 +184,34 @@
     }
   }
 
-  async function resetToDefaults() {
-    if (
-      !confirm(
-        'Remove the override?\nThe in-code default list will apply once the 5-minute cache window elapses on the api Worker.',
-      )
-    )
-      return
-    saving = true
+  function discard() {
+    custom = [...persistedCustom]
+    input = ''
+    inputError = null
     saveError = null
     flash = null
-    try {
-      await adminApi.call(`/v1/admin/config/${ALLOWED_KEY}`, {
-        method: 'DELETE',
-      })
-      override = null
-      working = []
-      updatedAt = null
-      updatedBy = null
-      flash = 'reset'
-    } catch (err) {
-      saveError = err instanceof AdminApiError ? err.message : 'Reset failed'
-    } finally {
-      saving = false
-    }
   }
 </script>
 
 <PageHeader
   path={['Settings', 'Identity']}
   title="Domain allow-list"
-  description="Restrict which email domains can start a human registration. The
-              defaults below are baked into packages/identity; saving an override
-              replaces them entirely."
+  description="Restrict which email domains can start a human registration. A built-in
+              default list is always allowed; the domains you add here are layered
+              on top and highlighted."
 />
 
 <div class="stack">
   <SettingsCard
     title="Currently allowed"
     description="The exact set of domains that POST /v1/humans accepts right now.
-                 Updates propagate within the 5-minute colo-local TTL on the api
-                 Worker."
+                 Built-in defaults are shown plain; your additions are highlighted
+                 and editable. Updates propagate within the 5-minute colo-local TTL
+                 on the api Worker."
     status={badgeEffective}
   >
     {#if loading}
       <p class="muted">Loading…</p>
-    {:else if usingDefaults}
-      <p class="muted small">
-        No override is set. The in-code default list applies — group breakdown:
-      </p>
-      <div class="groups">
-        {#each DEFAULT_GROUPS as group}
-          <div class="group">
-            <span class="group-label">{group.label}</span>
-            <ul class="chips read-only">
-              {#each group.domains as d}
-                <li><code>{d}</code></li>
-              {/each}
-            </ul>
-          </div>
-        {/each}
-      </div>
-      <p class="muted small foot">
-        {effective.length} domain{effective.length === 1 ? '' : 's'} total ·
-        defined in <code>packages/identity/src/service/human.ts</code>
-      </p>
-    {:else if override !== null && override.length === 0}
-      <p class="warn">
-        Override is set to an <strong>empty list</strong> — registration is
-        currently impossible. Remove the override below to fall back to defaults,
-        or add at least one domain.
-      </p>
-    {:else}
-      <ul class="chips read-only">
-        {#each effective as d}
-          <li><code>{d}</code></li>
-        {/each}
-      </ul>
-      <p class="muted small foot">
-        {effective.length} domain{effective.length === 1 ? '' : 's'} ·
-        {#if updatedAt}
-          set {new Date(updatedAt).toLocaleString()}{#if updatedBy} by <code>{updatedBy}</code>{/if}
-        {/if}
-      </p>
-    {/if}
-  </SettingsCard>
-
-  <SettingsCard
-    title="Override"
-    description="When set, this list completely replaces the defaults. Leave unset
-                 to keep the defaults in effect — the safest option for a fresh
-                 deploy."
-    status={badgeOverride}
-  >
-    {#if loading}
-      <p class="muted">Loading…</p>
-    {:else if override === null && working.length === 0}
-      <div class="empty-state">
-        <p class="muted small">
-          No override is configured. Click below to copy the defaults into an
-          editable list, then add or remove domains before saving.
-        </p>
-        <button type="button" class="btn primary" onclick={customizeFromDefaults}>
-          Customize from defaults
-        </button>
-      </div>
     {:else}
       <form onsubmit={add} class="add">
         <input
@@ -294,7 +227,7 @@
           class="btn primary"
           disabled={!input.trim() || saving}
         >
-          Add
+          Add domain
         </button>
       </form>
 
@@ -302,25 +235,39 @@
         <p class="msg error">{inputError}</p>
       {/if}
 
-      {#if working.length === 0}
-        <p class="warn">
-          The override list is empty. Saving as-is blocks all registrations.
+      <ul class="chips">
+        {#each DEFAULTS as d}
+          <li class="default"><code>{d}</code></li>
+        {/each}
+        {#each custom as d}
+          <li class="custom">
+            <code>{d}</code>
+            <button
+              type="button"
+              class="chip-remove"
+              onclick={() => remove(d)}
+              aria-label="Remove {d}"
+              disabled={saving}
+            >×</button>
+          </li>
+        {/each}
+      </ul>
+
+      <p class="muted small foot">
+        {totalCount} domain{totalCount === 1 ? '' : 's'} ·
+        {DEFAULTS.length} built-in default{DEFAULTS.length === 1 ? '' : 's'}
+        {#if custom.length > 0}
+          + {custom.length} custom
+        {/if}
+        {#if !dirty && custom.length > 0 && updatedAt}
+          · last set {new Date(updatedAt).toLocaleString()}{#if updatedBy} by <code>{updatedBy}</code>{/if}
+        {/if}
+      </p>
+
+      {#if custom.length === 0}
+        <p class="muted small">
+          No custom domains. Only the built-in defaults apply.
         </p>
-      {:else}
-        <ul class="chips">
-          {#each working as d}
-            <li>
-              <code>{d}</code>
-              <button
-                type="button"
-                class="chip-remove"
-                onclick={() => remove(d)}
-                aria-label="Remove {d}"
-                disabled={saving}
-              >×</button>
-            </li>
-          {/each}
-        </ul>
       {/if}
 
       <div class="actions">
@@ -330,23 +277,13 @@
           onclick={save}
           disabled={!dirty || saving}
         >
-          {saving ? 'Saving…' : override === null ? 'Save override' : 'Save changes'}
+          {saving ? 'Saving…' : 'Save changes'}
         </button>
-        {#if override !== null}
-          <button
-            type="button"
-            class="btn danger-ghost"
-            onclick={resetToDefaults}
-            disabled={saving}
-          >
-            Reset to defaults
-          </button>
-        {/if}
-        {#if override === null && working.length > 0}
+        {#if dirty}
           <button
             type="button"
             class="btn ghost"
-            onclick={() => (working = [])}
+            onclick={discard}
             disabled={saving}
           >
             Discard
@@ -362,7 +299,9 @@
           5-minute cache window.
         </p>
       {:else if flash === 'reset'}
-        <p class="msg ok">Override removed. The default list applies again.</p>
+        <p class="msg ok">
+          All custom domains removed. Only the built-in defaults apply now.
+        </p>
       {/if}
     {/if}
   </SettingsCard>
@@ -390,24 +329,12 @@
 {#snippet badgeEffective()}
   {#if loading}
     <StatusBadge tone="muted">loading</StatusBadge>
-  {:else if usingDefaults}
-    <StatusBadge tone="info">defaults · {effective.length}</StatusBadge>
-  {:else if override !== null && override.length === 0}
-    <StatusBadge tone="destructive">empty override</StatusBadge>
-  {:else}
-    <StatusBadge tone="success" dot>override · {effective.length}</StatusBadge>
-  {/if}
-{/snippet}
-
-{#snippet badgeOverride()}
-  {#if loading}
-    <StatusBadge tone="muted">loading</StatusBadge>
   {:else if dirty}
     <StatusBadge tone="warning">unsaved</StatusBadge>
-  {:else if override === null}
-    <StatusBadge tone="muted">unset</StatusBadge>
+  {:else if custom.length > 0}
+    <StatusBadge tone="success" dot>{custom.length} custom · {totalCount}</StatusBadge>
   {:else}
-    <StatusBadge tone="success">saved · {override.length}</StatusBadge>
+    <StatusBadge tone="info">defaults · {totalCount}</StatusBadge>
   {/if}
 {/snippet}
 
@@ -443,27 +370,9 @@
     &:disabled { opacity: 0.6; cursor: not-allowed; }
   }
 
-  .groups {
-    display: flex;
-    flex-direction: column;
-    gap: $space-3;
-  }
-  .group {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-  .group-label {
-    font-size: $font-size-xs;
-    font-weight: $font-weight-semibold;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--muted-foreground);
-  }
-
   .chips {
     list-style: none;
-    margin: 0;
+    margin: $space-3 0 0;
     padding: 0;
     display: flex;
     flex-wrap: wrap;
@@ -473,18 +382,27 @@
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      padding: 4px 4px 4px 10px;
-      background: var(--accent);
-      border: 1px solid var(--border);
       border-radius: $radius-full;
       font-size: $font-size-xs;
       font-family: $font-mono;
     }
 
-    &.read-only li {
+    // Built-in defaults — plain, read-only.
+    li.default {
       padding: 4px 10px;
       background: transparent;
-      border-color: var(--border);
+      border: 1px solid var(--border);
+      color: var(--muted-foreground);
+    }
+
+    // Admin-added domains — highlighted, removable.
+    li.custom {
+      padding: 4px 4px 4px 10px;
+      background: color-mix(in oklch, var(--primary) 16%, transparent);
+      border: 1px solid color-mix(in oklch, var(--primary) 42%, transparent);
+      color: var(--foreground);
+
+      code { color: var(--primary); font-weight: $font-weight-medium; }
     }
   }
 
@@ -494,29 +412,20 @@
     border-radius: 50%;
     border: none;
     background: transparent;
-    color: var(--muted-foreground);
+    color: var(--primary);
     cursor: pointer;
     font-size: 14px;
     line-height: 1;
 
-    &:hover { background: var(--muted); color: var(--foreground); }
-  }
-
-  .empty-state {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: $space-3;
-    padding: $space-4;
-    border: 1px dashed var(--border);
-    border-radius: $radius-md;
+    &:hover { background: color-mix(in oklch, var(--primary) 24%, transparent); }
+    &:disabled { opacity: 0.5; cursor: not-allowed; }
   }
 
   .actions {
     display: flex;
     gap: $space-2;
     flex-wrap: wrap;
-    margin-top: $space-2;
+    margin-top: $space-3;
   }
 
   .btn {
@@ -539,34 +448,14 @@
       border-color: var(--border);
       &:hover:not(:disabled) { background: var(--accent); }
     }
-    &.danger-ghost {
-      background: transparent;
-      color: var(--destructive);
-      border-color: color-mix(in oklch, var(--destructive) 36%, transparent);
-      &:hover:not(:disabled) {
-        background: color-mix(in oklch, var(--destructive) 12%, transparent);
-      }
-    }
     &:disabled { opacity: 0.5; cursor: not-allowed; }
   }
 
   .msg {
     font-size: $font-size-xs;
-    margin-top: 2px;
+    margin-top: $space-2;
     &.error { color: var(--destructive); }
     &.ok    { color: var(--success); }
-  }
-
-  .warn {
-    padding: $space-3;
-    background: color-mix(in oklch, var(--destructive) 10%, transparent);
-    border: 1px solid color-mix(in oklch, var(--destructive) 28%, transparent);
-    border-radius: $radius-md;
-    font-size: $font-size-xs;
-    color: var(--foreground);
-    line-height: $line-height-relaxed;
-
-    strong { color: var(--destructive); }
   }
 
   .muted {
@@ -582,7 +471,7 @@
     }
   }
   .small { font-size: $font-size-xs; }
-  .foot { margin-top: $space-2; }
+  .foot { margin-top: $space-3; }
 
   .kv {
     list-style: none;

@@ -9,6 +9,7 @@ import {
 } from '@citizenry/identity'
 import { vaultRouter, adminVaultRouter } from '@citizenry/vault'
 import { adminConfigRouter } from '@citizenry/config'
+import type { TokenPayload } from '@citizenry/identity/auth'
 import type { Bindings } from './env'
 import {
   identityDb,
@@ -42,8 +43,14 @@ app.onError(errorHandler)
 
 app.get('/_health', (c) => c.json({ service: 'citizenry-api', status: 'ok' }))
 
-// vault — D1, mounted under the /vault prefix
-const vaultApp = new Hono<{ Bindings: Bindings; Variables: VaultVars }>()
+// vault — D1, mounted under the /vault prefix. The global `auth`
+// middleware has already verified the agent JWT and set
+// `agentJwtPayload` on the shared context; the vault router reads
+// `sub` from it as the owning agent id.
+const vaultApp = new Hono<{
+  Bindings: Bindings
+  Variables: VaultVars & { agentJwtPayload?: TokenPayload }
+}>()
   .use('*', vaultDb)
   .route('/', vaultRouter)
 app.route('/vault', vaultApp)
@@ -76,8 +83,9 @@ const humansApp = new Hono<{ Bindings: Bindings; Variables: HumanRouterVars }>()
   .route('/', humansRouter)
 app.route('/', humansApp)
 
-// register — Bearer chk_ public surface. The body either supplies
-// public_key_jwk or asks the server to generate the keypair.
+// register — Bearer chk_ public surface. The body either supplies the
+// client-keyed set (public_key_jwk + encryption_key_jwk + key_binding_jws)
+// or asks the server to generate both the Ed25519 and X25519 keypairs.
 // Middlewares are path-scoped to /v1/agent/register so the wildcard
 // apiKeyAuth doesn't leak onto unrelated paths.
 const registerApp = new Hono<{ Bindings: Bindings; Variables: RegisterRouterVars }>()

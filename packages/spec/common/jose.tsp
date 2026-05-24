@@ -60,12 +60,99 @@ model JwkOkpEd25519Published extends JwkOkpEd25519Base {
 }
 
 /**
- * JWK Set (RFC 7517 §5) — externally exposed. Uses the variant where
+ * X25519 public-key JWK base (RFC 8037 §2) — Octet Key Pair on the
+ * Montgomery curve, used for ECDH key-agreement (vault encrypt-to-agent).
+ * Distinct from the Ed25519 signing key: an agent registers both.
+ *
+ * @example
+ * ```json
+ * { "kty": "OKP", "crv": "X25519", "use": "enc", "x": "3p7bfXt9w..." }
+ * ```
+ *
+ * @status confirmed
+ */
+model JwkOkpX25519Base {
+  /** Key type — Octet Key Pair */
+  kty: "OKP";
+
+  /** Curve — X25519 */
+  crv: "X25519";
+
+  /** Public-key bytes, base64url-encoded (32 bytes) */
+  x: base64url;
+
+  /** Public-key use — `"enc"` (key-agreement) */
+  `use`?: "enc";
+}
+
+/**
+ * Submission X25519 JWK — client → server on `register`. `kid` is
+ * issued by the server, so it **must not be included**.
+ * @status confirmed
+ */
+model JwkOkpX25519Submission extends JwkOkpX25519Base {}
+
+/**
+ * Published X25519 JWK — used in `JwkSet` / `DidDocument` exposure.
  * `kid` is required.
  * @status confirmed
  */
+model JwkOkpX25519Published extends JwkOkpX25519Base {
+  /** Key ID — server-issued, required when exposed externally */
+  kid: kid;
+}
+
+/**
+ * JWK Set (RFC 7517 §5) — externally exposed. Carries both the
+ * Ed25519 signing keys (`use:"sig"`) and the X25519 encryption keys
+ * (`use:"enc"`) for an agent.
+ * @status confirmed
+ */
 model JwkSet {
-  keys: JwkOkpEd25519Published[];
+  keys: (JwkOkpEd25519Published | JwkOkpX25519Published)[];
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Key-binding JWS — ties an X25519 enc key to the Ed25519 identity
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+/**
+ * Decoded payload of the registration key-binding JWS.
+ *
+ * Submitted (compact, base64url) as `key_binding_jws` on the
+ * client-keyed register path. Signed by the Ed25519 signing key,
+ * which both proves possession of that key and asserts that the
+ * X25519 enc key belongs to the same identity.
+ *
+ * Validation (server-side):
+ * - header `alg = "EdDSA"`
+ * - `purpose = "key-binding"`
+ * - `sig_jwk.x` equals the submitted `public_key_jwk.x`
+ * - `enc_jwk.x` equals the submitted `encryption_key_jwk.x`
+ * - `slug` equals the register request slug
+ * - `exp` is in the future (short lifetime recommended)
+ * - Ed25519 signature over `header.payload` verifies against `sig_jwk`
+ *
+ * @status confirmed
+ */
+model KeyBindingJwsPayload {
+  /** Fixed discriminator. */
+  purpose: "key-binding";
+
+  /** The Ed25519 signing public key (self-reference). */
+  sig_jwk: JwkOkpEd25519Submission;
+
+  /** The X25519 encryption public key being bound. */
+  enc_jwk: JwkOkpX25519Submission;
+
+  /** Agent slug — must match the register request. */
+  slug: slug;
+
+  /** Issued at (epoch seconds). */
+  iat: unixTimestamp;
+
+  /** Expires at (epoch seconds). Short lifetime recommended. */
+  exp: unixTimestamp;
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -182,12 +269,21 @@ model DidDocument {
   id: did;
 
   verificationMethod: VerificationMethod[];
+
+  /** Ed25519 signing keys — references into `verificationMethod`. */
   authentication: string[];
+
+  /** Ed25519 signing keys — references into `verificationMethod`. */
   assertionMethod: string[];
+
+  /** X25519 encryption keys — references into `verificationMethod`. */
+  keyAgreement: string[];
 }
 
 /**
- * Verification method (W3C jws-2020 suite).
+ * Verification method (W3C jws-2020 suite). Holds either an Ed25519
+ * signing key (referenced from `authentication`/`assertionMethod`) or
+ * an X25519 key-agreement key (referenced from `keyAgreement`).
  * @status confirmed
  */
 model VerificationMethod {
@@ -201,5 +297,5 @@ model VerificationMethod {
   controller: did;
 
   /** Public-key JWK — externally exposed, so uses the `kid`-required variant */
-  publicKeyJwk: JwkOkpEd25519Published;
+  publicKeyJwk: JwkOkpEd25519Published | JwkOkpX25519Published;
 }

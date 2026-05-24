@@ -50,14 +50,34 @@ model AgentRegisterRequest {
   display_name?: string;
 
   /**
-   * Locally generated Ed25519 public-key JWK. Exactly one of
-   * `public_key_jwk` and `generate_keypair=true` must be supplied.
+   * Locally generated Ed25519 signing public-key JWK. On the
+   * client-keyed path this is supplied together with
+   * `encryption_key_jwk` and `key_binding_jws`. Mutually exclusive
+   * with `generate_keypair=true`.
    */
   public_key_jwk?: JwkOkpEd25519Submission;
 
   /**
-   * When true, the server generates a fresh Ed25519 keypair and
-   * returns the private key in the response (surfaced only once).
+   * Locally generated X25519 encryption public-key JWK (for vault
+   * encrypt-to-agent key-agreement). Required alongside
+   * `public_key_jwk` on the client-keyed path.
+   * @status draft
+   */
+  encryption_key_jwk?: JwkOkpX25519Submission;
+
+  /**
+   * Compact JWS (EdDSA) binding the X25519 enc key to the Ed25519
+   * signing identity. Signed by the signing key; its decoded payload
+   * is a `KeyBindingJwsPayload`. Required on the client-keyed path.
+   * @status draft
+   */
+  key_binding_jws?: string;
+
+  /**
+   * When true, the server generates a fresh Ed25519 signing keypair
+   * AND an X25519 encryption keypair, returning both private keys in
+   * the response (surfaced only once). Mutually exclusive with the
+   * client-keyed fields above.
    * @status draft
    */
   generate_keypair?: boolean = false;
@@ -84,8 +104,11 @@ model AgentRegisterResponse {
   /** `did:web:citizenry.id:agent:{id}` */
   did: did;
 
-  /** Public-key identifier (JWS / JWT header `kid`) */
+  /** Signing-key identifier (JWS / JWT header `kid`) */
   kid: kid;
+
+  /** Encryption-key (X25519) identifier — used to address vault wraps. */
+  encryption_kid: kid;
 
   /** Tenant the agent is a member of */
   tenant: tenantSlug;
@@ -94,11 +117,20 @@ model AgentRegisterResponse {
   owner_human_principal_id: humanId;
 
   /**
-   * Raw private-key JWK — present only when the request set
-   * `generate_keypair=true`. Surfaced once and never recoverable.
+   * Raw Ed25519 signing private-key JWK — present only when the
+   * request set `generate_keypair=true`. Surfaced once and never
+   * recoverable.
    * @status draft
    */
   private_key_jwk?: Record<unknown>;
+
+  /**
+   * Raw X25519 encryption private-key JWK — present only when the
+   * request set `generate_keypair=true`. Surfaced once and never
+   * recoverable.
+   * @status draft
+   */
+  encryption_private_key_jwk?: Record<unknown>;
 
   metadata?: Record<unknown>;
 

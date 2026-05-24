@@ -34,6 +34,8 @@ export {
   type RegisterResult,
   type Ed25519Jwk,
   type Ed25519JwkPrivate,
+  type X25519Jwk,
+  type X25519JwkPrivate,
 } from './service/register'
 export { schema, type Schema, type Db } from './db'
 export type {

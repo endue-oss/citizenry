@@ -8,6 +8,7 @@ import {
   createRegisterService,
   RegisterError,
   type Ed25519Jwk,
+  type X25519Jwk,
 } from '../service/register'
 
 export type RegisterRouterVars = {
@@ -32,6 +33,8 @@ function svc(c: Context<Env>) {
 
 const STATUS_BY_CODE: Record<string, 400 | 401 | 403 | 409 | 422 | 500> = {
   jwk_invalid: 422,
+  enc_jwk_invalid: 422,
+  binding_invalid: 422,
   jwk_or_keygen_required: 400,
   slug_invalid: 422,
   slug_taken: 409,
@@ -40,6 +43,8 @@ const STATUS_BY_CODE: Record<string, 400 | 401 | 403 | 409 | 422 | 500> = {
 
 const ERR_CODE: Record<string, string> = {
   jwk_invalid: 'ERR-P01-S01-2001',
+  enc_jwk_invalid: 'ERR-P01-S01-2004',
+  binding_invalid: 'ERR-P01-S01-2005',
   jwk_or_keygen_required: 'ERR-P01-S01-0400',
   slug_invalid: 'ERR-P01-S01-2002',
   slug_taken: 'ERR-P01-S01-3110',
@@ -48,6 +53,8 @@ const ERR_CODE: Record<string, string> = {
 
 const TITLE: Record<string, string> = {
   jwk_invalid: 'Unprocessable',
+  enc_jwk_invalid: 'Unprocessable',
+  binding_invalid: 'Unprocessable',
   jwk_or_keygen_required: 'Bad Request',
   slug_invalid: 'Unprocessable',
   slug_taken: 'Conflict',
@@ -90,6 +97,8 @@ export const registerRouter = new Hono<Env>().post('/v1/agent/register', async (
     slug?: string
     display_name?: string
     public_key_jwk?: Ed25519Jwk
+    encryption_key_jwk?: X25519Jwk
+    key_binding_jws?: string
     generate_keypair?: boolean
     tenant?: string
     metadata?: Record<string, unknown>
@@ -131,6 +140,8 @@ export const registerRouter = new Hono<Env>().post('/v1/agent/register', async (
       slug: body.slug,
       displayName: body.display_name,
       publicKeyJwk: body.public_key_jwk,
+      encryptionPublicKeyJwk: body.encryption_key_jwk,
+      keyBindingJws: body.key_binding_jws,
       generateKeypair: body.generate_keypair,
       tenantSlug: body.tenant,
       metadata: body.metadata,
@@ -143,9 +154,11 @@ export const registerRouter = new Hono<Env>().post('/v1/agent/register', async (
         display_name: result.agent.displayName ?? undefined,
         did: `did:web:${c.var.issuerHost}:agent:${result.agent.principalId}`,
         kid: result.agentKey.kid,
+        encryption_kid: result.encryptionKey.kid,
         tenant: result.tenantSlug,
         owner_human_principal_id: result.agent.ownerHumanPrincipalId,
         private_key_jwk: result.privateKeyJwk,
+        encryption_private_key_jwk: result.encryptionPrivateKeyJwk,
         metadata: body.metadata,
         created_at: result.agent.createdAt.toISOString(),
       },

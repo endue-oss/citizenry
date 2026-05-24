@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm'
+import { eq, desc } from 'drizzle-orm'
 import type { DrizzleD1Database } from 'drizzle-orm/d1'
 import { entries, type Schema } from '../db/schema'
 
@@ -9,9 +9,14 @@ export const createEntryRepo = (db: DrizzleD1Database<Schema>) => ({
     db.select().from(entries).where(eq(entries.id, id)).get(),
 
   listByOwner: (ownerId: string) =>
-    db.select().from(entries).where(eq(entries.ownerId, ownerId)).all(),
+    db
+      .select()
+      .from(entries)
+      .where(eq(entries.ownerId, ownerId))
+      .orderBy(desc(entries.createdAt))
+      .all(),
 
-  listAll: () => db.select().from(entries).all(),
+  listAll: () => db.select().from(entries).orderBy(desc(entries.createdAt)).all(),
 
   create: (input: typeof entries.$inferInsert) =>
     db.insert(entries).values(input).returning().get(),

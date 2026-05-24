@@ -12,6 +12,7 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
     "db:generate": "drizzle-kit generate",
     "db:migrate:local": "wrangler d1 migrations apply citizenry-vault --local",
     "db:migrate": "wrangler d1 migrations apply citizenry-vault --remote"
@@ -27,6 +28,7 @@
     "@cloudflare/workers-types": "^4.20260516.0",
     "drizzle-kit": "^0.28.1",
     "typescript": "^5.6.3",
+    "vitest": "^2.1.5",
     "wrangler": "^4.0.0"
   }
 }

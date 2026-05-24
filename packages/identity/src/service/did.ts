@@ -1,7 +1,7 @@
 import type { Db } from '../db'
 import { agentDid, issuerDid } from '../ids'
 import { createAgentKeyRepo } from '../repo/agent_key'
-import type { JwkOkpEd25519Published } from './jwks'
+import type { PublishedJwk } from './jwks'
 
 export type DidService = ReturnType<typeof createDidService>
 
@@ -11,13 +11,14 @@ export interface DidDocument {
   verificationMethod: VerificationMethod[]
   authentication: string[]
   assertionMethod: string[]
+  keyAgreement: string[]
 }
 
 export interface VerificationMethod {
   id: string
   type: 'JsonWebKey2020'
   controller: string
-  publicKeyJwk: JwkOkpEd25519Published
+  publicKeyJwk: PublishedJwk
 }
 
 const DID_CONTEXT = [
@@ -42,10 +43,13 @@ export const createDidService = (deps: { db: Db; issuerHost: string }) => {
 
     /** `/agent/{id}/did.json`. */
     agent: async (agentId: string): Promise<DidDocument> => {
-      const active = await keys.findActiveByAgent(agentId)
+      const [sigActive, encActive] = await Promise.all([
+        keys.findActiveByAgent(agentId),
+        keys.findActiveEncByAgent(agentId),
+      ])
       const did = agentDid(deps.issuerHost, agentId)
 
-      const verificationMethod: VerificationMethod[] = active.map((k) => ({
+      const sigMethods: VerificationMethod[] = sigActive.map((k) => ({
         id: `${did}#${k.kid}`,
         type: 'JsonWebKey2020' as const,
         controller: did,
@@ -59,12 +63,26 @@ export const createDidService = (deps: { db: Db; issuerHost: string }) => {
         },
       }))
 
+      const encMethods: VerificationMethod[] = encActive.map((k) => ({
+        id: `${did}#${k.kid}`,
+        type: 'JsonWebKey2020' as const,
+        controller: did,
+        publicKeyJwk: {
+          kty: 'OKP' as const,
+          crv: 'X25519' as const,
+          use: 'enc' as const,
+          x: Buffer.from(k.publicKey).toString('base64url'),
+          kid: k.kid,
+        },
+      }))
+
       return {
         '@context': DID_CONTEXT,
         id: did,
-        verificationMethod,
-        authentication: verificationMethod.map((v) => v.id),
-        assertionMethod: verificationMethod.map((v) => v.id),
+        verificationMethod: [...sigMethods, ...encMethods],
+        authentication: sigMethods.map((v) => v.id),
+        assertionMethod: sigMethods.map((v) => v.id),
+        keyAgreement: encMethods.map((v) => v.id),
       }
     },
 

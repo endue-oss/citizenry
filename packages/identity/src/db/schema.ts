@@ -241,6 +241,13 @@ export const agent = sqliteTable(
 // ── agent_key ────────────────────────────────────────────────
 // Key rotation chain. JWT verification accepts (active OR rotated).
 // `id` is the SQLite ROWID alias — INTEGER PRIMARY KEY AUTOINCREMENT.
+//
+// Each agent holds two key kinds, distinguished by `use`:
+//   - use='sig' (EdDSA / Ed25519)  — identity, JWT signing/verification
+//   - use='enc' (X25519)           — vault DEK key-agreement (encrypt-to-agent)
+// An enc key is vouched for by the sig key that signed its registration
+// binding; `bound_to_kid` records that sig kid. JWT verification MUST
+// scope its lookup to use='sig' (see auth.ts).
 export const agentKey = sqliteTable(
   'agent_key',
   {
@@ -251,6 +258,10 @@ export const agentKey = sqliteTable(
     kid: text('kid').notNull().unique('agent_key_kid_uniq'),
     publicKey: bytes('public_key').notNull(),
     algorithm: text('algorithm').default('EdDSA').notNull(),
+    /** 'sig' (EdDSA) | 'enc' (X25519). */
+    use: text('use').default('sig').notNull(),
+    /** For use='enc' rows: the sig kid whose binding JWS vouched for this key. */
+    boundToKid: text('bound_to_kid'),
     status: text('status').default('active').notNull(),
     createdAt: integer('created_at', { mode: 'timestamp_ms' })
       .notNull()
@@ -260,7 +271,9 @@ export const agentKey = sqliteTable(
   (t) => ({
     agentIdx: index('agent_key_agent_id_idx').on(t.agentId),
     statusIdx: index('agent_key_status_idx').on(t.status),
-    algChk: check('agent_key_algorithm_check', sql`${t.algorithm} IN ('EdDSA')`),
+    useIdx: index('agent_key_use_idx').on(t.use),
+    algChk: check('agent_key_algorithm_check', sql`${t.algorithm} IN ('EdDSA', 'X25519')`),
+    useChk: check('agent_key_use_check', sql`${t.use} IN ('sig', 'enc')`),
     statusChk: check('agent_key_status_check', sql`${t.status} IN ('active', 'rotated', 'revoked')`),
   }),
 )

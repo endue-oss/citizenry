@@ -10,24 +10,42 @@ using Citizenry.Common;
 namespace Citizenry.Vault;
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// Vault — agent-owned encrypted secret entries
+// Vault — agent-owned end-to-end encrypted secret entries
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//
+// Encryption model: at-rest end-to-end. The caller encrypts the secret
+// client-side as an RFC 7516 JWE, addressed to its own X25519 encryption
+// key (`use:"enc"`), and submits the JWE as `data`. The server stores it
+// verbatim and never holds the data key — it cannot decrypt. Envelope
+// mechanics (random content key, per-recipient key wrapping for
+// multi-device / sharing) are handled inside the JWE by a standard JOSE
+// library; the server treats `data` as one opaque blob.
+//
+// Server-side decryption (the "proxy" path) is intentionally NOT a
+// stored capability: it is a future request-scoped delegation flow in
+// which the live agent re-wraps the content key to a one-time server
+// ephemeral key. Nothing here grants the server standing access.
 
 /**
  * Vault entry — base shape shared by create response, read, and list rows.
  *
- * `data` is opaque ciphertext; the service stores it as-is and never inspects it.
+ * `data` is an RFC 7516 JWE (compact or JSON serialization), encrypted
+ * to the owner's X25519 encryption key. The service stores it verbatim
+ * and never inspects or decrypts it.
  *
  * @status draft
  */
 model VaultEntryBase {
-  /** Entry identifier — `ven_` prefixed ULID once finalized. */
+  /** Entry identifier — `ven_` prefixed ULID. */
   id: ulid;
 
   /** Owner principal — agent or human. */
   owner_id: ownerId;
 
-  /** Opaque payload (ciphertext or signed blob). */
+  /**
+   * RFC 7516 JWE produced client-side, encrypted to the owner's X25519
+   * encryption key. Opaque to the server.
+   */
   data: string;
 
   created_at: iso8601;
@@ -40,11 +58,13 @@ model VaultEntryBase {
 model VaultEntryGetResponse extends VaultEntryBase {}
 
 /**
- * Vault entry create request.
+ * Vault entry create request. The caller has already encrypted the
+ * secret client-side as a JWE addressed to its own encryption key(s).
+ *
  * @status draft
  */
 model VaultEntryCreateRequest {
-  /** Opaque payload the caller wants stored. */
+  /** RFC 7516 JWE to store verbatim. */
   data: string;
 }
 

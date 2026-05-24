@@ -76,7 +76,7 @@ export interface VerifyJwtOptions {
  * Steps:
  *  1. parse compact JWS
  *  2. header.alg === "EdDSA"
- *  3. header.kid → agent_key lookup (status ∈ active|rotated)
+ *  3. header.kid → agent_key lookup (use='sig', status ∈ active|rotated)
  *  4. payload.iss === payload.sub === key.agent_id
  *  5. payload.aud ∩ options.audience ≠ ∅
  *  6. payload.exp > now
@@ -111,13 +111,15 @@ export const verifyAgentJwt = async (
     throw new AuthError('ERR-P01-S01-1004', 'header.kid missing')
   }
 
-  // kid → agent_key lookup
+  // kid → agent_key lookup. Scoped to use='sig' so a JWT can never be
+  // verified against an X25519 encryption key that shares the table.
   const keyRows = await db
     .select()
     .from(agentKeyTable)
     .where(
       and(
         eq(agentKeyTable.kid, header.kid),
+        eq(agentKeyTable.use, 'sig'),
         inArray(agentKeyTable.status, ['active', 'rotated']),
       ),
     )

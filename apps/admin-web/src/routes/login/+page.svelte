@@ -47,7 +47,7 @@
   <div class="brand">
     <img class="logo" src="/logo.svg" alt="" width="80" height="80" />
     <h1 id="auth-title" class="wordmark">Citizenry</h1>
-    <p class="by-endue">by <span class="endue-mark">Endue</span></p>
+    <p class="by-endue">by <span class="endue-mark">Endue AI</span></p>
     <p class="subtitle">for Admin</p>
   </div>
 

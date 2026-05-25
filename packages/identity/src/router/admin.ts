@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
-import { desc, eq, sql } from 'drizzle-orm'
+import { and, desc, eq, sql } from 'drizzle-orm'
 import type { Db } from '../db'
-import { agent, human } from '../db/schema'
+import { agent, auditLog, human } from '../db/schema'
 import {
   mountAdminFederationRoutes,
   type FederationVars,
@@ -90,6 +90,50 @@ export const adminIdentityRouter = new Hono<{ Variables: Vars }>()
       status: row.status,
       created_at: row.createdAt.toISOString(),
       updated_at: row.updatedAt.toISOString(),
+    })
+  })
+
+  // ── Admin audit log (read-only) ───────────────────────
+  // Newest first; optional exact-match filters on actor / action / target.
+  .get('/v1/admin/audit-log', async (c) => {
+    const { page, limit, offset } = paginate(c)
+    const db = c.var.db
+    const conds = []
+    const actor = c.req.query('actor')
+    const action = c.req.query('action')
+    const target = c.req.query('target')
+    if (actor) conds.push(eq(auditLog.actorPrincipalId, actor))
+    if (action) conds.push(eq(auditLog.action, action))
+    if (target) conds.push(eq(auditLog.targetId, target))
+    const where = conds.length ? and(...conds) : undefined
+    const totalRow = await db
+      .select({ n: sql<number>`count(*)`.as('n') })
+      .from(auditLog)
+      .where(where)
+    const total = Number(totalRow[0]?.n ?? 0)
+    const rows = await db
+      .select()
+      .from(auditLog)
+      .where(where)
+      .orderBy(desc(auditLog.createdAt))
+      .limit(limit)
+      .offset(offset)
+    return c.json({
+      items: rows.map((r) => ({
+        id: r.auditLogId,
+        actor: r.actorPrincipalId,
+        action: r.action,
+        target: r.targetId,
+        outcome: r.outcome,
+        payload: r.payload,
+        created_at: r.createdAt.toISOString(),
+      })),
+      meta: {
+        total,
+        page,
+        limit,
+        has_next_page: offset + rows.length < total,
+      },
     })
   })
 

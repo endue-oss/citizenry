@@ -136,3 +136,42 @@ interface AdminAgents {
     | NotFoundError
     | InternalError;
 }
+
+/**
+ * Audit log row. Append-only record of a state-changing admin action.
+ * @status draft
+ */
+model AuditLogGetResponse {
+  id: string;
+  /** Acting admin id (from the X-Admin-Id breadcrumb); null for system events. */
+  actor?: string;
+  /** Stable action label, e.g. `config.set`, `agent.revoke`. */
+  action: string;
+  /** Affected entity id / config key, when applicable. */
+  target?: string;
+  outcome: "success" | "failure";
+  /** Non-secret context (method, path, status). Never contains secret values. */
+  payload?: unknown;
+  created_at: iso8601;
+}
+
+/**
+ * Audit log — operator read of admin mutations.
+ * @status draft
+ */
+@tag("Admin")
+@route("/v1/admin/audit-log")
+interface AdminAuditLog {
+  /**
+   * Paginated audit trail, newest first. Optional exact-match filters on
+   * actor / action / target.
+   */
+  @summary("List audit-log entries (admin)")
+  @operationId("admin-audit-log-list")
+  @get list(
+    @query actor?: string,
+    @query action?: string,
+    @query target?: string,
+    ...PaginationParams,
+  ): PaginatedList<AuditLogGetResponse> | UnauthorizedError | InternalError;
+}

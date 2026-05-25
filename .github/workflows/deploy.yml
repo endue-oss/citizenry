@@ -158,10 +158,27 @@ jobs:
         run: |
           set -e
           if [[ -n "$MIGRATOR_TOKEN" ]]; then
+            # Optional explicit override via GitHub secret.
             token="$MIGRATOR_TOKEN"
           else
-            token=$(openssl rand -hex 32)
-            echo "::warning::Auto-generated MIGRATOR_TOKEN; persists in Cloudflare. Set the GH secret to control rotation."
+            # Otherwise keep a STABLE token in the identity _config and reuse
+            # it every run. Generating a fresh value each run raced
+            # Cloudflare's non-atomic secret propagation (/status 200 then
+            # /apply 401 from a colo still holding the old value). A stable
+            # value means a not-yet-propagated colo still authenticates,
+            # and no GitHub secret is required.
+            # Extract the 64-hex token directly — robust against wrangler's
+            # banner/update notices that can prefix its --json output and
+            # break a strict JSON parse.
+            token=$(cd apps/migrator && pnpm exec wrangler d1 execute citizenry-identity-db --remote --json \
+              --command "SELECT value FROM _config WHERE key='migrator_token';" 2>/dev/null \
+              | grep -oE '[a-f0-9]{64}' | head -1)
+            if [[ -z "$token" ]]; then
+              token=$(openssl rand -hex 32)
+              (cd apps/migrator && pnpm exec wrangler d1 execute citizenry-identity-db --remote \
+                --command "INSERT OR REPLACE INTO _config (key, value) VALUES ('migrator_token', '$token');")
+              echo "::notice::Generated and persisted migrator_token in identity _config."
+            fi
           fi
           printf '%s' "$token" | (cd apps/migrator && pnpm exec wrangler secret put MIGRATOR_TOKEN)
           echo "::add-mask::$token"

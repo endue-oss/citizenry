@@ -74,21 +74,21 @@ function ensureSystemTenant() {
 // ── humans ──────────────────────────────────────────────────────────
 
 const HUMAN_FIXTURES = [
-  { email: 'alex@gmail.com', name: 'Alex Park', status: 'active' },
-  { email: 'beatrice@outlook.com', name: 'Beatrice Choi', status: 'active' },
-  { email: 'carlos@icloud.com', name: 'Carlos Mendes', status: 'active' },
-  { email: 'daria@yahoo.com', name: 'Daria Kim', status: 'active' },
-  { email: 'eun@naver.com', name: 'Eun-Jin Lee', status: 'active' },
-  { email: 'farouk@gmail.com', name: 'Farouk Hassan', status: 'active' },
-  { email: 'grace@hotmail.com', name: 'Grace Yamamoto', status: 'active' },
-  { email: 'hyojin@kakao.com', name: 'Hyojin Yu', status: 'active' },
-  { email: 'ivan@live.com', name: 'Ivan Petrov', status: 'active' },
-  { email: 'jamila@me.com', name: 'Jamila Sow', status: 'active' },
-  { email: 'kenji@daum.net', name: 'Kenji Tanaka', status: 'active' },
-  { email: 'leila@yahoo.co.kr', name: 'Leila Rahmani', status: 'active' },
-  { email: 'mateo@googlemail.com', name: 'Mateo Silva', status: 'pending_verification' },
-  { email: 'nadia@nate.com', name: 'Nadia Sokolova', status: 'pending_verification' },
-  { email: 'oscar@msn.com', name: 'Oscar Lindgren', status: 'active' },
+  { email: 'team+alex@endue.ai', name: 'Alex Park', status: 'active' },
+  { email: 'team+beatrice@endue.ai', name: 'Beatrice Choi', status: 'active' },
+  { email: 'team+carlos@endue.ai', name: 'Carlos Mendes', status: 'active' },
+  { email: 'team+daria@endue.ai', name: 'Daria Kim', status: 'active' },
+  { email: 'team+eun@endue.ai', name: 'Eun-Jin Lee', status: 'active' },
+  { email: 'team+farouk@endue.ai', name: 'Farouk Hassan', status: 'active' },
+  { email: 'team+grace@endue.ai', name: 'Grace Yamamoto', status: 'active' },
+  { email: 'team+hyojin@endue.ai', name: 'Hyojin Yu', status: 'active' },
+  { email: 'team+ivan@endue.ai', name: 'Ivan Petrov', status: 'active' },
+  { email: 'team+jamila@endue.ai', name: 'Jamila Sow', status: 'active' },
+  { email: 'team+kenji@endue.ai', name: 'Kenji Tanaka', status: 'active' },
+  { email: 'team+leila@endue.ai', name: 'Leila Rahmani', status: 'active' },
+  { email: 'team+mateo@endue.ai', name: 'Mateo Silva', status: 'pending_verification' },
+  { email: 'team+nadia@endue.ai', name: 'Nadia Sokolova', status: 'pending_verification' },
+  { email: 'team+oscar@endue.ai', name: 'Oscar Lindgren', status: 'active' },
 ]
 
 function insertHuman(h, ts) {

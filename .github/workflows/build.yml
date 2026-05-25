@@ -26,6 +26,12 @@ jobs:
         run: pnpm --filter @citizenry/spec run build
 
       - name: Build Pages bundles
+        env:
+          # Stamp admin-web with its current version so it can self-compare
+          # against the latest stable GitHub release ("What's new" rail
+          # icon). Defaults to apps/admin-web/package.json `version`; set
+          # the APP_VERSION repo variable to stamp an explicit release.
+          PUBLIC_APP_VERSION: ${{ vars.APP_VERSION }}
         run: |
           pnpm --filter @citizenry/admin-web run build
           pnpm --filter @citizenry/docs      run build

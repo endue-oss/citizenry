@@ -4,10 +4,12 @@
   // surface as a fixed-position tooltip rendered next to the hovered
   // button.
 
+  import { onMount } from 'svelte'
   import { page } from '$app/stores'
   import { goto } from '$app/navigation'
   import { adminApi } from '$lib/api'
   import { session } from '$lib/session'
+  import { checkForUpdate, type UpdateInfo } from '$lib/whatsnew'
   import ThemeToggle from './ThemeToggle.svelte'
 
   type NavItem = { href: string; label: string; icon: string }
@@ -64,6 +66,16 @@
   // GitHub's mark is a filled glyph (rendered separately from the
   // stroke-based icons above).
   const githubHref = 'https://github.com/endue-oss/citizenry'
+
+  // "What's new" — shown only when a stable GitHub release newer than
+  // this build exists. Resolved client-side after mount; stays null
+  // (icon hidden) otherwise. See $lib/whatsnew.
+  let update = $state<UpdateInfo | null>(null)
+  onMount(() => {
+    void checkForUpdate().then((u) => {
+      update = u
+    })
+  })
 
   // Tooltip state — single instance, positioned next to the hovered item.
   let tooltip = $state<{ top: number; label: string; external: boolean } | null>(null)
@@ -147,6 +159,29 @@
         <path d="M12 .5C5.37.5 0 5.78 0 12.29c0 5.21 3.44 9.63 8.21 11.19.6.11.82-.25.82-.56 0-.28-.01-1.02-.02-2-3.34.71-4.04-1.58-4.04-1.58-.55-1.37-1.34-1.74-1.34-1.74-1.09-.73.08-.71.08-.71 1.2.08 1.84 1.21 1.84 1.21 1.07 1.79 2.81 1.27 3.49.97.11-.76.42-1.27.76-1.56-2.67-.3-5.47-1.31-5.47-5.84 0-1.29.47-2.35 1.24-3.18-.12-.3-.54-1.51.12-3.15 0 0 1.01-.32 3.3 1.21a11.6 11.6 0 0 1 3-.4c1.02 0 2.05.13 3 .4 2.29-1.53 3.3-1.21 3.3-1.21.66 1.64.24 2.85.12 3.15.77.83 1.24 1.89 1.24 3.18 0 4.54-2.81 5.54-5.49 5.83.43.37.81 1.1.81 2.22 0 1.6-.01 2.89-.01 3.28 0 .31.21.68.83.56A12.01 12.01 0 0 0 24 12.29C24 5.78 18.63.5 12 .5z" />
       </svg>
     </a>
+    {#if update}
+      <a
+        class="item whatsnew"
+        href={update.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={`What's new in ${update.version} (opens in a new tab)`}
+        onmouseenter={showTip(`What's new · ${update.version}`, true)}
+        onmouseleave={hideTip}
+        onfocus={showTip(`What's new · ${update.version}`, true)}
+        onblur={hideTip}
+      >
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <!-- Lucide `sparkles` — "what's new". -->
+          <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275z" />
+          <path d="M5 3v4" />
+          <path d="M19 17v4" />
+          <path d="M3 5h4" />
+          <path d="M17 19h4" />
+        </svg>
+        <span class="badge" aria-hidden="true"></span>
+      </a>
+    {/if}
   </div>
 
   <div class="footer">
@@ -287,6 +322,39 @@
     gap: 4px;
     width: 100%;
     flex-shrink: 0;
+  }
+
+  // "What's new" nudge — tinted with the brand colour and badged with a
+  // small dot so an available update reads as actionable, not just nav.
+  .whatsnew {
+    position: relative;
+    color: var(--primary);
+
+    &:hover {
+      background: var(--accent);
+      color: var(--primary);
+    }
+
+    .badge {
+      position: absolute;
+      top: 9px;
+      right: 9px;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--primary);
+      box-shadow: 0 0 0 2px var(--background);
+    }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .whatsnew .badge {
+      animation: badge-pulse 2.4s ease-in-out infinite;
+    }
+  }
+  @keyframes badge-pulse {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.35; }
   }
 
   .footer {

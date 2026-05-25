@@ -1,6 +1,6 @@
 <div align="center">
 
-<img width="64" height="64" alt="Citizenry" src="https://raw.githubusercontent.com/endue-oss/.github/main/logo/citizenry-dark.svg" />
+<a href="https://github.com/endue-oss/citizenry"><img width="64" height="64" alt="Citizenry" src="https://raw.githubusercontent.com/endue-oss/.github/main/logo/citizenry-dark.svg" /></a>
 <a href="https://github.com/endue-ai"><img src="https://raw.githubusercontent.com/endue-ai/.github/main/logo/endue-ai-logo-dark.svg" alt="Endue AI" height="64" /></a>
 
 

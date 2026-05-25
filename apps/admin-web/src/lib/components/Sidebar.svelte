@@ -47,14 +47,32 @@
     return pathname === href || pathname.startsWith(href + '/')
   }
 
-  // Tooltip state — single instance, positioned next to the hovered item.
-  let tooltip = $state<{ top: number; label: string } | null>(null)
+  // External links pinned to the bottom of the rail (above the footer).
+  // `external: true` makes the hover tooltip carry an "opens externally"
+  // glyph so operators know the link leaves the console.
+  const externalLinks = [
+    {
+      href: 'https://citizenry-docs.pages.dev',
+      label: 'Documentation',
+      // Lucide `file-text` — reads as "docs" at 20px.
+      icon:
+        'M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z ' +
+        'M14 2v5h5 M16 13H8 M16 17H8 M10 9H8',
+    },
+  ]
 
-  function showTip(label: string) {
+  // GitHub's mark is a filled glyph (rendered separately from the
+  // stroke-based icons above).
+  const githubHref = 'https://github.com/endue-oss/citizenry'
+
+  // Tooltip state — single instance, positioned next to the hovered item.
+  let tooltip = $state<{ top: number; label: string; external: boolean } | null>(null)
+
+  function showTip(label: string, external = false) {
     return (event: FocusEvent | MouseEvent) => {
       const target = event.currentTarget as HTMLElement
       const rect = target.getBoundingClientRect()
-      tooltip = { top: rect.top + rect.height / 2, label }
+      tooltip = { top: rect.top + rect.height / 2, label, external }
     }
   }
   function hideTip() {
@@ -96,6 +114,41 @@
     {/each}
   </nav>
 
+  <div class="links">
+    {#each externalLinks as link}
+      <a
+        class="item"
+        href={link.href}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={`${link.label} (opens in a new tab)`}
+        onmouseenter={showTip(link.label, true)}
+        onmouseleave={hideTip}
+        onfocus={showTip(link.label, true)}
+        onblur={hideTip}
+      >
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d={link.icon} />
+        </svg>
+      </a>
+    {/each}
+    <a
+      class="item"
+      href={githubHref}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="GitHub (opens in a new tab)"
+      onmouseenter={showTip('GitHub', true)}
+      onmouseleave={hideTip}
+      onfocus={showTip('GitHub', true)}
+      onblur={hideTip}
+    >
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
+        <path d="M12 .5C5.37.5 0 5.78 0 12.29c0 5.21 3.44 9.63 8.21 11.19.6.11.82-.25.82-.56 0-.28-.01-1.02-.02-2-3.34.71-4.04-1.58-4.04-1.58-.55-1.37-1.34-1.74-1.34-1.74-1.09-.73.08-.71.08-.71 1.2.08 1.84 1.21 1.84 1.21 1.07 1.79 2.81 1.27 3.49.97.11-.76.42-1.27.76-1.56-2.67-.3-5.47-1.31-5.47-5.84 0-1.29.47-2.35 1.24-3.18-.12-.3-.54-1.51.12-3.15 0 0 1.01-.32 3.3 1.21a11.6 11.6 0 0 1 3-.4c1.02 0 2.05.13 3 .4 2.29-1.53 3.3-1.21 3.3-1.21.66 1.64.24 2.85.12 3.15.77.83 1.24 1.89 1.24 3.18 0 4.54-2.81 5.54-5.49 5.83.43.37.81 1.1.81 2.22 0 1.6-.01 2.89-.01 3.28 0 .31.21.68.83.56A12.01 12.01 0 0 0 24 12.29C24 5.78 18.63.5 12 .5z" />
+      </svg>
+    </a>
+  </div>
+
   <div class="footer">
     <div class="divider"></div>
     <div
@@ -122,7 +175,17 @@
 </aside>
 
 {#if tooltip}
-  <div class="tooltip" style:top="{tooltip.top}px">{tooltip.label}</div>
+  <div class="tooltip" style:top="{tooltip.top}px">
+    <span>{tooltip.label}</span>
+    {#if tooltip.external}
+      <!-- Lucide `external-link` — signals the link opens outside the console. -->
+      <svg class="ext" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M15 3h6v6" />
+        <path d="M10 14 21 3" />
+        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h6" />
+      </svg>
+    {/if}
+  </div>
 {/if}
 
 <style lang="scss">
@@ -215,6 +278,17 @@
     }
   }
 
+  // External links (Docs, GitHub) pinned just above the footer. The
+  // `.nav` flex:1 above pushes this group to the bottom of the rail.
+  .links {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    width: 100%;
+    flex-shrink: 0;
+  }
+
   .footer {
     display: flex;
     flex-direction: column;
@@ -252,6 +326,9 @@
     position: fixed;
     left: 72px;
     transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     padding: 6px 12px;
     border-radius: 6px;
     background: rgba(17, 24, 39, 0.95);
@@ -262,5 +339,10 @@
     pointer-events: none;
     z-index: $z-modal;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+
+    .ext {
+      flex-shrink: 0;
+      opacity: 0.8;
+    }
   }
 </style>

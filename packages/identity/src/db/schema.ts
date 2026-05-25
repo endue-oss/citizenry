@@ -13,9 +13,19 @@ import {
 // raw bytes — e.g. Ed25519 32B, SHA-256 32B. D1 (SQLite) BLOB column.
 // drizzle's default blob({mode:'buffer'}) forces Buffer, but the CF Workers runtime
 // returns ArrayBuffer and our code handles Uint8Array — so we define this customType.
+// `fromDriver` normalises the read shape: production D1 hands back an
+// ArrayBuffer, but the local miniflare driver returns a plain number[]. Both
+// (and Buffer) are coerced to Uint8Array so callers like `crypto.subtle.importKey`
+// always receive a BufferSource.
 const bytes = customType<{ data: Uint8Array; driverData: Uint8Array }>({
   dataType() {
     return 'BLOB'
+  },
+  fromDriver(value: unknown): Uint8Array {
+    if (value instanceof Uint8Array) return value
+    if (value instanceof ArrayBuffer) return new Uint8Array(value)
+    if (Array.isArray(value)) return Uint8Array.from(value as number[])
+    return value as Uint8Array
   },
 })
 

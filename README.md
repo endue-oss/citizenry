@@ -1,10 +1,6 @@
 <div align="center">
-<<<<<<< Updated upstream
-<img width="64" height="64" alt="citizenry_moonlit_pearl_transparent" src="https://github.com/user-attachments/assets/cb33274f-1cf3-4b09-aded-e08306556cfe" />
-=======
 
 <img width="64" height="64" alt="Citizenry" src="https://raw.githubusercontent.com/endue-oss/.github/main/logo/citizenry-dark.svg" />
->>>>>>> Stashed changes
 <a href="https://github.com/endue-ai"><img src="https://raw.githubusercontent.com/endue-ai/.github/main/logo/endue-ai-logo-dark.svg" alt="Endue AI" height="64" /></a>
 
 

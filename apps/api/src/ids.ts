@@ -44,6 +44,7 @@ export const newHumanVerificationId = () => `hev_${ulid()}`
 export const newHumanApiKeyId = () => `hak_${ulid()}`
 export const newAgentId = () => `ag_${ulid()}`
 export const newKid = () => `kid_${ulid()}`
+export const newAuditLogId = () => `aud_${ulid()}`
 
 // Raw API-Key body. `chk_` + 26-char Crockford Base32 of 130 random
 // bits; only the peppered SHA-256 is persisted. Caller surfaces this

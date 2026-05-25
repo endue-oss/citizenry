@@ -20,6 +20,7 @@ import {
   type ConfigVars,
 } from './db'
 import { auth, serviceKeyAuth, apiKeyAuth } from './middleware/auth'
+import { auditAdmin } from './middleware/audit'
 import { cors } from './middleware/cors'
 import { errorHandler } from './middleware/error'
 import { createNotifier } from './notifier'
@@ -96,7 +97,9 @@ app.route('/', registerApp)
 //   admin vault routes:    /v1/admin/vault/*
 //   admin identity routes: /v1/admin/{humans,agents,federation}/*
 //   Paths do not overlap, so the per-sub-app middleware (identityDb / vaultDb) stays cleanly separated.
-const adminApp = new Hono<{ Bindings: Bindings }>().use('*', serviceKeyAuth)
+const adminApp = new Hono<{ Bindings: Bindings }>()
+  .use('*', serviceKeyAuth)
+  .use('*', auditAdmin)
 
 const adminIdentityApp = new Hono<{ Bindings: Bindings; Variables: IdentityVars }>()
   .use('*', identityDb)

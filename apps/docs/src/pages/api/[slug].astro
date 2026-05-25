@@ -17,15 +17,22 @@
 import Header from '../../citizenry-id/Header.svelte'
 import '../../styles/handbook.css'
 
+// All three service references. Scalar renders a built-in document
+// selector from `sources`, so visitors switch between Identity / Vault /
+// Mail without leaving the page. Each /api/<slug>/ route still exists as
+// a clean entry point; it just preselects the matching source.
+const APIS = [
+  { slug: 'identity', title: 'Identity', file: 'identity-api.yaml' },
+  { slug: 'vault',    title: 'Vault',    file: 'vault-api.yaml' },
+  { slug: 'mail',     title: 'Mail',     file: 'mail-api.yaml' },
+]
+
 export function getStaticPaths() {
-  return [
-    { params: { slug: 'identity' }, props: { title: 'Identity', file: 'identity-api.yaml' } },
-    { params: { slug: 'vault' },    props: { title: 'Vault',    file: 'vault-api.yaml' } },
-    { params: { slug: 'mail' },     props: { title: 'Mail',     file: 'mail-api.yaml' } },
-  ]
+  return APIS.map((a) => ({ params: { slug: a.slug }, props: { current: a.slug } }))
 }
 
-const { title, file } = Astro.props
+const { current } = Astro.props
+const title = APIS.find((a) => a.slug === current)?.title ?? 'API'
 ---
 <!doctype html>
 <html lang="en">
@@ -111,7 +118,7 @@ const { title, file } = Astro.props
     <Header client:load onEnroll={() => {}} />
     <div id="app"></div>
     <script is:inline src="/scalar.standalone.js"></script>
-    <script type="module" is:inline define:vars={{ file, title }}>
+    <script type="module" is:inline define:vars={{ apis: APIS, current, title }}>
       Scalar.createApiReference('#app', {
         theme: 'deepSpace',
         layout: 'modern',
@@ -119,7 +126,12 @@ const { title, file } = Astro.props
         hideClientButton: false,
         hideTestRequestButton: false,
         hideDownloadButton: true,
-        sources: [{ url: `/${file}`, title, slug: title.toLowerCase(), default: true }],
+        sources: apis.map((a) => ({
+          url: `/${a.file}`,
+          title: a.title,
+          slug: a.slug,
+          default: a.slug === current,
+        })),
         metaData: { title: `Citizenry API · ${title}` },
         // Selectors track Scalar's internal markup and may need a touch-up
         // when @scalar/api-reference is bumped. The `a[href*="scalar.com"]`

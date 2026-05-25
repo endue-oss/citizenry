@@ -121,6 +121,10 @@ architectural changes.
 - **DCO sign-off is required.** Use `git commit -s`. See
   [`CONTRIBUTING.md`](./CONTRIBUTING.md) for the full text and rationale.
 - **English-only** subject and body (see Language above).
+- **No AI/tool attribution.** Never add assistant co-author or
+  "generated with" trailers (e.g. `Co-Authored-By: Claude ...`,
+  `🤖 Generated with ...`). Commit messages must not reference the
+  tooling used to author them.
 - One logical change per commit. Prefer a new commit over `--amend`
   once a commit has been pushed.
 - Reference issue numbers in the body when applicable; keep the subject

@@ -21,18 +21,24 @@ import '../../styles/handbook.css'
 // selector from `sources`, so visitors switch between Identity / Vault /
 // Mail without leaving the page. Each /api/<slug>/ route still exists as
 // a clean entry point; it just preselects the matching source.
-const APIS = [
-  { slug: 'identity', title: 'Identity', file: 'identity-api.yaml' },
-  { slug: 'vault',    title: 'Vault',    file: 'vault-api.yaml' },
-  { slug: 'mail',     title: 'Mail',     file: 'mail-api.yaml' },
-]
-
+//
+// NB: the list lives inside getStaticPaths. Astro hoists that function
+// into its own isolated scope at build time, so it cannot read
+// module-scope frontmatter consts — everything the render needs is
+// handed back through props.
 export function getStaticPaths() {
-  return APIS.map((a) => ({ params: { slug: a.slug }, props: { current: a.slug } }))
+  const apis = [
+    { slug: 'identity', title: 'Identity', file: 'identity-api.yaml' },
+    { slug: 'vault',    title: 'Vault',    file: 'vault-api.yaml' },
+    { slug: 'mail',     title: 'Mail',     file: 'mail-api.yaml' },
+  ]
+  return apis.map((a) => ({
+    params: { slug: a.slug },
+    props: { current: a.slug, title: a.title, apis },
+  }))
 }
 
-const { current } = Astro.props
-const title = APIS.find((a) => a.slug === current)?.title ?? 'API'
+const { current, title, apis } = Astro.props
 ---
 <!doctype html>
 <html lang="en">
@@ -118,7 +124,7 @@ const title = APIS.find((a) => a.slug === current)?.title ?? 'API'
     <Header client:load onEnroll={() => {}} />
     <div id="app"></div>
     <script is:inline src="/scalar.standalone.js"></script>
-    <script type="module" is:inline define:vars={{ apis: APIS, current, title }}>
+    <script type="module" is:inline define:vars={{ apis, current, title }}>
       Scalar.createApiReference('#app', {
         theme: 'deepSpace',
         layout: 'modern',

@@ -1,6 +1,6 @@
 <div align="center">
 
-<a href="https://github.com/endue-oss/citizenry"><img width="64" height="64" alt="Citizenry" src="https://cdn.jsdelivr.net/gh/endue-oss/.github@main/logo/citizenry.svg" /></a>
+<a href="https://github.com/endue-oss/citizenry"><img width="64" height="64" alt="Citizenry" src="https://cdn.jsdelivr.net/gh/endue-oss/.github@main/logo/citizenry.svg?v=2" /></a>
 
 
 # Endue Citizenry

@@ -36,8 +36,8 @@ namespace Citizenry.Vault;
  * @status draft
  */
 model VaultEntryBase {
-  /** Entry identifier — `ven_` prefixed ULID. */
-  id: ulid;
+  /** Entry identifier — `ven_` + 26-character ULID. */
+  id: vaultEntryId;
 
   /** Owner principal — agent or human. */
   owner_id: ownerId;
@@ -64,7 +64,13 @@ model VaultEntryGetResponse extends VaultEntryBase {}
  * @status draft
  */
 model VaultEntryCreateRequest {
-  /** RFC 7516 JWE to store verbatim. */
+  /**
+   * RFC 7516 JWE to store verbatim. 1–65536 characters; the server never
+   * inspects it. An empty body is a 400; a body over the cap is rejected
+   * with 413 PayloadTooLargeError.
+   */
+  @minLength(1)
+  @maxLength(65536)
   data: string;
 }
 
@@ -101,21 +107,22 @@ interface Entries {
   /**
    * Read a single entry. Returns 404 when a non-owner reads.
    *
-   * Possible errors: 401, 404, 500.
+   * Possible errors: 401, 404, 429, 500.
    */
   @summary("Read a single vault entry by id")
   @operationId("vault-entry-read")
   @route("{id}")
-  @get read(@path id: ulid):
+  @get read(@path id: vaultEntryId):
     | VaultEntryGetResponse
     | UnauthorizedError
     | NotFoundError
+    | RateLimitedError
     | InternalError;
 
   /**
    * Create a new entry.
    *
-   * Possible errors: 400, 401, 422, 429, 500.
+   * Possible errors: 400, 401, 413, 429, 500.
    */
   @summary("Create a vault entry under the caller")
   @operationId("vault-entry-create")
@@ -126,7 +133,25 @@ interface Entries {
       }
     | BadRequestError
     | UnauthorizedError
-    | UnprocessableError
+    | PayloadTooLargeError
+    | RateLimitedError
+    | InternalError;
+
+  /**
+   * Delete one of the caller's own entries. Idempotent from the caller's
+   * view: a non-owner or unknown id yields 404 (no existence oracle).
+   *
+   * Possible errors: 401, 404, 429, 500.
+   */
+  @summary("Delete one of the caller's vault entries")
+  @operationId("vault-entry-delete")
+  @route("{id}")
+  @delete remove(@path id: vaultEntryId):
+    | {
+        @statusCode statusCode: 204;
+      }
+    | UnauthorizedError
+    | NotFoundError
     | RateLimitedError
     | InternalError;
 }
@@ -170,7 +195,7 @@ interface AdminEntries {
   @summary("Force-delete a vault entry (admin, idempotent)")
   @operationId("admin-vault-entry-delete")
   @route("{id}")
-  @delete remove(@path id: ulid):
+  @delete remove(@path id: vaultEntryId):
     | {
         @statusCode statusCode: 204;
       }

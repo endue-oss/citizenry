@@ -1,5 +1,8 @@
 // Mail-domain errors — thrown by the router, enveloped by the BaseError
-// helper. 1:1 with the codes in packages/spec/mail/errors.tsp.
+// helper. Codes come from `@citizenry/spec/error-codes/mail`, which is
+// generated from packages/spec/mail/errors.tsp (the source of truth).
+
+import { MAIL_ERR } from '@citizenry/spec/error-codes/mail'
 
 export class MailError extends Error {
   readonly code: string
@@ -29,12 +32,12 @@ const make =
     new MailError({ code, status, title, message, detail })
 
 export const MAIL = {
-  badRequest: make('ERR-P01-S02-0400', 400, 'Bad Request'),
-  notFound: make('ERR-P01-S02-0404', 404, 'Not Found'),
-  rateLimited: make('ERR-P01-S02-0429', 429, 'Too Many Requests'),
-  internal: make('ERR-P01-S02-0500', 500, 'Internal Server Error'),
-  unavailable: make('ERR-P01-S02-0503', 503, 'Service Unavailable'),
-  invalidBody: make('ERR-P01-S02-2001', 400, 'Bad Request'),
-  fromRequired: make('ERR-P01-S02-2002', 400, 'Bad Request'),
-  sendFailed: make('ERR-P01-S02-4001', 502, 'Bad Gateway'),
+  badRequest: make(MAIL_ERR.bad_request, 400, 'Bad Request'),
+  notFound: make(MAIL_ERR.not_found, 404, 'Not Found'),
+  rateLimited: make(MAIL_ERR.rate_limited, 429, 'Too Many Requests'),
+  internal: make(MAIL_ERR.internal, 500, 'Internal Server Error'),
+  unavailable: make(MAIL_ERR.unavailable, 503, 'Service Unavailable'),
+  invalidBody: make(MAIL_ERR.invalid_body, 400, 'Bad Request'),
+  fromRequired: make(MAIL_ERR.from_required, 400, 'Bad Request'),
+  sendFailed: make(MAIL_ERR.send_failed, 502, 'Bad Gateway'),
 } as const

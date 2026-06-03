@@ -78,7 +78,7 @@ schedule in Section 8.
 - The Endue and Endue Citizenry trademarks (see `TRADEMARKS.md`).
 - The right to operate and administer the Endue Citizenry Conformance
   Program (see Section 5).
-- The right to operate official infrastructure (citizenry.dev,
+- The right to operate official infrastructure (citizenry.id,
   registries, conformance services).
 
 These rights are independent of the governance of code and specification
@@ -127,8 +127,8 @@ RFC and may be merged by Spec Editors directly.
 
 ### 4.2 RFC lifecycle
 
-1. **Draft** - Author opens a PR adding `rfcs/NNNN-short-title.md`
-   based on the RFC template. Discussion happens in the PR.
+1. **Draft** - Author opens a PR adding `docs/reference/rfcs/NNNN-short-title.md`
+   based on the RFC template (`templates/rfc.md`). Discussion happens in the PR.
 2. **Final Comment Period (FCP)** - When a Spec Editor judges that
    discussion has converged, they propose FCP. The RFC enters a
    minimum 10-day FCP, announced in the project's official channels.
@@ -181,7 +181,7 @@ Citizenry compatibility behave consistently for users.
   a specified specification version, and (b) entering a conformance
   mark agreement with Endue.
 - Certified implementations may use the "Endue Citizenry Certified" mark
-  and appear in the official directory at `citizenry.dev/certified`.
+  and appear in the official directory at `citizenry.id/certified`.
 
 ### 5.3 Fees
 
@@ -189,7 +189,7 @@ Citizenry compatibility behave consistently for users.
   runnable.
 - Endue may charge a nominal certification administration fee to cover
   program costs. The fee schedule is published at
-  `citizenry.dev/conformance` and is designed to be accessible (with
+  `citizenry.id/conformance` and is designed to be accessible (with
   reduced or waived fees for individuals, students, and small
   open source projects).
 

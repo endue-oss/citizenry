@@ -147,6 +147,9 @@ importers:
       '@citizenry/mail':
         specifier: workspace:*
         version: link:../../packages/mail
+      '@citizenry/spec':
+        specifier: workspace:*
+        version: link:../../packages/spec
       aws4fetch:
         specifier: ^1.0.20
         version: 1.0.20
@@ -269,6 +272,9 @@ importers:
       '@citizenry/identity':
         specifier: workspace:*
         version: link:../identity
+      '@citizenry/spec':
+        specifier: workspace:*
+        version: link:../spec
       drizzle-orm:
         specifier: ^0.36.4
         version: 0.36.4(@cloudflare/workers-types@4.20260516.1)(@opentelemetry/api@1.9.0)(postgres@3.4.9)

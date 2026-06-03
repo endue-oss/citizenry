@@ -42,7 +42,7 @@
 
 <main class="page">
   <section class="hero">
-    <img class="logo" src="/logo.svg" alt="Citizenry — an Endue product" width="80" height="80" />
+    <img class="logo" src="/citizenry-light.svg" alt="Citizenry" width="80" height="80" />
     <div class="brand">
       <h2 class="wordmark">Citizenry</h2>
       <p class="by-endue">by <span class="endue-mark">Endue AI</span></p>

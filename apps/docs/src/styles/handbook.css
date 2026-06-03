@@ -140,7 +140,7 @@ html {
   border: 1px solid rgba(92, 234, 212, 0.18);
 }
 
-/* Logo tweaks — the endue-logo-dark mark is 512×512; cap height in
+/* Logo tweaks — the citizenry-light mark; cap height in
  * the header so it sits next to the title without dominating. */
 .site-title img {
   max-height: 28px;

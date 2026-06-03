@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import { and, desc, eq, sql } from 'drizzle-orm'
+import { IDENTITY_ERR } from '@citizenry/spec/error-codes/identity'
 import type { Db } from '../db'
 import { agent, auditLog, human } from '../db/schema'
 import {
@@ -74,7 +75,7 @@ export const adminIdentityRouter = new Hono<{ Variables: Vars }>()
         {
           title: 'Not Found',
           message: 'no human with this id',
-          code: 'ERR-P01-S01-0404',
+          code: IDENTITY_ERR.not_found,
           method: c.req.method,
           instance: c.req.path,
           request_url: c.req.url,
@@ -181,7 +182,7 @@ export const adminIdentityRouter = new Hono<{ Variables: Vars }>()
         {
           title: 'Not Found',
           message: 'no agent with this id',
-          code: 'ERR-P01-S01-0404',
+          code: IDENTITY_ERR.not_found,
           method: c.req.method,
           instance: c.req.path,
           request_url: c.req.url,

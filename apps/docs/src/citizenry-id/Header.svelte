@@ -162,7 +162,7 @@
     </button>
 
     <a href="/" class="brand">
-      <img class="logo" src="/endue-logo-dark.svg" alt="" aria-hidden="true" />
+      <img class="logo" src="/citizenry-light.svg" alt="" aria-hidden="true" />
       <span class="wordmark">
         <span class="word">Endue</span><span class="tld">&nbsp;Citizenry</span>
       </span>

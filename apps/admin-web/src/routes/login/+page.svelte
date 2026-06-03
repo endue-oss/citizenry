@@ -45,7 +45,7 @@
 
 <section class="card" aria-labelledby="auth-title">
   <div class="brand">
-    <img class="logo" src="/logo.svg" alt="" width="80" height="80" />
+    <img class="logo" src="/citizenry-light.svg" alt="" width="80" height="80" />
     <h1 id="auth-title" class="wordmark">Citizenry</h1>
     <p class="by-endue">by <span class="endue-mark">Endue AI</span></p>
     <p class="subtitle">for Admin</p>

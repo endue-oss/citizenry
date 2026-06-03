@@ -111,7 +111,7 @@
 
 <aside class="rail" aria-label="Primary navigation">
   <a class="logo" href="/" aria-label="Citizenry home">
-    <img src="/logo.svg" alt="" width="28" height="28" />
+    <img src="/citizenry-light.svg" alt="" width="28" height="28" />
   </a>
 
   <div class="divider"></div>

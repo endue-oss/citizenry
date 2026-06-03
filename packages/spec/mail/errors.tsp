@@ -27,6 +27,8 @@ enum MailErrorCode {
   // ── 0xxx Transport / HTTP ─────────────────────────────
   /** 400 — malformed request body / query (catch-all) */
   bad_request: "ERR-P01-S02-0400",
+  /** 401 — service-key missing or invalid on `/_internal/*` routes */
+  unauthorized: "ERR-P01-S02-0401",
   /** 404 — mail or mailbox not found (or owned by another account) */
   not_found: "ERR-P01-S02-0404",
   /** 429 — rate limited (reserved) */

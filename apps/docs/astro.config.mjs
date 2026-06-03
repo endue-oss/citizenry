@@ -16,7 +16,7 @@ export default defineConfig({
       lastUpdated: true,
       pagination: true,
       logo: {
-        src: './src/assets/endue-logo-dark.svg',
+        src: './src/assets/citizenry-light.svg',
         alt: 'Endue Citizenry',
         replacesTitle: false,
       },

@@ -31,7 +31,7 @@ Report vulnerabilities privately via one of the following:
   tab. This routes directly to the security response team.
 - **Email:** `team@endue.ai`
   - Optionally encrypt with the project's PGP key published at
-    `https://citizenry.dev/.well-known/security.txt`.
+    `https://citizenry.id/.well-known/security.txt`.
 
 ### What to include
 
@@ -87,7 +87,7 @@ published publicly, including:
 Advisories are published at:
 
 - The repository's GitHub Security Advisories page.
-- `https://citizenry.dev/security/advisories`
+- `https://citizenry.id/security/advisories`
 
 ---
 
@@ -133,6 +133,6 @@ of this policy, contact `team@endue.ai` first.
 ## Contact
 
 - **Vulnerability reports:** `team@endue.ai`
-- **PGP key:** `https://citizenry.dev/.well-known/security.txt`
+- **PGP key:** `https://citizenry.id/.well-known/security.txt`
 - **General security questions (non-vulnerability):**
   `team@endue.ai`

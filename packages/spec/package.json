@@ -6,15 +6,19 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./error-codes/identity": "./generated/error-codes/identity.ts",
+    "./error-codes/mail": "./generated/error-codes/mail.ts",
+    "./error-codes/vault": "./generated/error-codes/vault.ts",
     "./openapi/identity": "./generated/openapi/identity-api.yaml",
     "./openapi/mail": "./generated/openapi/mail-api.yaml",
     "./openapi/vault": "./generated/openapi/vault-api.yaml"
   },
   "scripts": {
-    "build": "pnpm run build:identity && pnpm run build:mail && pnpm run build:vault",
+    "build": "pnpm run build:identity && pnpm run build:mail && pnpm run build:vault && pnpm run build:error-codes",
     "build:identity": "tsp compile identity/main.tsp --config identity/tspconfig.yaml",
     "build:mail": "tsp compile mail/main.tsp --config mail/tspconfig.yaml",
     "build:vault": "tsp compile vault/main.tsp --config vault/tspconfig.yaml",
+    "build:error-codes": "node scripts/gen-error-codes.mjs",
     "lint:identity": "tsp compile identity/main.tsp --config identity/tspconfig.yaml --no-emit",
     "lint:mail": "tsp compile mail/main.tsp --config mail/tspconfig.yaml --no-emit",
     "lint:vault": "tsp compile vault/main.tsp --config vault/tspconfig.yaml --no-emit",

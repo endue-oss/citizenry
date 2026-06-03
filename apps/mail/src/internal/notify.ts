@@ -25,6 +25,7 @@ import {
   schema as mailSchema,
   type NotifyRequest,
 } from '@citizenry/mail'
+import { MAIL_ERR } from '@citizenry/spec/error-codes/mail'
 import type { Bindings } from '../env'
 import { configReader, type ConfigVars } from '../db'
 import { buildSender } from '../outbound'
@@ -44,7 +45,7 @@ function unauthorized(c: Context, message: string) {
     {
       title: 'Unauthorized',
       message,
-      code: 'ERR-P01-S02-0401',
+      code: MAIL_ERR.unauthorized,
       method: c.req.method,
       instance: c.req.path,
       request_url: c.req.url,
@@ -79,7 +80,7 @@ export const internalRouter = new Hono<{
         {
           title: 'Bad Request',
           message: 'request body must be valid JSON',
-          code: 'ERR-P01-S02-0400',
+          code: MAIL_ERR.bad_request,
           method: c.req.method,
           instance: c.req.path,
           request_url: c.req.url,

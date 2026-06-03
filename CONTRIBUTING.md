@@ -132,15 +132,16 @@ through the RFC process described in `GOVERNANCE.md` Section 4.
 
 ### Quick summary
 
-1. Open a PR adding `rfcs/NNNN-short-title.md` using the RFC template.
+1. Open a PR adding `docs/reference/rfcs/NNNN-short-title.md` using the
+   RFC template (`templates/rfc.md`).
 2. Discuss in the PR. Spec Editors and the community will review.
 3. When discussion converges, a Spec Editor proposes Final Comment
    Period (FCP), minimum 10 days.
 4. At end of FCP, RFC is accepted, rejected, or postponed.
 5. Accepted RFCs are tracked to implementation.
 
-The RFC template will be added to `rfcs/0000-template.md` once the
-RFC repository is initialized.
+The RFC template lives at `templates/rfc.md`, and existing RFCs are in
+`docs/reference/rfcs/`.
 
 ---
 

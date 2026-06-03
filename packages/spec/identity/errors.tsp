@@ -57,6 +57,14 @@ enum IdentityErrorCode {
   jws_lifetime_exceeded: "ERR-P01-S01-1012",
   /** Service PSK verification failed (`X-Service-Key`) */
   psk_invalid: "ERR-P01-S01-1020",
+  /** API-Key bearer (`chk_…`) invalid or unknown */
+  api_key_invalid: "ERR-P01-S01-1040",
+  /** API-Key has been revoked */
+  api_key_revoked: "ERR-P01-S01-1041",
+  /** API-Key is past its expiry */
+  api_key_expired: "ERR-P01-S01-1042",
+  /** Owner human is not in `active` status */
+  human_not_active: "ERR-P01-S01-1043",
 
   // ── 2xxx Schema / input validation ───────────────────
   /** public_key_jwk malformed (kty/crv/length, etc.) */
@@ -67,6 +75,10 @@ enum IdentityErrorCode {
   tenant_invalid: "ERR-P01-S01-2003",
   /** Submitted email's domain is outside the operator-configured allow-list (400) */
   email_domain_not_allowed: "ERR-P01-S01-2004",
+  /** Register key-binding validation failed (e.g. sig/enc JWK mismatch) */
+  binding_invalid: "ERR-P01-S01-2005",
+  /** encryption_key_jwk malformed (X25519 OKP shape, etc.) */
+  enc_jwk_invalid: "ERR-P01-S01-2006",
 
   // ── 3xxx Business rules ──────────────────────────────
   /** rotate-key signed by a key that is not active */
@@ -76,6 +88,8 @@ enum IdentityErrorCode {
   /** A row for the supplied email already exists (409) — POST /v1/humans
    *  is fresh-email-only; existing rows rotate via POST /v1/humans/rotate. */
   human_email_already_in_use: "ERR-P01-S01-3100",
+  /** Agent slug already taken */
+  slug_taken: "ERR-P01-S01-3110",
 
   // ── 4xxx External dependencies ───────────────────────
   /** Postgres query failure */

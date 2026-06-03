@@ -3,6 +3,7 @@
 // public_key_jwk or `generate_keypair=true`.
 
 import { Hono, type Context } from 'hono'
+import { IDENTITY_ERR } from '@citizenry/spec/error-codes/identity'
 import type { Db } from '../db'
 import {
   createRegisterService,
@@ -42,13 +43,13 @@ const STATUS_BY_CODE: Record<string, 400 | 401 | 403 | 409 | 422 | 500> = {
 }
 
 const ERR_CODE: Record<string, string> = {
-  jwk_invalid: 'ERR-P01-S01-2001',
-  enc_jwk_invalid: 'ERR-P01-S01-2004',
-  binding_invalid: 'ERR-P01-S01-2005',
-  jwk_or_keygen_required: 'ERR-P01-S01-0400',
-  slug_invalid: 'ERR-P01-S01-2002',
-  slug_taken: 'ERR-P01-S01-3110',
-  tenant_invalid: 'ERR-P01-S01-2003',
+  jwk_invalid: IDENTITY_ERR.jwk_invalid,
+  enc_jwk_invalid: IDENTITY_ERR.enc_jwk_invalid,
+  binding_invalid: IDENTITY_ERR.binding_invalid,
+  jwk_or_keygen_required: IDENTITY_ERR.bad_request,
+  slug_invalid: IDENTITY_ERR.slug_invalid,
+  slug_taken: IDENTITY_ERR.slug_taken,
+  tenant_invalid: IDENTITY_ERR.tenant_invalid,
 }
 
 const TITLE: Record<string, string> = {
@@ -67,7 +68,7 @@ function envelope(c: Context<Env>, err: RegisterError) {
       title: TITLE[err.code] ?? 'Internal Server Error',
       message: err.message,
       detail: err.detail,
-      code: ERR_CODE[err.code] ?? 'ERR-P01-S01-0500',
+      code: ERR_CODE[err.code] ?? IDENTITY_ERR.internal,
       method: c.req.method,
       instance: c.req.path,
       request_url: c.req.url,
@@ -83,7 +84,7 @@ export const registerRouter = new Hono<Env>().post('/v1/agent/register', async (
       {
         title: 'Unauthorized',
         message: 'api-key required',
-        code: 'ERR-P01-S01-1040',
+        code: IDENTITY_ERR.api_key_invalid,
         method: c.req.method,
         instance: c.req.path,
         request_url: c.req.url,
@@ -110,7 +111,7 @@ export const registerRouter = new Hono<Env>().post('/v1/agent/register', async (
       {
         title: 'Bad Request',
         message: 'request body must be valid JSON',
-        code: 'ERR-P01-S01-0400',
+        code: IDENTITY_ERR.bad_request,
         method: c.req.method,
         instance: c.req.path,
         request_url: c.req.url,
@@ -124,7 +125,7 @@ export const registerRouter = new Hono<Env>().post('/v1/agent/register', async (
       {
         title: 'Bad Request',
         message: 'slug is required',
-        code: 'ERR-P01-S01-0400',
+        code: IDENTITY_ERR.bad_request,
         method: c.req.method,
         instance: c.req.path,
         request_url: c.req.url,

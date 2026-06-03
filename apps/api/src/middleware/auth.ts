@@ -7,6 +7,7 @@ import {
 import { drizzle } from 'drizzle-orm/d1'
 import { schema } from '@citizenry/identity/schema'
 import { ApiKeyError, createApiKeyService } from '@citizenry/identity'
+import { IDENTITY_ERR } from '@citizenry/spec/error-codes/identity'
 import type { Bindings } from '../env'
 import { hexToBytes, newApiKeyToken, newHumanApiKeyId } from '../ids'
 
@@ -83,7 +84,7 @@ export const auth: MiddlewareHandler<{
 
   const bearer = extractBearer(c)
   if (!bearer) {
-    return unauthorized(c, new AuthError('ERR-P01-S01-0401', 'Authorization Bearer missing'))
+    return unauthorized(c, new AuthError(IDENTITY_ERR.unauthorized, 'Authorization Bearer missing'))
   }
 
   // ── Agent JWT verification (GET /me + /vault/*) ────────────────
@@ -115,7 +116,7 @@ export const serviceKeyAuth: MiddlewareHandler<{
   if (!expected || !safeEqual(provided, expected)) {
     return unauthorized(
       c,
-      new AuthError('ERR-P01-S01-0401', 'admin service key invalid or missing'),
+      new AuthError(IDENTITY_ERR.unauthorized, 'admin service key invalid or missing'),
     )
   }
   await next()
@@ -129,10 +130,10 @@ function safeEqual(a: string, b: string): boolean {
 }
 
 const API_KEY_ERROR_CODE: Record<string, string> = {
-  api_key_invalid: 'ERR-P01-S01-1040',
-  api_key_revoked: 'ERR-P01-S01-1041',
-  api_key_expired: 'ERR-P01-S01-1042',
-  human_not_active: 'ERR-P01-S01-1043',
+  api_key_invalid: IDENTITY_ERR.api_key_invalid,
+  api_key_revoked: IDENTITY_ERR.api_key_revoked,
+  api_key_expired: IDENTITY_ERR.api_key_expired,
+  human_not_active: IDENTITY_ERR.human_not_active,
 }
 
 const apiKeyUnauthorized = (c: Ctx, err: ApiKeyError) =>
@@ -141,7 +142,7 @@ const apiKeyUnauthorized = (c: Ctx, err: ApiKeyError) =>
       title: 'Unauthorized',
       message: err.message,
       detail: err.detail,
-      code: API_KEY_ERROR_CODE[err.code] ?? 'ERR-P01-S01-0401',
+      code: API_KEY_ERROR_CODE[err.code] ?? IDENTITY_ERR.unauthorized,
       method: c.req.method,
       instance: c.req.path,
       request_url: c.req.url,

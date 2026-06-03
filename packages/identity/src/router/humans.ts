@@ -15,6 +15,7 @@
 
 import { Hono, type Context } from 'hono'
 import type { ConfigReader } from '@citizenry/config'
+import { IDENTITY_ERR } from '@citizenry/spec/error-codes/identity'
 import type { Db } from '../db'
 import {
   createHumanService,
@@ -55,10 +56,10 @@ const STATUS_BY_CODE: Record<string, 400 | 401 | 409 | 422 | 500> = {
 }
 
 const ERR_CODE_BY_CODE: Record<string, string> = {
-  email_invalid: 'ERR-P01-S01-0400',
-  email_domain_not_allowed: 'ERR-P01-S01-2004',
-  email_already_in_use: 'ERR-P01-S01-3100',
-  invalid_credentials: 'ERR-P01-S01-1100',
+  email_invalid: IDENTITY_ERR.bad_request,
+  email_domain_not_allowed: IDENTITY_ERR.email_domain_not_allowed,
+  email_already_in_use: IDENTITY_ERR.human_email_already_in_use,
+  invalid_credentials: IDENTITY_ERR.human_verification_code_invalid,
 }
 
 const TITLE_BY_CODE: Record<string, string> = {
@@ -74,7 +75,7 @@ function envelope(c: Context<Env>, err: HumanError) {
       title: TITLE_BY_CODE[err.code] ?? 'Internal Server Error',
       message: err.message,
       detail: err.detail,
-      code: ERR_CODE_BY_CODE[err.code] ?? 'ERR-P01-S01-0500',
+      code: ERR_CODE_BY_CODE[err.code] ?? IDENTITY_ERR.internal,
       method: c.req.method,
       instance: c.req.path,
       request_url: c.req.url,
@@ -138,7 +139,7 @@ async function enforceRateLimit(
         {
           title: 'Too Many Requests',
           message: `rate limit exceeded (${bucket.kind} / ${decision.reason})`,
-          code: 'ERR-P01-S01-0429',
+          code: IDENTITY_ERR.rate_limited,
           method: c.req.method,
           instance: c.req.path,
           request_url: c.req.url,
@@ -281,7 +282,7 @@ export const humansRouter = new Hono<Env>()
           {
             title: 'Internal Server Error',
             message: `verify succeeded but api-key issue failed: ${err.message}`,
-            code: 'ERR-P01-S01-0500',
+            code: IDENTITY_ERR.internal,
             method: c.req.method,
             instance: c.req.path,
             request_url: c.req.url,

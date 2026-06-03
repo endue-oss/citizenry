@@ -3,6 +3,7 @@
 
 import { eq, inArray, and } from 'drizzle-orm'
 import type { DrizzleD1Database } from 'drizzle-orm/d1'
+import { IDENTITY_ERR, type IdentityErrorCodeValue } from '@citizenry/spec/error-codes/identity'
 import { agent as agentTable, agentKey as agentKeyTable } from './db/schema'
 import type { Schema } from './db/schema'
 
@@ -23,12 +24,12 @@ export interface TokenPayload {
   jti?: string
 }
 
-export type AuthErrorCode =
-  | 'ERR-P01-S01-1001' // jwt_alg_mismatch
-  | 'ERR-P01-S01-1002' // jwt_aud_mismatch
-  | 'ERR-P01-S01-1003' // jwt_expired
-  | 'ERR-P01-S01-1004' // jwt_kid_unknown
-  | 'ERR-P01-S01-0401' // unauthorized (generic)
+/**
+ * The subset of identity error codes that the auth verifier can emit.
+ * Pulled from the generated `IDENTITY_ERR` catalog so the .tsp source of
+ * truth (`packages/spec/identity/errors.tsp`) drives this surface too.
+ */
+export type AuthErrorCode = IdentityErrorCodeValue
 
 export class AuthError extends Error {
   constructor(
@@ -49,7 +50,7 @@ export interface TokenVerifier {
  */
 export const createNoopVerifier = (): TokenVerifier => ({
   verifyJwt: async () => {
-    throw new AuthError('ERR-P01-S01-0401', 'TokenVerifier not configured')
+    throw new AuthError(IDENTITY_ERR.unauthorized, 'TokenVerifier not configured')
   },
 })
 
@@ -89,7 +90,7 @@ export const verifyAgentJwt = async (
 ): Promise<TokenPayload> => {
   const parts = token.split('.')
   if (parts.length !== 3) {
-    throw new AuthError('ERR-P01-S01-0401', 'malformed compact JWS')
+    throw new AuthError(IDENTITY_ERR.unauthorized, 'malformed compact JWS')
   }
   const h64 = parts[0]!
   const p64 = parts[1]!
@@ -101,14 +102,14 @@ export const verifyAgentJwt = async (
     header = JSON.parse(base64urlToString(h64))
     payload = JSON.parse(base64urlToString(p64))
   } catch {
-    throw new AuthError('ERR-P01-S01-0401', 'JWT header/payload not valid JSON')
+    throw new AuthError(IDENTITY_ERR.unauthorized, 'JWT header/payload not valid JSON')
   }
 
   if (header.alg !== 'EdDSA') {
-    throw new AuthError('ERR-P01-S01-1001', `unexpected alg: ${header.alg}`)
+    throw new AuthError(IDENTITY_ERR.jwt_alg_mismatch, `unexpected alg: ${header.alg}`)
   }
   if (!header.kid) {
-    throw new AuthError('ERR-P01-S01-1004', 'header.kid missing')
+    throw new AuthError(IDENTITY_ERR.jwt_kid_unknown, 'header.kid missing')
   }
 
   // kid → agent_key lookup. Scoped to use='sig' so a JWT can never be
@@ -126,28 +127,28 @@ export const verifyAgentJwt = async (
     .limit(1)
   const key = keyRows[0]
   if (!key) {
-    throw new AuthError('ERR-P01-S01-1004', 'kid unknown or revoked')
+    throw new AuthError(IDENTITY_ERR.jwt_kid_unknown, 'kid unknown or revoked')
   }
 
   // self-signed claim sanity
   if (!payload.sub || !payload.iss || payload.iss !== payload.sub) {
-    throw new AuthError('ERR-P01-S01-0401', 'iss must equal sub (self-signed)')
+    throw new AuthError(IDENTITY_ERR.unauthorized, 'iss must equal sub (self-signed)')
   }
   if (payload.sub !== key.agentId) {
-    throw new AuthError('ERR-P01-S01-0401', 'sub does not match key.agent_id')
+    throw new AuthError(IDENTITY_ERR.unauthorized, 'sub does not match key.agent_id')
   }
 
   // aud
   const auds = Array.isArray(payload.aud) ? payload.aud : payload.aud ? [payload.aud] : []
   const audOk = auds.some((a) => opts.audience.includes(a))
   if (!audOk) {
-    throw new AuthError('ERR-P01-S01-1002', 'aud does not match allowed audiences')
+    throw new AuthError(IDENTITY_ERR.jwt_aud_mismatch, 'aud does not match allowed audiences')
   }
 
   // exp
   const now = Math.floor(Date.now() / 1000)
   if (!payload.exp || payload.exp <= now) {
-    throw new AuthError('ERR-P01-S01-1003', 'JWT expired')
+    throw new AuthError(IDENTITY_ERR.jwt_expired, 'JWT expired')
   }
 
   // Ed25519 verify
@@ -162,7 +163,7 @@ export const verifyAgentJwt = async (
   )
   const ok = await crypto.subtle.verify('Ed25519', publicKey, signature, signingInput)
   if (!ok) {
-    throw new AuthError('ERR-P01-S01-0401', 'signature verification failed')
+    throw new AuthError(IDENTITY_ERR.unauthorized, 'signature verification failed')
   }
 
   // confirm agent is not revoked
@@ -173,7 +174,7 @@ export const verifyAgentJwt = async (
     .limit(1)
   const agentRow = agentRows[0]
   if (!agentRow || agentRow.status !== 'active') {
-    throw new AuthError('ERR-P01-S01-0401', 'agent not active')
+    throw new AuthError(IDENTITY_ERR.unauthorized, 'agent not active')
   }
 
   return payload

@@ -3,7 +3,7 @@ import type { Schema, EntryRow } from '../db/schema'
 import { createEntryRepo, type EntryRepo } from '../repo/entry'
 import { newEntryId } from '../ids'
 
-export type VaultErrorCode = 'invalid_body' | 'not_found' | 'forbidden'
+export type VaultErrorCode = 'invalid_body' | 'not_found' | 'forbidden' | 'payload_too_large'
 
 export class VaultError extends Error {
   constructor(
@@ -14,6 +14,11 @@ export class VaultError extends Error {
     this.name = 'VaultError'
   }
 }
+
+/** Maximum byte length of the `data` JWE blob — mirrors the spec cap. */
+export const VAULT_DATA_MAX_BYTES = 65536
+export const VAULT_PAGE_LIMIT_DEFAULT = 25
+export const VAULT_PAGE_LIMIT_MAX = 100
 
 /** API-shaped entry. `data` is the stored RFC 7516 JWE, verbatim. */
 export type EntryView = {
@@ -26,6 +31,15 @@ export type EntryView = {
 export type CreateInput = {
   ownerId: string
   data: string
+}
+
+export type PageInput = { page: number; limit: number }
+
+export type PagedResult<T> = {
+  items: T[]
+  total: number
+  page: number
+  limit: number
 }
 
 const entryView = (e: EntryRow): EntryView => ({
@@ -45,10 +59,14 @@ export const createVaultService = (deps: {
   const mintId = deps.mintEntryId ?? newEntryId
 
   return {
-    /** Entries owned by the caller, newest first. */
-    list: async (ownerId: string): Promise<EntryView[]> => {
-      const rows = await entries.listByOwner(ownerId)
-      return rows.map(entryView)
+    /** Entries owned by the caller, newest first. Paginated. */
+    list: async (ownerId: string, page: PageInput): Promise<PagedResult<EntryView>> => {
+      const offset = (page.page - 1) * page.limit
+      const [rows, total] = await Promise.all([
+        entries.listByOwnerPage(ownerId, { limit: page.limit, offset }),
+        entries.countByOwner(ownerId),
+      ])
+      return { items: rows.map(entryView), total, page: page.page, limit: page.limit }
     },
 
     /**
@@ -79,12 +97,32 @@ export const createVaultService = (deps: {
       )
     },
 
+    /**
+     * Owner-scoped delete. Throws `not_found` when missing or owned by
+     * someone else — same 404-only contract as `get` (no existence
+     * oracle to a non-owner).
+     */
+    delete: async (ownerId: string, id: string): Promise<void> => {
+      const row = await entries.findById(id)
+      if (!row || row.ownerId !== ownerId) {
+        throw new VaultError('not_found', 'entry not found')
+      }
+      await entries.delete(id)
+    },
+
     // ── admin (X-Service-Key) ──────────────────────────────────
-    adminList: async (ownerId?: string): Promise<EntryView[]> => {
-      const rows = ownerId
-        ? await entries.listByOwner(ownerId)
-        : await entries.listAll()
-      return rows.map(entryView)
+    adminList: async (
+      page: PageInput,
+      ownerId?: string,
+    ): Promise<PagedResult<EntryView>> => {
+      const offset = (page.page - 1) * page.limit
+      const [rows, total] = await Promise.all([
+        ownerId
+          ? entries.listByOwnerPage(ownerId, { limit: page.limit, offset })
+          : entries.listAllPage({ limit: page.limit, offset }),
+        ownerId ? entries.countByOwner(ownerId) : entries.countAll(),
+      ])
+      return { items: rows.map(entryView), total, page: page.page, limit: page.limit }
     },
 
     /** Idempotent operator delete. */

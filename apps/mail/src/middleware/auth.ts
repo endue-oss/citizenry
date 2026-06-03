@@ -5,6 +5,7 @@ import type { MiddlewareHandler } from 'hono'
 import { drizzle } from 'drizzle-orm/d1'
 import { schema as identitySchema } from '@citizenry/identity/schema'
 import { AuthError, verifyAgentJwt, type TokenPayload } from '@citizenry/identity/auth'
+import { IDENTITY_ERR } from '@citizenry/spec/error-codes/identity'
 import type { Bindings } from '../env'
 
 export type AuthVars = {
@@ -49,7 +50,7 @@ export const bearerAuth: MiddlewareHandler<{
 
   const token = extractBearer(c)
   if (!token) {
-    return unauthorized(c, new AuthError('ERR-P01-S01-0401', 'Authorization Bearer missing'))
+    return unauthorized(c, new AuthError(IDENTITY_ERR.unauthorized, 'Authorization Bearer missing'))
   }
 
   const db = drizzle(c.env.DB_IDENTITY, { schema: identitySchema })

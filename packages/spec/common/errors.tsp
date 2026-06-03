@@ -103,6 +103,16 @@ model GoneError extends BaseError {
 }
 
 /**
+ * 413 Payload Too Large — request body exceeds the endpoint's size cap
+ * (e.g. a Vault entry blob over the configured maximum).
+ * @status confirmed
+ */
+@error
+model PayloadTooLargeError extends BaseError {
+  @statusCode statusCode: 413;
+}
+
+/**
  * 422 Unprocessable Entity — schema passed but domain rule violated.
  * @status confirmed
  */
@@ -159,6 +169,7 @@ alias RestfulApiErrorResponse =
   | NotFoundError
   | ConflictError
   | GoneError
+  | PayloadTooLargeError
   | UnprocessableError
   | RateLimitedError
   | InternalError

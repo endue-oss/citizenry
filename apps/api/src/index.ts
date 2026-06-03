@@ -38,6 +38,33 @@ import {
 const app = new Hono<{ Bindings: Bindings }>()
 
 app.use('*', cors)
+
+// Federation is not enabled on this instance yet. The peer-discovery and
+// inbound-handshake surfaces (and the admin peer routes) require an instance
+// federation signing key, whose issuance is not built yet — the same key set
+// that backs /.well-known/jwks.json. Until that lands the FederationService is
+// never injected, so these routes would otherwise fault. Respond with an honest
+// 501 instead. Remove this guard and inject the service (see
+// packages/identity/src/router/federation.ts) once federation keys ship.
+app.use('*', async (c, next) => {
+  const path = c.req.path
+  const isFederation =
+    path === '/.well-known/citizenry-peer' ||
+    path === '/federation/handshake' ||
+    path.includes('/v1/admin/federation')
+  if (isFederation) {
+    return c.json(
+      {
+        title: 'Federation not enabled',
+        status: 501,
+        message: 'Federation is not enabled on this instance yet.',
+      },
+      501,
+    )
+  }
+  await next()
+})
+
 app.use('*', auth)
 app.onError(errorHandler)
 

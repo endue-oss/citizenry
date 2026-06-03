@@ -87,6 +87,13 @@ scalar instanceId extends string;
 scalar kid extends string;
 
 /**
+ * Vault entry ID — `ven_` + 26-character ULID.
+ * @status draft
+ */
+@pattern("^ven_[0-9A-HJKMNP-TV-Z]{26}$")
+scalar vaultEntryId extends string;
+
+/**
  * Owner ID (e.g. a user or another agent). External IdP identifiers may
  * appear, so the format is not enforced — only constrained to a string
  * up to 64 characters.

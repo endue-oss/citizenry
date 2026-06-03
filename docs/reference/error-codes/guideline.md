@@ -75,7 +75,7 @@ given class is restricted to a fixed set of HTTP status codes - enforced by CI.
 
 | Class | Meaning | Allowed HTTP status |
 |---|---|---|
-| `0xxx` | transport | `400`, `415`, `503` |
+| `0xxx` | transport | `400`, `413`, `415`, `503` |
 | `1xxx` | auth | `401`, `403` |
 | `2xxx` | schema (request shape) | `400`, `422` |
 | `3xxx` | business rule / lookup miss | `404`, `409`, `410`, `422` |

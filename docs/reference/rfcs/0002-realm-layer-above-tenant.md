@@ -163,8 +163,8 @@ follow-up migration so legacy rows can be backfilled in one go.
 
 | code | meaning |
 |---|---|
-| `ERR-P01-S01-3120` | Realm boundary violation (actor's realm ≠ target realm). 403. |
-| `ERR-P01-S01-3121` | Realm not found for the requested operation. 404. |
+| `ERR-P01-IDT-3120` | Realm boundary violation (actor's realm ≠ target realm). 403. |
+| `ERR-P01-IDT-3121` | Realm not found for the requested operation. 404. |
 
 ### Migration
 

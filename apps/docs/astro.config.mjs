@@ -5,8 +5,14 @@ import sitemap from '@astrojs/sitemap'
 import svelte from '@astrojs/svelte'
 
 // SSG-only. Pure static output → Cloudflare Pages deploy unchanged.
+// `site` is the canonical origin used for the sitemap and absolute/canonical
+// URLs. The production instance serves this handbook from the apex
+// citizenry.id (bound as a Pages custom domain — see
+// docs/deploy-citizenry-id.md). Forks that stay on *.pages.dev can override
+// this, but a mismatched `site` only affects sitemap/canonical metadata, not
+// routing.
 export default defineConfig({
-  site: 'https://citizenry-docs.pages.dev',
+  site: 'https://citizenry.id',
   output: 'static',
   trailingSlash: 'always',
   integrations: [
@@ -54,6 +60,7 @@ export default defineConfig({
       sidebar: [
         { label: 'Welcome', link: '/' },
         { label: 'Deploy', link: '/handbook/deploy/' },
+        { label: 'Deploy citizenry.id', link: '/handbook/deploy-citizenry-id/' },
         {
           label: 'ADRs',
           collapsed: false,

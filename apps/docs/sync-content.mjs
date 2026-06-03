@@ -75,13 +75,21 @@ await mkdir(destHandbook, { recursive: true })
 const mdFiles = await walkMarkdown(srcDocs)
 for (const path of mdFiles) {
   const rel = relative(srcDocs, path)
-  const dest = resolve(destHandbook, rel)
+  // The repo groups ADRs / RFCs / error-codes under docs/reference/, but the
+  // handbook URLs — and the Starlight sidebar `autogenerate` directories and
+  // index.mdx links — are flat: /handbook/adr, /handbook/rfcs,
+  // /handbook/error-codes. Strip the leading `reference/` segment so the
+  // synced layout matches the sidebar config and in-page links. Without this
+  // the three reference sections render empty (the regression from grouping
+  // the sources under reference/).
+  const handbookRel = rel.replace(/^reference[\\/]/, '')
+  const dest = resolve(destHandbook, handbookRel)
   await mkdir(dirname(dest), { recursive: true })
   const raw = await readFile(path, 'utf8')
-  const fallback = rel.replace(/\.md$/, '').replace(/\//g, ' / ')
+  const fallback = handbookRel.replace(/\.md$/, '').replace(/\//g, ' / ')
   const fixed = ensureFrontmatter(raw, fallback)
   await writeFile(dest, fixed)
-  console.log(`md     ${rel}`)
+  console.log(`md     ${handbookRel}`)
 }
 
 // ── OpenAPI YAML sync ─────────────────────────────────────────────────

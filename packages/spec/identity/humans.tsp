@@ -173,7 +173,7 @@ interface Humans {
    *
    * All failure modes (no such email / no pending verification / wrong
    * code / expired window) collapse into a single 401 with code
-   * `ERR-P01-S01-1100` to prevent enumeration.
+   * `ERR-P01-IDT-1100` to prevent enumeration.
    *
    * Possible errors: 401, 429, 500.
    */

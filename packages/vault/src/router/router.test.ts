@@ -105,7 +105,7 @@ describe('vault router — agent surface', () => {
       expect(repo.rows.size).toBe(1)
     })
 
-    it('401 ERR-P01-S03-0401 when no agent JWT', async () => {
+    it('401 ERR-P01-VLT-0401 when no agent JWT', async () => {
       const res = await agentApp({ sub: null, service: buildSvc(fakeRepo()) }).request(
         '/vault/entries',
         {
@@ -116,21 +116,21 @@ describe('vault router — agent surface', () => {
       )
       expect(res.status).toBe(401)
       const body = (await res.json()) as { code: string; title: string }
-      expect(body.code).toBe('ERR-P01-S03-0401')
+      expect(body.code).toBe('ERR-P01-VLT-0401')
       expect(body.title).toBe('Unauthorized')
     })
 
-    it('400 ERR-P01-S03-0400 on non-JSON body', async () => {
+    it('400 ERR-P01-VLT-0400 on non-JSON body', async () => {
       const res = await agentApp({ sub: 'ag_a', service: buildSvc(fakeRepo()) }).request(
         '/vault/entries',
         { method: 'POST', body: 'not json', headers: { 'content-type': 'application/json' } },
       )
       expect(res.status).toBe(400)
       const body = (await res.json()) as { code: string }
-      expect(body.code).toBe('ERR-P01-S03-0400')
+      expect(body.code).toBe('ERR-P01-VLT-0400')
     })
 
-    it('400 ERR-P01-S03-2001 when data is missing or empty', async () => {
+    it('400 ERR-P01-VLT-2001 when data is missing or empty', async () => {
       const app = agentApp({ sub: 'ag_a', service: buildSvc(fakeRepo()) })
       const empty = await app.request('/vault/entries', {
         method: 'POST',
@@ -138,7 +138,7 @@ describe('vault router — agent surface', () => {
         headers: { 'content-type': 'application/json' },
       })
       expect(empty.status).toBe(400)
-      expect(((await empty.json()) as { code: string }).code).toBe('ERR-P01-S03-2001')
+      expect(((await empty.json()) as { code: string }).code).toBe('ERR-P01-VLT-2001')
 
       const missing = await app.request('/vault/entries', {
         method: 'POST',
@@ -146,10 +146,10 @@ describe('vault router — agent surface', () => {
         headers: { 'content-type': 'application/json' },
       })
       expect(missing.status).toBe(400)
-      expect(((await missing.json()) as { code: string }).code).toBe('ERR-P01-S03-2001')
+      expect(((await missing.json()) as { code: string }).code).toBe('ERR-P01-VLT-2001')
     })
 
-    it('413 ERR-P01-S03-0413 when data exceeds the byte cap', async () => {
+    it('413 ERR-P01-VLT-0413 when data exceeds the byte cap', async () => {
       const oversize = 'x'.repeat(VAULT_DATA_MAX_BYTES + 1)
       const res = await agentApp({ sub: 'ag_a', service: buildSvc(fakeRepo()) }).request(
         '/vault/entries',
@@ -161,7 +161,7 @@ describe('vault router — agent surface', () => {
       )
       expect(res.status).toBe(413)
       const body = (await res.json()) as { code: string; title: string }
-      expect(body.code).toBe('ERR-P01-S03-0413')
+      expect(body.code).toBe('ERR-P01-VLT-0413')
       expect(body.title).toBe('Payload Too Large')
     })
 
@@ -232,7 +232,7 @@ describe('vault router — agent surface', () => {
       expect(body.id).toBe(created.id)
     })
 
-    it('404 ERR-P01-S03-0404 for cross-owner reads (no existence oracle)', async () => {
+    it('404 ERR-P01-VLT-0404 for cross-owner reads (no existence oracle)', async () => {
       const repo = fakeRepo()
       const s = buildSvc(repo)
       const created = await s.create({ ownerId: 'ag_a', data: jweFixture })
@@ -240,7 +240,7 @@ describe('vault router — agent surface', () => {
         `/vault/entries/${created.id}`,
       )
       expect(res.status).toBe(404)
-      expect(((await res.json()) as { code: string }).code).toBe('ERR-P01-S03-0404')
+      expect(((await res.json()) as { code: string }).code).toBe('ERR-P01-VLT-0404')
     })
 
     it('404 for unknown id', async () => {
@@ -273,7 +273,7 @@ describe('vault router — agent surface', () => {
         { method: 'DELETE' },
       )
       expect(res.status).toBe(404)
-      expect(((await res.json()) as { code: string }).code).toBe('ERR-P01-S03-0404')
+      expect(((await res.json()) as { code: string }).code).toBe('ERR-P01-VLT-0404')
       expect(repo.rows.size).toBe(1)
     })
 

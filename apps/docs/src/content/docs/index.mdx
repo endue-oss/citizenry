@@ -3,30 +3,56 @@ title: Citizenry
 description: The Endue Citizenry handbook - architecture decisions, RFCs, error codes, and a live API reference.
 template: splash
 hero:
-  tagline: Identity, vault, and mail for agents - running on Cloudflare.
+  tagline: Verifiable identity, an end-to-end encrypted vault, and mail - for agents, on Cloudflare.
   actions:
     - text: Deploy your own
       link: /handbook/deploy/
       icon: right-arrow
       variant: primary
-    - text: Read the RFCs
-      link: /handbook/rfcs/readme/
+    - text: API reference
+      link: /api/identity/
       icon: external
 ---
 
 import { Card, CardGrid } from '@astrojs/starlight/components'
 
+Citizenry is the open-source identity, vault, and mail substrate for
+agents. Every agent gets a `did:web` identity backed by its own JWKS, a
+vault that stores only ciphertext the server cannot read, and a mailbox -
+all on Cloudflare Workers and D1.
+
 <CardGrid>
-  <Card title="Architecture Decisions" icon="puzzle">
-    [Browse the ADRs](/handbook/adr/2026-0001/) - why the codebase is shaped the way it is.
+  <Card title="Agent identity" icon="approve-check-circle">
+    Each agent carries dual keys - an Ed25519 signing key and an X25519
+    encryption key - published as a `did:web` document and JWKS. See
+    [ADR-2026-0003](/handbook/adr/2026-0003/) (per-agent JWKS) and
+    [ADR-2026-0006](/handbook/adr/2026-0006/) (dual keys + E2E vault).
   </Card>
-  <Card title="RFCs" icon="document">
-    [Read accepted and draft RFCs](/handbook/rfcs/readme/) - protocol changes, federation, realms.
+  <Card title="End-to-end vault" icon="information">
+    Entries are RFC 7516 JWE, encrypted client-side to the agent's
+    encryption key. The server stores the blob verbatim and never holds a
+    data key. Live spec: [Vault API](/api/vault/).
   </Card>
   <Card title="Error codes" icon="warning">
-    [Public catalog](/handbook/error-codes/guideline/) - every `ERR-P##-XXX-NNNN` returned by the API.
+    A [public catalog](/handbook/error-codes/guideline/) documenting every
+    `ERR-P01-XXX-NNNN` the API returns - one page per code, resolvable from
+    the RFC 9457 `type` URI.
   </Card>
-  <Card title="API Reference" icon="rocket">
-    Live OpenAPI for [Identity](/api/identity/), [Vault](/api/vault/), and [Mail](/api/mail/).
+  <Card title="API reference" icon="rocket">
+    Live OpenAPI for [Identity](/api/identity/), [Vault](/api/vault/), and
+    [Mail](/api/mail/).
+  </Card>
+</CardGrid>
+
+## Architecture & process
+
+<CardGrid>
+  <Card title="Architecture Decisions" icon="puzzle">
+    [Browse the ADRs](/handbook/adr/2026-0001/) - why the codebase is
+    shaped the way it is.
+  </Card>
+  <Card title="RFCs" icon="document">
+    [Accepted and draft RFCs](/handbook/rfcs/readme/) - protocol changes,
+    federation, realms.
   </Card>
 </CardGrid>

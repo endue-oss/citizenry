@@ -359,5 +359,7 @@ jobs:
               echo "| ${P}-mail     | Worker | \`${P}-mail.${SUBDOMAIN}.workers.dev\` |"
               echo "| ${P}-admin-web | Pages  | \`${P}-admin-web.pages.dev\` |"
               echo "| ${P}-docs      | Pages  | \`${P}-docs.pages.dev\` |"
+              echo
+              echo "Default endpoints shown. To serve from your own domain — the canonical instance binds the apex \`citizenry.id\` to \`${P}-docs\` with \`api.\`/\`mail.\` subdomains on the Workers — see \`docs/deploy-citizenry-id.md\` (handbook → Deploy citizenry.id)."
             fi
           } >> "$GITHUB_STEP_SUMMARY"

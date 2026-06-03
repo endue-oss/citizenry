@@ -9,15 +9,15 @@ namespace Citizenry.Common;
 /**
  * Standard RESTful API error response base.
  *
- * Error code format: `ERR-{P##}-{S##}-{NNNN}`
+ * Error code format: `ERR-{P##}-{XXX}-{NNNN}` (see the error-code guideline).
  * - `P##` product code
- *   - **P01** = citizenry-id, P02 = endue-ai, P03 = endue-space
- * - `S##` service code within the product
- *   - For citizenry-id: **S01** = identity, S02 = mail, S03 = vault, S04 = wallet, S05 = tenant
+ *   - **P01** = citizenry-id, P02 = endue-salon, P03 = (reserved)
+ * - `XXX` service slug within the product (3–4 uppercase letters, self-describing)
+ *   - For citizenry-id: **IDT** = identity, VLT = vault, MAIL = mail, WLT = wallet, TNT = tenant, FED = federation
  * - `NNNN` 4-digit serial (unique within the service).
  *   - 0xxx=transport, 1xxx=auth, 2xxx=schema, 3xxx=business, 4xxx=external dep, 5xxx=invariant, 7xxx=domain, 9xxx=fallback
  *
- * Example: `ERR-P01-S01-0401` = citizenry-id (P01) identity (S01) 401 auth failure.
+ * Example: `ERR-P01-IDT-0401` = citizenry-id (P01) identity (IDT) 401 auth failure.
  *
  * @status confirmed
  */
@@ -32,7 +32,7 @@ model BaseError {
   /** Extra detail (e.g. `{ "field": "slug", "reason": "duplicate" }`) */
   detail?: Record<unknown>;
 
-  /** Error code — `ERR-{P##}-{S##}-{NNNN}` */
+  /** Error code — `ERR-{P##}-{XXX}-{NNNN}` */
   code: string;
 
   /** HTTP method (e.g. "POST") */

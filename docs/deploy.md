@@ -22,13 +22,13 @@ card needed. No external database, no servers to rent.
 ## Table of contents
 
 1. [Before you begin](#before-you-begin)
-2. [Step 1 - Fork the repository](#step-1--fork-the-repository)
-3. [Step 2 - Create a Cloudflare API token](#step-2--create-a-cloudflare-api-token)
-4. [Step 3 - Find your Cloudflare Account ID](#step-3--find-your-cloudflare-account-id)
-5. [Step 4 - Add the two required secrets to your fork](#step-4--add-the-two-required-secrets-to-your-fork)
-6. [Step 5 - Run the deploy workflow](#step-5--run-the-deploy-workflow)
-7. [Step 6 - Retrieve the admin password](#step-6--retrieve-the-admin-password)
-8. [Step 7 - Sign in to the admin console](#step-7--sign-in-to-the-admin-console)
+2. [Step 1 - Fork the repository](#step-1---fork-the-repository)
+3. [Step 2 - Create a Cloudflare API token](#step-2---create-a-cloudflare-api-token)
+4. [Step 3 - Find your Cloudflare Account ID](#step-3---find-your-cloudflare-account-id)
+5. [Step 4 - Add the two required secrets to your fork](#step-4---add-the-two-required-secrets-to-your-fork)
+6. [Step 5 - Run the deploy workflow](#step-5---run-the-deploy-workflow)
+7. [Step 6 - Retrieve the admin password](#step-6---retrieve-the-admin-password)
+8. [Step 7 - Sign in to the admin console](#step-7---sign-in-to-the-admin-console)
 9. [Day-to-day operations](#day-to-day-operations)
 10. [Optional: enable outbound and inbound mail](#optional-enable-outbound-and-inbound-mail)
 11. [Optional: use your own domain names](#optional-use-your-own-domain-names)
@@ -121,7 +121,7 @@ billing settings.
 9. **Copy the token now.** Cloudflare will not show it again.
 
 > **What if I lose the token?** No catastrophe - just create a new
-> one and update the GitHub secret in [Step 4](#step-4--add-the-two-required-secrets-to-your-fork).
+> one and update the GitHub secret in [Step 4](#step-4---add-the-two-required-secrets-to-your-fork).
 > The old token can be revoked from the same page.
 
 ---
@@ -162,6 +162,16 @@ secret on first run.
 
 The workflow is named **Deploy to Cloudflare** and lives at
 `.github/workflows/deploy.yml`.
+
+> **Planning to use your own domain?** Set the GitHub *Variables*
+> `ISSUER_HOST`, `JWT_AUDIENCE`, and `MAIL_DOMAIN` **before** this
+> first deploy - see
+> [Optional: use your own domain names](#optional-use-your-own-domain-names).
+> They default to `citizenry.id` (the upstream project's domain), and
+> `ISSUER_HOST` is baked into every agent DID at registration, so
+> identities issued under the wrong host stay bound to it. If you are
+> fine with the `*.workers.dev` hostnames, you can skip this and still
+> set the variables later - just do it before you register real agents.
 
 ### First-time trigger
 
@@ -453,13 +463,22 @@ gives you for free. To attach a domain you own:
 
    | Variable       | Purpose                                                      |
    | -------------- | ------------------------------------------------------------ |
-   | `ISSUER_HOST`  | Identity issuer host baked into JWTs.                        |
+   | `ISSUER_HOST`  | Identity issuer host baked into JWTs and agent DIDs (`did:web:{ISSUER_HOST}:agent:…`). Pick the hostname that serves the API (e.g. `api.example.com`) so the DIDs resolve. |
    | `JWT_AUDIENCE` | Comma-separated audience list accepted by `api`.             |
-   | `API_BASE_URL` | URL that `admin-api` proxies to. Defaults to the workers.dev URL. |
+   | `API_BASE_URL` | Public base URL of the API Worker. Used for the email magic-links and as the `admin-api` proxy target; when unset it falls back to `https://{ISSUER_HOST}`, so set it whenever the two differ. |
    | `MAIL_DOMAIN`  | The host used for inbound and outbound mail.                 |
 
 5. Re-run the deploy workflow. The next deploy bakes the new host
    names into `[vars]`.
+
+> **Set these before issuing real identities.** If the variables are
+> unset, the committed `wrangler.toml` defaults apply -
+> `ISSUER_HOST=citizenry.id`, `MAIL_DOMAIN=citizenry.id` - which is the
+> upstream project's domain, not yours. Agents registered under those
+> defaults carry `did:web:citizenry.id:…` DIDs that your instance can
+> never serve, and verification emails link to a host you do not
+> control. The deploy itself succeeds either way, which makes this easy
+> to miss.
 
 ---
 

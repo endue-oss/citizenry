@@ -25,7 +25,7 @@ Workers bake in the production hostnames.
    `citizenry-docs` and `citizenry-admin-web` (Pages); `citizenry-api`,
    `citizenry-mail`, `citizenry-admin-api`, `citizenry-mcp`,
    `citizenry-migrator` (Workers). See
-   [Deploy your own citizenry → Step 5](./deploy.md#step-5--run-the-deploy-workflow).
+   [Deploy your own citizenry → Step 5](./deploy.md#step-5---run-the-deploy-workflow).
 
 ---
 

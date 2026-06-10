@@ -14,6 +14,7 @@
 //   then persists into the recipient's Inbox.
 
 import { Hono } from 'hono'
+import { secureHeaders } from 'hono/secure-headers'
 import { mailRouter, type MailRouterVars } from '@citizenry/mail'
 import type { Bindings } from './env'
 import { mailDb, configReader, type MailVars, type ConfigVars } from './db'
@@ -24,6 +25,8 @@ import { buildSender } from './outbound'
 import { mintId } from './ids'
 
 const app = new Hono<{ Bindings: Bindings }>()
+
+app.use('*', secureHeaders({ crossOriginResourcePolicy: false, xFrameOptions: 'DENY' }))
 
 app.get('/_health', (c) => c.json({ service: 'citizenry-mail', status: 'ok' }))
 

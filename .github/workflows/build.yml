@@ -32,6 +32,10 @@ jobs:
           # icon). Defaults to apps/admin-web/package.json `version`; set
           # the APP_VERSION repo variable to stamp an explicit release.
           PUBLIC_APP_VERSION: ${{ vars.APP_VERSION }}
+          # Canonical origin baked into the docs site (sitemap + canonical
+          # URLs). Forks default to their own Pages URL; the canonical
+          # instance sets the SITE_ORIGIN variable to https://citizenry.id.
+          SITE_ORIGIN: ${{ vars.SITE_ORIGIN || format('https://{0}-docs.pages.dev', vars.SERVICE_PREFIX || 'citizenry') }}
         run: |
           pnpm --filter @citizenry/admin-web run build
           pnpm --filter @citizenry/docs      run build

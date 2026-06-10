@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import { secureHeaders } from 'hono/secure-headers'
 import {
   identityRouter,
   adminIdentityRouter,
@@ -23,6 +24,7 @@ import {
 import { auth, serviceKeyAuth, apiKeyAuth } from './middleware/auth'
 import { auditAdmin } from './middleware/audit'
 import { cors } from './middleware/cors'
+import { validateEnv } from './middleware/validate_env'
 import { errorHandler } from './middleware/error'
 import { createNotifier } from './notifier'
 import {
@@ -37,7 +39,11 @@ import {
 
 const app = new Hono<{ Bindings: Bindings }>()
 
+// Baseline security headers. CORP is left off: the well-known JWKS/DID
+// documents are public cross-origin resources by design.
+app.use('*', secureHeaders({ crossOriginResourcePolicy: false, xFrameOptions: 'DENY' }))
 app.use('*', cors)
+app.use('*', validateEnv)
 
 // Federation is not enabled on this instance yet. The peer-discovery and
 // inbound-handshake surfaces (and the admin peer routes) require an instance

@@ -13,9 +13,11 @@
 // from end-operator credentials.
 
 import { Hono } from 'hono'
+import { secureHeaders } from 'hono/secure-headers'
 import type { Bindings } from './env'
 import { errorHandler } from './middleware/error'
 import { cors } from './middleware/cors'
+import { validateEnv } from './middleware/validate_env'
 import { adminJwtAuth, type AuthVars } from './middleware/auth'
 import { authRouter, meRouter } from './routes/auth'
 
@@ -23,10 +25,13 @@ const app = new Hono<{ Bindings: Bindings }>()
 
 // CORS must run before everything else so preflight OPTIONS get
 // answered before the JWT middleware tries to authenticate them.
+app.use('*', secureHeaders({ crossOriginResourcePolicy: false, xFrameOptions: 'DENY' }))
 app.use('*', cors)
 app.onError(errorHandler)
 
 app.get('/_health', (c) => c.json({ service: 'citizenry-admin-api', status: 'ok' }))
+
+app.use('*', validateEnv)
 
 // /auth/* — login, refresh, logout, me. The `meRouter` carries its own
 // JWT middleware; everything else under /auth is unauthenticated by

@@ -1,5 +1,6 @@
 import type { Db } from '../db'
-import { createAgentKeyRepo } from '../repo/agent_key'
+import { createAgentKeyRepo, type AgentKeyRepo } from '../repo/agent_key'
+import { bytesToBase64url } from '../jose'
 
 export type JwksService = ReturnType<typeof createJwksService>
 
@@ -36,8 +37,12 @@ export interface JwkSet {
  * `/.well-known/jwks.json` is a separate, bounded key set and is not
  * served from this service.
  */
-export const createJwksService = (deps: { db: Db }) => {
-  const keys = createAgentKeyRepo(deps.db)
+export const createJwksService = (deps: {
+  db: Db
+  /** Inject for tests; defaults to the D1-backed repo over `db`. */
+  keys?: AgentKeyRepo
+}) => {
+  const keys = deps.keys ?? createAgentKeyRepo(deps.db)
 
   return {
     /**
@@ -55,14 +60,14 @@ export const createJwksService = (deps: { db: Db }) => {
         crv: 'Ed25519' as const,
         alg: 'EdDSA' as const,
         use: 'sig' as const,
-        x: Buffer.from(r.publicKey).toString('base64url'),
+        x: bytesToBase64url(r.publicKey),
         kid: r.kid,
       }))
       const encKeys: PublishedJwk[] = encRows.map((r) => ({
         kty: 'OKP' as const,
         crv: 'X25519' as const,
         use: 'enc' as const,
-        x: Buffer.from(r.publicKey).toString('base64url'),
+        x: bytesToBase64url(r.publicKey),
         kid: r.kid,
       }))
       return { keys: [...sigKeys, ...encKeys] }

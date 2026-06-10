@@ -1,5 +1,33 @@
-export { identityRouter } from './router'
+export { identityRouter, type IdentityRouterVars } from './router'
 export { adminIdentityRouter } from './router/admin'
+export {
+  createTokenService,
+  MAX_BODY_JWS_LIFETIME_SEC,
+  type TokenService,
+  type TokenServicePorts,
+  type BodyJwsAction,
+  type BodyJwsPayload,
+  type VerifiedBodyJws,
+} from './service/token'
+export {
+  createMeService,
+  type MeService,
+  type MeServicePorts,
+  type WhoamiResult,
+  type RotateKeyResult,
+} from './service/me'
+export {
+  createJwksService,
+  type JwksService,
+  type JwkSet,
+  type PublishedJwk,
+} from './service/jwks'
+export {
+  createDidService,
+  type DidService,
+  type DidDocument,
+  type VerificationMethod,
+} from './service/did'
 export { humansRouter, type HumanRouterVars } from './router/humans'
 export { registerRouter, type RegisterRouterVars } from './router/register'
 export {

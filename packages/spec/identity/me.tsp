@@ -175,7 +175,8 @@ interface Me {
    * Authentication comes from the body JWS, not the header, so the
    * OpenAPI security is noAuth.
    *
-   * Possible errors: 400, 401, 404, 422, 429, 500.
+   * Possible errors: 400, 401, 404, 409 (`key_not_active`,
+   * `agent_revoked`), 422, 429, 500.
    */
   @summary("Rotate the agent's signing key via body JWS")
   @operationId("agent-me-rotate-key")
@@ -186,6 +187,7 @@ interface Me {
     | BadRequestError
     | UnauthorizedError
     | NotFoundError
+    | ConflictError
     | UnprocessableError
     | RateLimitedError
     | InternalError;
@@ -195,7 +197,8 @@ interface Me {
    * key. Once effective, all keys → `revoked`. No header authentication
    * (the body JWS is the credential).
    *
-   * Possible errors: 400, 401, 404, 429, 500.
+   * Possible errors: 400, 401, 404, 409 (`key_not_active`,
+   * `agent_revoked`), 429, 500.
    */
   @summary("Self-revoke the agent via body JWS")
   @operationId("agent-me-revoke")
@@ -207,6 +210,7 @@ interface Me {
     | BadRequestError
     | UnauthorizedError
     | NotFoundError
+    | ConflictError
     | RateLimitedError
     | InternalError;
 }

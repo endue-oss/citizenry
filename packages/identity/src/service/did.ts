@@ -1,7 +1,8 @@
 import type { Db } from '../db'
 import { agentDid, issuerDid } from '../ids'
-import { createAgentKeyRepo } from '../repo/agent_key'
+import { createAgentKeyRepo, type AgentKeyRepo } from '../repo/agent_key'
 import type { PublishedJwk } from './jwks'
+import { bytesToBase64url } from '../jose'
 
 export type DidService = ReturnType<typeof createDidService>
 
@@ -29,16 +30,35 @@ const DID_CONTEXT = [
 /**
  * DID Document builder.
  *
- * issuer: every active key as a verificationMethod.
+ * issuer: the instance-level document (federation signing keys).
  * agent: only the agent's active keys as verificationMethods.
  */
-export const createDidService = (deps: { db: Db; issuerHost: string }) => {
-  const keys = createAgentKeyRepo(deps.db)
+export const createDidService = (deps: {
+  db: Db
+  issuerHost: string
+  /** Inject for tests; defaults to the D1-backed repo over `db`. */
+  keys?: AgentKeyRepo
+}) => {
+  const keys = deps.keys ?? createAgentKeyRepo(deps.db)
 
   return {
-    /** `/.well-known/did.json`. */
+    /**
+     * `/.well-known/did.json` — the instance document. Its
+     * verificationMethods are the instance-level federation signing
+     * keys; their issuance is not built yet (the same gap that keeps
+     * `/.well-known/jwks.json` empty), so the method set is empty for
+     * now. The document id already follows the configured issuer host.
+     */
     issuer: async (): Promise<DidDocument> => {
-      throw new Error('not implemented')
+      const did = issuerDid(deps.issuerHost)
+      return {
+        '@context': DID_CONTEXT,
+        id: did,
+        verificationMethod: [],
+        authentication: [],
+        assertionMethod: [],
+        keyAgreement: [],
+      }
     },
 
     /** `/agent/{id}/did.json`. */
@@ -58,7 +78,7 @@ export const createDidService = (deps: { db: Db; issuerHost: string }) => {
           crv: 'Ed25519' as const,
           alg: 'EdDSA' as const,
           use: 'sig' as const,
-          x: Buffer.from(k.publicKey).toString('base64url'),
+          x: bytesToBase64url(k.publicKey),
           kid: k.kid,
         },
       }))
@@ -71,7 +91,7 @@ export const createDidService = (deps: { db: Db; issuerHost: string }) => {
           kty: 'OKP' as const,
           crv: 'X25519' as const,
           use: 'enc' as const,
-          x: Buffer.from(k.publicKey).toString('base64url'),
+          x: bytesToBase64url(k.publicKey),
           kid: k.kid,
         },
       }))

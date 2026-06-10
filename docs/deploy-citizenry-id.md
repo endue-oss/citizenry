@@ -144,12 +144,11 @@ rule to the `citizenry-mail` Worker.
 These are tracked elsewhere and do **not** block the apex binding, but set
 expectations:
 
-- **Per-agent JWKS / DID routes return empty stubs.** The services support
-  dual keys, but the mounted routes in
-  [`packages/identity/src/router/index.ts`](../packages/identity/src/router/index.ts)
-  are not yet wired (see [ADR-2026-0006](./reference/adr/2026-0006.md)). An
-  agent can encrypt to its own vault key (received at registration), but
-  third-party encrypt-to-agent is not live until these routes are wired.
+- **Per-agent JWKS / DID routes are live.** `/agent/{id}/jwks.json` and
+  `/agent/{id}/did.json` publish the registered dual keys, and the
+  `/v1/agent/me` surface (whoami / rotate-key / self-revoke) is wired
+  (see [ADR-2026-0006](./reference/adr/2026-0006.md)). Agent DIDs follow
+  `ISSUER_HOST`, so they resolve once the issuer host is bound.
 - **Federation is disabled.** `/.well-known/citizenry-peer`,
   `/federation/handshake`, and `/v1/admin/federation/*` return `501` until
   instance federation signing keys ship; `/.well-known/jwks.json` returns

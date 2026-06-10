@@ -6,6 +6,7 @@ import type { DrizzleD1Database } from 'drizzle-orm/d1'
 import { IDENTITY_ERR, type IdentityErrorCodeValue } from '@citizenry/spec/error-codes/identity'
 import { agent as agentTable, agentKey as agentKeyTable } from './db/schema'
 import type { Schema } from './db/schema'
+import { base64urlToBytes, base64urlToString, verifyEd25519 } from './jose'
 
 export interface TokenPayload {
   /** Subject — agent_id */
@@ -54,17 +55,31 @@ export const createNoopVerifier = (): TokenVerifier => ({
   },
 })
 
-const base64urlToBytes = (s: string): Uint8Array => {
-  const pad = '='.repeat((4 - (s.length % 4)) % 4)
-  const b64 = (s + pad).replace(/-/g, '+').replace(/_/g, '/')
-  const bin = atob(b64)
-  const out = new Uint8Array(bin.length)
-  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i)
-  return out
-}
+/**
+ * Tolerated clock drift between the token minter and this verifier,
+ * applied to `exp` checks (a token is accepted until `exp + leeway`).
+ */
+export const CLOCK_SKEW_LEEWAY_SEC = 60
 
-const base64urlToString = (s: string): string =>
-  new TextDecoder().decode(base64urlToBytes(s))
+/**
+ * How long a `rotated` signing key keeps verifying bearer JWTs after
+ * rotation. Implements the `rotated → revoked (after grace period)`
+ * transition from the spec lazily: past the window the key is treated
+ * as revoked at verify time — no cron required. The `rotated_until`
+ * field in the rotate-key response is `rotated_at + this`.
+ */
+export const ROTATED_KEY_GRACE_SEC = 24 * 60 * 60
+
+/**
+ * Whether a rotated key is still inside its verification grace window.
+ * Rows rotated before the `rotated_at` column existed (null) are
+ * treated as past the window — fail closed.
+ */
+export const isRotatedKeyWithinGrace = (
+  rotatedAt: Date | null | undefined,
+  nowMs: number,
+): boolean =>
+  rotatedAt instanceof Date && rotatedAt.getTime() + ROTATED_KEY_GRACE_SEC * 1000 > nowMs
 
 export interface VerifyJwtOptions {
   /** Allowed audience list (any one match, not all). */
@@ -78,9 +93,10 @@ export interface VerifyJwtOptions {
  *  1. parse compact JWS
  *  2. header.alg === "EdDSA"
  *  3. header.kid → agent_key lookup (use='sig', status ∈ active|rotated)
+ *     — rotated keys only inside their grace window
  *  4. payload.iss === payload.sub === key.agent_id
  *  5. payload.aud ∩ options.audience ≠ ∅
- *  6. payload.exp > now
+ *  6. payload.exp + leeway > now
  *  7. Ed25519.verify(public_key, signature, signing_input)
  */
 export const verifyAgentJwt = async (
@@ -129,6 +145,9 @@ export const verifyAgentJwt = async (
   if (!key) {
     throw new AuthError(IDENTITY_ERR.jwt_kid_unknown, 'kid unknown or revoked')
   }
+  if (key.status === 'rotated' && !isRotatedKeyWithinGrace(key.rotatedAt, Date.now())) {
+    throw new AuthError(IDENTITY_ERR.jwt_kid_unknown, 'kid rotated past its grace window')
+  }
 
   // self-signed claim sanity
   if (!payload.sub || !payload.iss || payload.iss !== payload.sub) {
@@ -145,23 +164,16 @@ export const verifyAgentJwt = async (
     throw new AuthError(IDENTITY_ERR.jwt_aud_mismatch, 'aud does not match allowed audiences')
   }
 
-  // exp
+  // exp (with clock-skew leeway)
   const now = Math.floor(Date.now() / 1000)
-  if (!payload.exp || payload.exp <= now) {
+  if (!payload.exp || payload.exp + CLOCK_SKEW_LEEWAY_SEC <= now) {
     throw new AuthError(IDENTITY_ERR.jwt_expired, 'JWT expired')
   }
 
   // Ed25519 verify
   const signingInput = new TextEncoder().encode(`${h64}.${p64}`)
   const signature = base64urlToBytes(s64)
-  const publicKey = await crypto.subtle.importKey(
-    'raw',
-    key.publicKey,
-    { name: 'Ed25519' },
-    false,
-    ['verify'],
-  )
-  const ok = await crypto.subtle.verify('Ed25519', publicKey, signature, signingInput)
+  const ok = await verifyEd25519(key.publicKey, signature, signingInput)
   if (!ok) {
     throw new AuthError(IDENTITY_ERR.unauthorized, 'signature verification failed')
   }

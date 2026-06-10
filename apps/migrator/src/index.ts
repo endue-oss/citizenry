@@ -13,6 +13,7 @@
 //   POST /apply     — authenticated, applies pending files in identity → vault → mail order
 
 import { Hono, type MiddlewareHandler } from 'hono'
+import { secureHeaders } from 'hono/secure-headers'
 import type { Bindings } from './env'
 import { applyD1, statusD1 } from './runner'
 import {
@@ -23,6 +24,8 @@ import {
 } from './migrations.generated'
 
 const app = new Hono<{ Bindings: Bindings }>()
+
+app.use('*', secureHeaders({ crossOriginResourcePolicy: false, xFrameOptions: 'DENY' }))
 
 // ── auth ────────────────────────────────────────────────────────────
 // Constant-time compare. The Workers global lacks `crypto.timingSafeEqual`,

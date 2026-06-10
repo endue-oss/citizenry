@@ -6,13 +6,13 @@ import svelte from '@astrojs/svelte'
 
 // SSG-only. Pure static output → Cloudflare Pages deploy unchanged.
 // `site` is the canonical origin used for the sitemap and absolute/canonical
-// URLs. The production instance serves this handbook from the apex
-// citizenry.id (bound as a Pages custom domain — see
-// docs/deploy-citizenry-id.md). Forks that stay on *.pages.dev can override
-// this, but a mismatched `site` only affects sitemap/canonical metadata, not
-// routing.
+// URLs. The deploy workflow passes SITE_ORIGIN: forks default to their own
+// `<prefix>-docs.pages.dev` URL, and the canonical instance sets the
+// SITE_ORIGIN repo variable to https://citizenry.id (bound as a Pages custom
+// domain — see docs/deploy-citizenry-id.md). A mismatched `site` only affects
+// sitemap/canonical metadata, not routing.
 export default defineConfig({
-  site: 'https://citizenry.id',
+  site: process.env.SITE_ORIGIN || 'https://citizenry.id',
   output: 'static',
   trailingSlash: 'always',
   integrations: [

@@ -567,6 +567,7 @@ are written into `wrangler.toml` `[vars]` at deploy time):
 | `JWT_AUDIENCE`   | JWT audience list (comma-separated) accepted by `api`.                   | `api.id.example.com,citizenry-id`  |
 | `API_BASE_URL`   | Public URL `admin-api` proxies to. Defaults to the workers.dev URL.      | `https://api.example.com`          |
 | `MAIL_DOMAIN`    | Mail host for inbound (MX) and outbound (SPF/DKIM) configuration.        | `mail.example.com`                 |
+| `SITE_ORIGIN`    | Canonical origin baked into the docs site (sitemap/canonical URLs). Defaults to your `<prefix>-docs.pages.dev` URL. | `https://docs.example.com`         |
 
 ### Renaming the deployment
 

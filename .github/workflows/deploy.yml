@@ -96,6 +96,11 @@ jobs:
             exit 1
           fi
 
+      - name: Warn when identity variables are unset
+        if: env.ISSUER_HOST == '' || env.MAIL_DOMAIN == ''
+        run: |
+          echo "::warning::ISSUER_HOST / MAIL_DOMAIN are not set as GitHub Variables, so the committed wrangler.toml defaults (the upstream project's domain, citizenry.id) get baked into this deploy. Agent DIDs issued under the wrong ISSUER_HOST are permanent — set the variables before registering real agents. See docs/deploy.md → Optional: use your own domain names."
+
       - uses: actions/checkout@v4
 
       - name: Provision D1 databases (identity + vault + mail + config)

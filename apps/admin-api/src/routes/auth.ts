@@ -11,20 +11,56 @@
 // passed to admin_auth as `getAdminPassword` so reads piggyback on
 // the 5-minute colo-local TTL.
 
-import { Hono } from 'hono'
+import { Hono, type Context } from 'hono'
 import {
   createAdminAuthService,
+  createRateLimitService,
   AdminAuthErrorResult,
   type AdminAuthError,
 } from '@citizenry/identity'
+import { auditLog } from '@citizenry/identity/schema'
 import type { Bindings } from '../env'
 import { signAccessToken } from '../tokens'
 import { adminJwtAuth, type AuthVars } from '../middleware/auth'
 import { configReader, identityDb, type ConfigReaderVars, type IdentityVars } from '../db'
+import { newAuditLogId } from '../ids'
 
 type Vars = IdentityVars & ConfigReaderVars
 
 const ADMIN_PASSWORD_KEY = 'admin.password'
+
+// Per-IP caps for POST /auth/login. Looser than the humans-surface
+// defaults so an operator typo cannot lock the console out for long,
+// but tight enough to make online brute force of the password
+// pointless. Only FAILED attempts consume the budget.
+const LOGIN_CAPS = { perMinute: 5, perDay: 50 }
+
+const clientIp = (c: Context): string => c.req.header('CF-Connecting-IP') ?? 'unknown'
+
+// Fire-and-forget login audit row in the identity DB so operators can
+// detect brute-force attempts. Never blocks or fails the request;
+// recorded values are outcome + admin id + ip — no secrets.
+const auditLogin = (
+  c: Context<{ Bindings: Bindings; Variables: Vars }>,
+  outcome: 'success' | 'failure',
+  adminId: string,
+) => {
+  const write = c.var.db
+    .insert(auditLog)
+    .values({
+      auditLogId: newAuditLogId(),
+      actorPrincipalId: null,
+      action: 'admin.login',
+      targetId: adminId,
+      outcome,
+      payload: { ip: clientIp(c) },
+    })
+    .then(
+      () => undefined,
+      () => undefined,
+    )
+  c.executionCtx.waitUntil(write)
+}
 
 const hexToBytes = (hex: string): Uint8Array => {
   if (hex.length % 2 !== 0) throw new Error('hex length must be even')
@@ -96,6 +132,23 @@ export const authRouter = new Hono<{ Bindings: Bindings; Variables: Vars }>()
         400,
       )
     }
+
+    const limiter = createRateLimitService({ db: c.var.db })
+    const ipBucket = { kind: 'ip' as const, value: clientIp(c) }
+    const decision = await limiter.check(ipBucket, 'admin.login', LOGIN_CAPS)
+    if (!decision.allowed) {
+      c.header('Retry-After', String(decision.retryAfterSecs))
+      return c.json(
+        {
+          title: 'Too Many Requests',
+          code: 'ERR-P01-ADM-2005',
+          message: 'too many failed login attempts from this address — retry later',
+          timestamp: new Date().toISOString(),
+        },
+        429,
+      )
+    }
+
     const svc = makeService(c)
     try {
       const result = await svc.login({
@@ -107,6 +160,7 @@ export const authRouter = new Hono<{ Bindings: Bindings; Variables: Vars }>()
         adminId: result.adminId,
         ttlSecs: Number(c.env.ACCESS_TOKEN_TTL_SECS) || 900,
       })
+      auditLogin(c, 'success', result.adminId)
       return c.json({
         admin_id: result.adminId,
         access_token: access.token,
@@ -117,6 +171,11 @@ export const authRouter = new Hono<{ Bindings: Bindings; Variables: Vars }>()
       })
     } catch (err) {
       if (err instanceof AdminAuthErrorResult) {
+        if (err.kind === 'invalid_credentials') {
+          // Failures consume the rate budget; legitimate logins stay free.
+          await limiter.recordHit(ipBucket, 'admin.login')
+          auditLogin(c, 'failure', body.admin_id)
+        }
         const { status, body: payload } = errResponse(err.kind)
         return c.json(payload, status)
       }

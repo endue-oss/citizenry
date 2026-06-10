@@ -42,6 +42,16 @@ const BASE = (PUBLIC_ADMIN_API_BASE_URL || '').replace(/\/+$/, '')
 
 function url(path: string): string {
   if (path.startsWith('http://') || path.startsWith('https://')) return path
+  if (!BASE) {
+    // Empty means the Pages project env var was never set: every call
+    // would silently 404 against the app's own origin. Fail with an
+    // actionable message instead (it surfaces on the login screen).
+    throw new AdminApiError({
+      status: 0,
+      message:
+        'PUBLIC_ADMIN_API_BASE_URL is not configured — set it on the Pages project (or in .env for local dev) and rebuild. See docs/deploy.md.',
+    })
+  }
   if (!path.startsWith('/')) path = `/${path}`
   return `${BASE}${path}`
 }

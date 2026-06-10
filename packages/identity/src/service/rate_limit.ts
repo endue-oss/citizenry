@@ -18,7 +18,11 @@ import { and, eq, gt, lt, sql } from 'drizzle-orm'
 import type { Db } from '../db'
 import { rateLimitEvent } from '../db/schema'
 
-export type RateLimitScope = 'humans.start' | 'humans.rotate' | 'humans.verify'
+export type RateLimitScope =
+  | 'humans.start'
+  | 'humans.rotate'
+  | 'humans.verify'
+  | 'admin.login'
 export type RateLimitBucket = {
   kind: 'email' | 'ip'
   value: string
@@ -78,14 +82,17 @@ export function createRateLimitService(deps: RateLimitServiceDeps) {
     async check(
       bucket: RateLimitBucket,
       scope: RateLimitScope,
+      caps?: { perMinute?: number; perDay?: number },
     ): Promise<RateLimitDecision> {
+      const perMinute = caps?.perMinute ?? PER_MINUTE_CAP
+      const perDay = caps?.perDay ?? PER_DAY_CAP
       const tNow = now()
       const minuteCount = await countSince(bucket, scope, tNow - MIN_WINDOW_MS)
-      if (minuteCount >= PER_MINUTE_CAP) {
+      if (minuteCount >= perMinute) {
         return { allowed: false, retryAfterSecs: 60, reason: 'minute' }
       }
       const dayCount = await countSince(bucket, scope, tNow - DAY_WINDOW_MS)
-      if (dayCount >= PER_DAY_CAP) {
+      if (dayCount >= perDay) {
         // Best-effort: tell the caller they have to wait at most
         // until the oldest day-window row falls out (= roughly the
         // remainder of 24h).

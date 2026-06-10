@@ -9,6 +9,14 @@ export const createAgentKeyRepo = (db: Db) => ({
     db.select().from(agentKey).where(eq(agentKey.kid, kid)).limit(1),
 
   // ── signing keys (use='sig', EdDSA) ──────────────────────────
+  /** kid → signing-key row regardless of status (callers branch on it). */
+  findSigByKid: (kid: string) =>
+    db
+      .select()
+      .from(agentKey)
+      .where(and(eq(agentKey.kid, kid), eq(agentKey.use, 'sig')))
+      .limit(1),
+
   findActiveByAgent: (agentId: string) =>
     db
       .select()
@@ -67,17 +75,17 @@ export const createAgentKeyRepo = (db: Db) => ({
   create: (input: typeof agentKey.$inferInsert) =>
     db.insert(agentKey).values(input).returning(),
 
-  rotate: (oldKid: string) =>
+  rotate: (oldKid: string, rotatedAt: Date) =>
     db
       .update(agentKey)
-      .set({ status: 'rotated' })
+      .set({ status: 'rotated', rotatedAt })
       .where(and(eq(agentKey.kid, oldKid), eq(agentKey.status, 'active')))
       .returning(),
 
-  revokeAllForAgent: (agentId: string) =>
+  revokeAllForAgent: (agentId: string, revokedAt: Date = new Date()) =>
     db
       .update(agentKey)
-      .set({ status: 'revoked', revokedAt: new Date() })
+      .set({ status: 'revoked', revokedAt })
       .where(eq(agentKey.agentId, agentId))
       .returning(),
 })

@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import {
   identityRouter,
+  type IdentityRouterVars,
   adminIdentityRouter,
   humansRouter,
   type HumanRouterVars,
@@ -83,9 +84,23 @@ const vaultApp = new Hono<{
 app.route('/vault', vaultApp)
 
 // identity — D1; the routes are absolute (/v1/agent/*, /.well-known/*, /agent/{id}/*),
-// so mount at the root.
-const identityApp = new Hono<{ Bindings: Bindings; Variables: IdentityVars }>()
+// so mount at the root. The global `auth` middleware has already
+// verified the bearer JWT for GET /v1/agent/me (rotate-key / self-revoke
+// authenticate via their body JWS instead) and set `agentJwtPayload`.
+const identityApp = new Hono<{ Bindings: Bindings; Variables: IdentityRouterVars }>()
   .use('*', identityDb)
+  .use('*', async (c, next) => {
+    c.set('issuerHost', c.env.ISSUER_HOST)
+    c.set('mintKid', newKid)
+    c.set(
+      'audience',
+      (c.env.JWT_AUDIENCE || '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean),
+    )
+    await next()
+  })
   .route('/', identityRouter)
 app.route('/', identityApp)
 

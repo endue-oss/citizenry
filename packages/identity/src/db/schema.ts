@@ -276,6 +276,11 @@ export const agentKey = sqliteTable(
     createdAt: integer('created_at', { mode: 'timestamp_ms' })
       .notNull()
       .default(sql`(unixepoch() * 1000)`),
+    /** When the key left `active` via rotation. Bearer-JWT verification
+     *  accepts a rotated key only until `rotated_at + grace window`
+     *  (auth.ts ROTATED_KEY_GRACE_SEC) — the lazy `rotated → revoked`
+     *  transition. */
+    rotatedAt: integer('rotated_at', { mode: 'timestamp_ms' }),
     revokedAt: integer('revoked_at', { mode: 'timestamp_ms' }),
   },
   (t) => ({
